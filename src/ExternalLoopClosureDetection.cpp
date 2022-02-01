@@ -55,7 +55,7 @@ class ExternalLoopClosureService
 
 	bool process(const rtabmap::SensorData& data, const int id)
 	{
-		ROS_INFO("Process Image %d for Loop Closure Detection", id);
+		ROS_DEBUG("Process Image %d for Loop Closure Detection", id);
 		// Image message
 		std_msgs::Header header;
 		header.seq = id;
@@ -71,7 +71,7 @@ class ExternalLoopClosureService
 		if (client_.call(srv))
 		{
 			loop_closure_id_ = srv.response.detected_loop_closure_id;
-			ROS_INFO("Loop Closure Detection service success: %d", ((int) srv.response.is_detected));
+			ROS_DEBUG("Loop Closure Detection service success: %d", ((int) srv.response.is_detected));
 			return srv.response.is_detected;
 		}
 		else
@@ -101,7 +101,7 @@ rtabmap::RegistrationVis reg;
 
 void mapDataCallback(const rtabmap_ros::MapDataConstPtr & mapDataMsg, const rtabmap_ros::InfoConstPtr & infoMsg)
 {
-	ROS_INFO("Received map data!");
+	ROS_DEBUG("Received map data!");
 
 	rtabmap::Statistics stats;
 	rtabmap_ros::infoFromROS(*infoMsg, stats);
@@ -112,7 +112,7 @@ void mapDataCallback(const rtabmap_ros::MapDataConstPtr & mapDataMsg, const rtab
 	if(smallMovement || fastMovement)
 	{
 		// The signature has been ignored from rtabmap, don't process it
-		ROS_INFO("Ignore keyframe. Small movement=%d, Fast movement=%d", (int)smallMovement, (int)fastMovement);
+		ROS_DEBUG("Ignore keyframe. Small movement=%d, Fast movement=%d", (int)smallMovement, (int)fastMovement);
 		return;
 	}
 
@@ -139,7 +139,7 @@ void mapDataCallback(const rtabmap_ros::MapDataConstPtr & mapDataMsg, const rtab
 			{
 				int fromId = id;
 				int toId = loopClosureDetector.getLoopClosureId();
-				ROS_INFO("Detected loop closure between %d and %d", fromId, toId);
+				ROS_DEBUG("Detected loop closure between %d and %d", fromId, toId);
 				if(localData.find(toId) != localData.end())
 				{
 					//Compute transformation
@@ -171,11 +171,9 @@ void mapDataCallback(const rtabmap_ros::MapDataConstPtr & mapDataMsg, const rtab
 					ROS_WARN("Could not compute transformation between %d and %d because node data %d is not in cache.", fromId, toId, toId);
 				}
 			}
-			// if(!g_localizationMode)
-			// {
-			localData.insert(std::make_pair(id, s));
-			// }
 		}
+
+		localData.insert(std::make_pair(id, s));
 	}
 }
 
@@ -193,73 +191,19 @@ int main(int argc, char** argv)
 
 	loopClosureDetector.init(nh);
 
+	// Registration params
+	int min_inliers = 20;
+	if (ros::param::has("~min_inliers")) {
+		ros::param::get("~min_inliers", min_inliers);
+	}
+	rtabmap::ParametersMap params;
+	params.insert(rtabmap::ParametersPair(rtabmap::Parameters::kVisMinInliers(), std::to_string(min_inliers)));
+	reg.parseParameters(params);
+
 	ros::Rate rate(1);
-
-	// rtabmap::ParametersMap params;
-	// params.insert(rtabmap::ParametersPair(rtabmap::Parameters::kMemGenerateIds(), "false")); // use provided ids
-	// params.insert(rtabmap::ParametersPair(rtabmap::Parameters::kRGBDEnabled(), "false")); // BOW-only mode
-	// loopClosureDetector.init(params, "");
-
-	//pnh.param("localization", g_localizationMode, g_localizationMode);
 
 	// service to add link
 	addLinkSrv = nh.serviceClient<rtabmap_ros::AddLink>("/rtabmap/add_link");
-
-	// service to get map for initialization
-	//getMapSrv = nh.serviceClient<rtabmap_ros::GetMap>("/rtabmap/get_map_data");
-
-	// rtabmap_ros::GetMap::Request mapReq;
-	// mapReq.global = true;
-	// mapReq.graphOnly = false;
-	// mapReq.optimized = false;
-	// rtabmap_ros::GetMap::Response mapRes;
-	// ros::Rate rate(1);
-	// while(!getMapSrv.exists() && nh.ok())
-	// {
-	// 	ROS_INFO("Waiting for service \"%s\" to be available. If rtabmap is already started, "
-	// 			"make sure the service name is the same or remap it.", getMapSrv.getService().c_str());
-	// 	rate.sleep();
-	// 	ros::spinOnce();
-	// }
-	// if(!nh.ok())
-	// {
-	// 	return 0;
-	// }
-	// ROS_INFO("Calling \"%s\" service to get data already in the map.", getMapSrv.getService().c_str());
-	// if(getMapSrv.call(mapReq, mapRes) && !mapRes.data.nodes.empty())
-	// {
-	// 	ROS_INFO("Adding %d nodes to memory...", (int)mapRes.data.nodes.size());
-	// 	std::map<int, rtabmap::Transform> poses;
-	// 	std::multimap<int, rtabmap::Link> links;
-	// 	rtabmap::Transform mapToOdom;
-	// 	rtabmap_ros::mapGraphFromROS(mapRes.data.graph, poses, links, mapToOdom);
-	// 	int addedNodes = 0;
-	// 	for(size_t i=0; i<mapRes.data.nodes.size(); ++i)
-	// 	{
-	// 		rtabmap::Signature s = rtabmap_ros::nodeDataFromROS(mapRes.data.nodes.at(i));
-	// 		rtabmap::SensorData compressedData = s.sensorData();
-	// 		s.sensorData().uncompressData();
-	// 		if(loopClosureDetector.process(s.sensorData(), rtabmap::Transform()))
-	// 		{
-	// 			localData.insert(std::make_pair(
-	// 					loopClosureDetector.getStatistics().getLastSignatureData().id(),
-	// 					compressedData));
-	// 			++addedNodes;
-	// 		}
-	// 	}
-	// 	ROS_INFO("Added %d/%d nodes to memory! Vocabulary size=%d",
-	// 			addedNodes,
-	// 			(int)mapRes.data.nodes.size(),
-	// 			(int)loopClosureDetector.getMemory()->getVWDictionary()->getVisualWords().size());
-
-	// }
-
-	// if(g_localizationMode)
-	// {
-	// 	params.insert(rtabmap::ParametersPair(rtabmap::Parameters::kMemIncrementalMemory(), "false")); // localization mode
-	// 	loopClosureDetector.parseParameters(params);
-	// 	ROS_INFO("Set detector in localization mode");
-	// }
 
 	// subscription
 	message_filters::Subscriber<rtabmap_ros::Info> infoTopic;

@@ -14,11 +14,15 @@ class LoopClosureDetection(object):
     def init(self):
         rospy.init_node('loop_closure_detection', anonymous=True)
 
-        params = [] # TODO: Parse params
+        params = {}
+        params['threshold'] = rospy.get_param('~threshold')
+        params['min_inbetween_keyframes'] = rospy.get_param('~min_inbetween_keyframes')
+        params['checkpoint'] = rospy.get_param('~checkpoint')
+        params['pca'] = rospy.get_param('~pca')
 
         self.netvlad = NetVLADLoopClosureDetection(params)
 
-        service = rospy.Service('detect_loop_closure', DetectLoopClosure, self.service)
+        self.srv = rospy.Service('detect_loop_closure', DetectLoopClosure, self.service)
 
         rospy.spin()
 

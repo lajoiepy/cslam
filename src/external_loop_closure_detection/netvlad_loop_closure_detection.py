@@ -59,8 +59,7 @@ class NetVLADLoopClosureDetection(object):
             self.model.pool = nn.DataParallel(self.model.pool)
             self.isParallel = True     
 
-        #resume_ckpt = join("/home/lajoiepy/Documents/projects/SelfSupervisedPlaceRecognition/pytorch-NetVlad/runs/Nov24_23-21-16_vgg16_netvlad-Pit", 'checkpoints', 'model_best.pth.tar')
-        resume_ckpt = join("/home/lajoiepy/Documents/projects/SelfSupervisedPlaceRecognition/pytorch-NetVlad/runs/Jan14_triplet_kitti00_CraftedOutliers_marginx10_10epochs", 'checkpoints', 'model_refined.pth.tar')
+        resume_ckpt = self.params['checkpoint']
         if isfile(resume_ckpt):
             print("=> loading checkpoint '{}'".format(resume_ckpt))
             checkpoint = torch.load(resume_ckpt, map_location=lambda storage, loc: storage)
@@ -81,15 +80,14 @@ class NetVLADLoopClosureDetection(object):
 
             self.transform = transforms.ToTensor()  
         
-        self.pca = pickle.load(open("/home/lajoiepy/Documents/projects/SelfSupervisedPlaceRecognition/pytorch-NetVlad/pca.pkl",'rb'))
+        self.pca = pickle.load(open(self.params["pca"],'rb'))
         self.counter = 0
 
     def compute_embedding(self, keyframe):
-        # TODO: Load keyframes into batches to speed up this
         with torch.no_grad():    
             image = Image.fromarray(keyframe)
             input = self.transform(image)
-            input = torch.unsqueeze(input, 0) # TODO: batch eval , input[None,:]
+            input = torch.unsqueeze(input, 0)
             input = input.to(self.device)
             image_encoding = self.model.encoder(input)
             vlad_encoding = self.model.pool(image_encoding) 
@@ -110,33 +108,26 @@ class NetVLADLoopClosureDetection(object):
         self.nns.add_item(embedding, id)
 
     def detect(self, embedding, id):
-        kfs, ds = self.nns.search(embedding, k=5) # TODO: reestablish 20
+        kfs, ds = self.nns.search(embedding, k=self.params['min_inbetween_keyframes'])
 
-        # TODO: restablish condition
-        #if len(kfs) > 0 and kfs[0] == keyframe:
-        #    kfs, ds = kfs[1:], ds[1:]
-        #if len(kfs) == 0:
-        #    return None
+        if len(kfs) > 0 and kfs[0] == id:
+            kfs, ds = kfs[1:], ds[1:]
+        if len(kfs) == 0:
+            return None
 
-        min_d = np.min(ds)
         for kf, d in zip(kfs, ds):
             #TODO: restablish condition
-            #if abs(kf - id) < self.params.lc_min_inbetween_frames:
-            #    continue
-            #if d > 0.8:
-            #    continue
+            if abs(kf - id) < self.params['min_inbetween_keyframes']:
+                continue
+
             rospy.loginfo("Netvlad match: id0= " + str(kf) + ", id1= " + str(id) + ", distance= " + str(d))
             f = open("best_matches_netvlad_distances.csv", "a")
             f.write(str(id)+","+str(kf) +","+str(d)+'\n')
             f.close()
-            # if d < 1.0:
-            #     for i in range(len(ds)):
-            #         if abs(kfs[i].id - keyframe.id) < self.params.lc_min_inbetween_frames:
-            #             continue
-            #         print(str(kfs[i].id) + ", " + str(keyframe.id) + " | " + str(ds[i]))
-            #     is_inlier = True
-            if d > min_d * 1.5:
-                break
+
+            if d > self.params['threshold']:
+                continue
+    
             return kf
         return None
 
@@ -147,7 +138,7 @@ class NetVLADLoopClosureDetection(object):
 
         # Netvlad processing
         match = None
-        if self.counter > 10: # TODO: add param
+        if self.counter > 0:
             match = self.detect(embedding, req.image.header.seq) # Systematic evaluation
         self.add_keyframe(embedding, req.image.header.seq)
         self.counter = self.counter + 1
