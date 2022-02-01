@@ -1,20 +1,6 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(external_loop_closure_detection)
 
-# Policy CMP0043 introduced in cmake version 3.0 IGNORES the use of COMPILE_DEFINITIONS suffixed variables, e.g. COMPILE_DEFINITIONS_DEBUG
-# Set to OLD behavior until minimum cmake version >= 2.8.10 (version that COMPILE_DEFINITIONS can be set by generator expressions instead)
-if (POLICY CMP0043)
-    cmake_policy(SET CMP0043 OLD)
-endif (POLICY CMP0043)
-# Policy CMP0042 introduced in cmake version 3.0 enables the use of @rpath in an install name via MACOSX_RPATH by default
-# Set to OLD behavior so that all versions use the same behavior, or until minimum cmake version >= 2.8.12 (version where @rpath is available)
-if (POLICY CMP0042)
-    cmake_policy(SET CMP0042 OLD)
-endif (POLICY CMP0042)
-
-if (POLICY CMP0048)
-    cmake_policy(SET CMP0048 OLD)
-endif (POLICY CMP0048)
 
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
@@ -50,6 +36,8 @@ find_package(OpenCV REQUIRED)
    DetectLoopClosure.srv
  )
 
+catkin_python_setup()
+
 ## Generate added messages and services with any dependencies listed here
 generate_messages(
    DEPENDENCIES
@@ -57,6 +45,7 @@ generate_messages(
    geometry_msgs
    sensor_msgs
 )
+
 
 ###################################
 ## catkin specific configuration ##
@@ -109,6 +98,8 @@ set_target_properties(external_loop_closure_detection PROPERTIES OUTPUT_NAME "ex
 
 catkin_install_python(PROGRAMS
   scripts/loop_closure_detection.py
+  src/external_loop_closure_detection/nearest_neighbors.py
+  src/external_loop_closure_detection/netvlad_loop_closure_detection.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 

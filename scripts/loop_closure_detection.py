@@ -5,29 +5,32 @@
 
 import rospy
 from sensor_msgs.msg import Image
-from cv_bridge import CvBridge
 
 from external_loop_closure_detection.srv import DetectLoopClosure, DetectLoopClosureResponse
+from external_loop_closure_detection.netvlad_loop_closure_detection import NetVLADLoopClosureDetection
 
-def detect_loop_closure_netvlad(req):
-    bridge = CvBridge()
-    cv_image = bridge.imgmsg_to_cv2(req.image, desired_encoding='passthrough')
+class LoopClosureDetection(object):
 
-    # TODO: Netvlad processing
-    rospy.logwarn("NetVLAD processing")
+    def init(self):
+        rospy.init_node('loop_closure_detection', anonymous=True)
 
-    return DetectLoopClosureResponse(is_detected=True, detected_loop_closure_id=req.image.header.seq-1)
+        params = [] # TODO: Parse params
 
+        self.netvlad = NetVLADLoopClosureDetection(params)
 
-def main():
-    rospy.init_node('loop_closure_detection', anonymous=True)
+        service = rospy.Service('detect_loop_closure', DetectLoopClosure, self.service)
 
-    service = rospy.Service('detect_loop_closure', DetectLoopClosure, detect_loop_closure_netvlad)
+        rospy.spin()
 
-    rospy.spin()
+    def service(self, req):
+        # Call all methods we want to test
+        res = self.netvlad.detect_loop_closure_service(req)
+        return res
 
 if __name__ == '__main__':
+
     try:
-        main()
+        lcd = LoopClosureDetection()
+        lcd.init()
     except rospy.ROSInterruptException:
         pass
