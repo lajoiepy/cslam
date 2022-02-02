@@ -1,0 +1,13 @@
+<launch>
+    <arg name="bag" default="/home/lajoiepy/Documents/datasets/Poly4eCorridorsRealsense/18jan/Train1.bag"/>
+    <arg name="out_bag" default="/home/lajoiepy/Documents/datasets/Poly4eCorridorsRealsense/18jan/Train1_decompressed.bag"/>
+    
+    <node pkg="rosbag" type="play" name="rosbag_play"
+        args="$(arg bag) --topics /tf /tf_static /rtabmap/imu /camera/color/camera_info /camera/color/image_raw/compressed /camera/aligned_depth_to_color/image_raw/compressed" />
+    <node pkg="image_transport" type="republish" name="decompress_color" 
+        args="compressed in:=/camera/color/image_raw raw out:=/camera/color/image_raw"/>
+    <node pkg="image_transport" type="republish" name="decompress_depth" 
+        args="compressed in:=camera/aligned_depth_to_color/image_raw raw out:=camera/aligned_depth_to_color/image_raw"/>
+    <node pkg="rosbag" type="record" name="rosbag_record"
+        args="-a -O $(arg out_bag)" />
+</launch>

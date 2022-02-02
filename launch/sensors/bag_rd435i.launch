@@ -1,0 +1,5 @@
+<launch>
+    <arg name="bag" default="/home/lajoiepy/Documents/datasets/Poly4eCorridorsRealsense/18jan/Train1_decompressed_fixed.bag"/>
+    <node pkg="rosbag" type="play" name="rosbag_play"
+        args="$(arg bag) --clock" />
+</launch>
