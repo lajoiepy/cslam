@@ -392,7 +392,12 @@
       <param unless="$(arg localization)" name="Mem/IncrementalMemory" type="string" value="true"/>
       <param name="Mem/InitWMWithAllNodes" type="string" value="$(arg localization)"/>
 
+      <!-- Disable loop closing in RTAB-MAP -->
       <param name="Rtabmap/LoopThr" type="string" value="1000.0"/>
+      <param name="Rtabmap/LoopRatio" type="string" value="1000.0"/>
+      <param name="RGBD/OptimizeMaxError" type="string" value="0.0"/>
+      <param name="RGBD/MaxLoopClosureDistance," type="string" value="0.0"/>
+      <param name="Optimizer/Iterations" type="string" value="0"/>
     </node>
 
     <!-- TODO: Look deeply into RTAB-Map parameters -->
