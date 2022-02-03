@@ -1,0 +1,8 @@
+<launch>
+    <arg name="bag" default="/home/lajoiepy/Documents/datasets/KITTI/data_odometry_color/dataset/kitti_data_odometry_color_sequence_00.bag"/>
+    
+    <node pkg="rosbag" type="play" name="rosbag_play"
+        args="$(arg bag) --clock" />
+
+     <node pkg="tf2_ros" type="static_transform_publisher" name="kitti_camera_link" args="0 0 0 0 0 0 camera_link camera_gray_left" />       
+</launch>

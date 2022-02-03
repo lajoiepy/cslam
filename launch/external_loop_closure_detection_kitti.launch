@@ -1,21 +1,8 @@
 <!-- -->
 <launch>
-  <!-- Convenience launch file to launch odometry, rtabmap and rtabmapviz nodes at once -->
-
-  <!-- For stereo:=false
-        Your RGB-D sensor should be already started with "depth_registration:=true".
-        Examples:
-           $ roslaunch freenect_launch freenect.launch depth_registration:=true 
-           $ roslaunch openni2_launch openni2.launch depth_registration:=true -->
-           
-  <!-- For stereo:=true
-        Your camera should be calibrated and publishing rectified left and right 
-        images + corresponding camera_info msgs. You can use stereo_image_proc for image rectification.
-        Example:
-           $ roslaunch rtabmap_ros bumblebee.launch -->
      
   <!-- Choose between depth and stereo, set both to false to do only scan -->      
-  <arg name="stereo"                    default="false"/>
+  <arg name="stereo"                    default="true"/>
   <arg     if="$(arg stereo)" name="depth"  default="false"/>
   <arg unless="$(arg stereo)" name="depth"  default="true"/>
   <arg name="subscribe_rgb"  default="$(arg depth)"/>
@@ -28,7 +15,7 @@
   <arg name="localization"            default="false"/>
   
   <!-- sim time for convenience, if playing a rosbag -->
-  <arg name="use_sim_time"            default="false"/>
+  <arg name="use_sim_time"            default="true"/>
   <param if="$(arg use_sim_time)" name="use_sim_time" value="true"/>
   
   <!-- Corresponding config files -->
@@ -66,9 +53,9 @@
   <arg name="depth_camera_info_topic" default="$(arg camera_info_topic)" />
   
   <!-- stereo related topics -->
-  <arg name="stereo_namespace"        default="/stereo_camera"/>
+  <arg name="stereo_namespace"        default="/kitti/camera_color"/>
   <arg name="left_image_topic"        default="$(arg stereo_namespace)/left/image_rect_color" />
-  <arg name="right_image_topic"       default="$(arg stereo_namespace)/right/image_rect" />      <!-- using grayscale image for efficiency -->
+  <arg name="right_image_topic"       default="$(arg stereo_namespace)/right/image_rect_color" />      <!-- using grayscale image for efficiency -->
   <arg name="left_camera_info_topic"  default="$(arg stereo_namespace)/left/camera_info" />
   <arg name="right_camera_info_topic" default="$(arg stereo_namespace)/right/camera_info" />
   
