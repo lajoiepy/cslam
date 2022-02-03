@@ -1,5 +1,8 @@
 <!-- -->
 <launch>
+  <arg name="min_inbetween_keyframes" default="10"/>
+  <arg name="threshold" default="1.5"/>
+  <arg name="min_inliers" default="6"/>
      
   <!-- Choose between depth and stereo, set both to false to do only scan -->      
   <arg name="stereo"                    default="true"/>
@@ -391,14 +394,14 @@
 
     <!-- Loop Closure Detection nodes -->
     <node name="loop_closure_detection" pkg="external_loop_closure_detection" type="loop_closure_detection.py" clear_params="$(arg clear_params)" output="$(arg output)" launch-prefix="$(arg launch_prefix)">
-      <param name="threshold" type="double" value="1.5"/>
-      <param name="min_inbetween_keyframes" type="int" value="10"/>
+      <param name="threshold" type="double" value="$(arg threshold)"/>
+      <param name="min_inbetween_keyframes" type="int" value="$(arg min_inbetween_keyframes)"/>
       <param name="checkpoint" type="string" value="/home/lajoiepy/Documents/projects/SelfSupervisedPlaceRecognition/pytorch-NetVlad/runs/Nov24_23-21-16_vgg16_netvlad-Pit-Baseline/checkpoints/model_best.pth.tar"/>
       <param name="pca" type="string" value="/home/lajoiepy/Documents/projects/SelfSupervisedPlaceRecognition/pytorch-NetVlad/pca.pkl"/>
     </node>
     
     <node name="external_loop_closure_detection" pkg="external_loop_closure_detection" type="external_loop_detection" clear_params="$(arg clear_params)" output="$(arg output)" launch-prefix="$(arg launch_prefix)">
-      <param name="min_inliers" type="int" value="6"/>
+      <param name="min_inliers" type="int" value="$(arg min_inliers)"/>
     </node>
   
     <!-- Visualisation RTAB-Map -->
