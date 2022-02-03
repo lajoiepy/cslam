@@ -2,3 +2,4 @@ sensor_msgs/Image image
 ---
 bool is_detected
 int32 detected_loop_closure_id
+int32[] best_matches

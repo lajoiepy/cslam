@@ -94,7 +94,11 @@ SET(Libraries
 
 add_executable(external_loop_closure_detection src/ExternalLoopClosureDetection.cpp)
 target_link_libraries(external_loop_closure_detection ${Libraries})
-set_target_properties(external_loop_closure_detection PROPERTIES OUTPUT_NAME "external_loop_detection")
+set_target_properties(external_loop_closure_detection PROPERTIES OUTPUT_NAME "external_loop_closure_detection")
+
+add_executable(external_loop_closure_detection_triplet src/ExternalLoopClosureDetectionTriplet.cpp)
+target_link_libraries(external_loop_closure_detection_triplet ${Libraries})
+set_target_properties(external_loop_closure_detection_triplet PROPERTIES OUTPUT_NAME "external_loop_closure_detection_triplet")
 
 catkin_install_python(PROGRAMS
   scripts/loop_closure_detection.py

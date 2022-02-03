@@ -128,8 +128,8 @@ class NetVLADLoopClosureDetection(object):
             if d > self.params['threshold']:
                 continue
     
-            return kf
-        return None
+            return kf, kfs
+        return None, None
 
     def detect_loop_closure_service(self, req):
         bridge = CvBridge()
@@ -139,11 +139,11 @@ class NetVLADLoopClosureDetection(object):
         # Netvlad processing
         match = None
         if self.counter > 0:
-            match = self.detect(embedding, req.image.header.seq) # Systematic evaluation
+            match, best_matches = self.detect(embedding, req.image.header.seq) # Systematic evaluation
         self.add_keyframe(embedding, req.image.header.seq)
         self.counter = self.counter + 1
 
         if match is not None:
-            return DetectLoopClosureResponse(is_detected=True, detected_loop_closure_id=match)
+            return DetectLoopClosureResponse(is_detected=True, detected_loop_closure_id=match, best_matches=np.asarray(best_matches))
         else:
-            return DetectLoopClosureResponse(is_detected=False, detected_loop_closure_id=-1)
+            return DetectLoopClosureResponse(is_detected=False, detected_loop_closure_id=-1, best_matches=np.array([]))
