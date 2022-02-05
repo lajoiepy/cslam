@@ -3,8 +3,8 @@
   <arg name="min_inbetween_keyframes" default="10"/>
   <arg name="threshold" default="1.5"/>
   <arg name="min_inliers" default="6"/>
-  <!--arg name="checkpoint" default="/home/lajoiepy/Documents/projects/SelfSupervisedPlaceRecognition/pytorch-NetVlad/runs/Nov24_23-21-16_vgg16_netvlad-Pit-Baseline/checkpoints/model_best.pth.tar"/-->
-  <arg name="checkpoint" default="/home/lajoiepy/Documents/projects/SelfSupervisedPlaceRecognition/pytorch-NetVlad/runs/Feb03_15-51-59_vgg16_netvlad-rtabmap-kitti00/checkpoints/model_refined.pth.tar"/>
+  <arg name="checkpoint" default="/home/lajoiepy/Documents/projects/SelfSupervisedPlaceRecognition/pytorch-NetVlad/runs/Nov24_23-21-16_vgg16_netvlad-Pit-Baseline/checkpoints/model_best.pth.tar"/>
+  <!--arg name="checkpoint" default="/home/lajoiepy/Documents/projects/SelfSupervisedPlaceRecognition/pytorch-NetVlad/runs/Feb04_20-15-24_vgg16_netvlad/checkpoints/model_refined.pth.tar"/-->
   <arg name="pca" default="/home/lajoiepy/Documents/projects/SelfSupervisedPlaceRecognition/pytorch-NetVlad/pca.pkl"/>
      
   <!-- Choose between depth and stereo, set both to false to do only scan -->      
@@ -273,6 +273,8 @@
           <param name="expected_update_rate"        type="double" value="$(arg odom_expected_rate)"/>
           <param name="max_update_rate"             type="double" value="$(arg odom_max_rate)"/>
           <param name="keep_color"                  type="bool"   value="$(arg use_odom_features)"/>
+          <param name="keep_color"                  type="bool"   value="$(arg use_odom_features)"/>
+          <param name="Vis/MinInliers"                  type="int"   value="8"/>
         </node>
       </group>
     </group>
