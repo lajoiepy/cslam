@@ -1,10 +1,10 @@
 <!-- -->
 <launch>
-  <arg name="min_inbetween_keyframes" default="10"/>
+  <arg name="min_inbetween_keyframes" default="20"/>
   <arg name="threshold" default="1.5"/>
   <arg name="min_inliers" default="6"/>
-  <arg name="checkpoint" default="/home/lajoiepy/Documents/projects/SelfSupervisedPlaceRecognition/pytorch-NetVlad/runs/Nov24_23-21-16_vgg16_netvlad-Pit-Baseline/checkpoints/model_best.pth.tar"/>
-  <!--arg name="checkpoint" default="/home/lajoiepy/Documents/projects/SelfSupervisedPlaceRecognition/pytorch-NetVlad/runs/Feb04_20-15-24_vgg16_netvlad/checkpoints/model_refined.pth.tar"/-->
+  <!--arg name="checkpoint" default="/home/lajoiepy/Documents/projects/SelfSupervisedPlaceRecognition/pytorch-NetVlad/runs/Nov24_23-21-16_vgg16_netvlad-Pit-Baseline/checkpoints/model_best.pth.tar"/-->
+  <arg name="checkpoint" default="/home/lajoiepy/Documents/projects/SelfSupervisedPlaceRecognition/pytorch-NetVlad/runs/Feb09_10-29-55_vgg16_netvlad/checkpoints/model_refined.pth.tar"/>
   <arg name="pca" default="/home/lajoiepy/Documents/projects/SelfSupervisedPlaceRecognition/pytorch-NetVlad/pca.pkl"/>
      
   <!-- Choose between depth and stereo, set both to false to do only scan -->      
@@ -405,7 +405,7 @@
       <param name="pca" type="string" value="$(arg pca)"/>
     </node>
     
-    <node name="external_loop_closure_detection" pkg="external_loop_closure_detection" type="external_loop_closure_detection_triplet" clear_params="$(arg clear_params)" output="$(arg output)" launch-prefix="$(arg launch_prefix)">
+    <node name="external_loop_closure_detection" pkg="external_loop_closure_detection" type="external_loop_closure_detection_tuple" clear_params="$(arg clear_params)" output="$(arg output)" launch-prefix="$(arg launch_prefix)">
       <param name="min_inliers" type="int" value="$(arg min_inliers)"/>
     </node>
   

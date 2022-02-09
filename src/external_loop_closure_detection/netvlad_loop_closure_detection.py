@@ -84,7 +84,7 @@ class NetVLADLoopClosureDetection(object):
         self.pca = pickle.load(open(self.params["pca"],'rb'))
         self.counter = 0
         os.system('rm best_matches_netvlad_distances.csv')
-        os.system('rm triplets.txt')
+        os.system('rm tuples.txt')
 
     def compute_embedding(self, keyframe):
         with torch.no_grad():    

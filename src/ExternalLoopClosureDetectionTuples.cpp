@@ -173,9 +173,9 @@ void mapDataCallback(const rtabmap_ros::MapDataConstPtr & mapDataMsg, const rtab
 							// Find the closest match (NetVLAD-wise) for which we cannot compute a transform
 							std::vector<int> best_matches = loopClosureDetector.getBestMatches();
 							auto it = std::find(best_matches.begin(), best_matches.end(), toId)++;
-							bool found_failed_match = false;
 							int match_id;
-							while (it != best_matches.end() && !found_failed_match)
+							std::vector<int> neg_ids;
+							while (it != best_matches.end())
 							{
 								int match_id = *it;
 								// Test this match if we can compute a transform
@@ -186,16 +186,21 @@ void mapDataCallback(const rtabmap_ros::MapDataConstPtr & mapDataMsg, const rtab
 								t = reg.computeTransformation(tmpFrom, tmpTo, rtabmap::Transform(), &regInfo);
 								if(t.isNull())
 								{
-									found_failed_match = true;
-									ROS_INFO("Failed match found. Triplet= (%d,%d,%d)", fromId, toId, match_id);
-									std::ofstream triplets_file;
-									triplets_file.open ("triplets.txt", std::ios::app);
-									triplets_file << std::to_string(fromId) << " " << std::to_string(toId) << " " << std::to_string(match_id) << "\n";
-									triplets_file.close();
+									neg_ids.push_back(match_id);
 								}
 								// Try next one
 								it++;
 							}
+							ROS_INFO("Failed match found. Tuples= (%d,%d,%d)", fromId, toId, match_id);
+							std::ofstream tuples_file;
+							tuples_file.open ("tuples.txt", std::ios::app);
+							tuples_file << std::to_string(fromId) << " " << std::to_string(toId);
+							for (auto neg_id : neg_ids)
+							{
+								tuples_file << " " << std::to_string(neg_id);
+							}
+							tuples_file << "\n";
+							tuples_file.close();
 						}
 					}
 					else
