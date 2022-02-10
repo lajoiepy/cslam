@@ -19,8 +19,14 @@ class LoopClosureDetection(object):
         params['min_inbetween_keyframes'] = rospy.get_param('~min_inbetween_keyframes')
         params['checkpoint'] = rospy.get_param('~checkpoint')
         params['pca'] = rospy.get_param('~pca')
+        params['technique'] = rospy.get_param('~technique')
 
-        self.netvlad = NetVLADLoopClosureDetection(params)
+        if params['technique'].lower() == 'netvlad':
+            self.lcd = NetVLADLoopClosureDetection(params)
+        elif params['technique'].lower() == 'vit':
+            self.lcd = ViTLoopClosureDetection(params)
+        else:
+            rospy.logerr('ERROR: Unknown technique')
 
         self.srv = rospy.Service('detect_loop_closure', DetectLoopClosure, self.service)
 
@@ -28,7 +34,7 @@ class LoopClosureDetection(object):
 
     def service(self, req):
         # Call all methods we want to test
-        res = self.netvlad.detect_loop_closure_service(req)
+        res = self.lcd.detect_loop_closure_service(req)
         return res
 
 if __name__ == '__main__':

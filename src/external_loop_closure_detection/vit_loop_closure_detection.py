@@ -18,11 +18,7 @@ from datetime import datetime
 import torchvision.datasets as datasets
 import torchvision.models as models
 import numpy as np
-import sys
-sys.path.append('/home/lajoiepy/Documents/projects/SelfSupervisedPlaceRecognition/pytorch-NetVlad') # TODO: add as submodule?
-import netvlad
-import pickle
-import sklearn
+import timm
 
 from timm.data.constants import IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD
 
@@ -30,8 +26,15 @@ from external_loop_closure_detection.nearest_neighbors import NearestNeighbors
 
 from external_loop_closure_detection.srv import DetectLoopClosure, DetectLoopClosureResponse
 
+class L2Norm(nn.Module):
+    def __init__(self, dim=1):
+        super().__init__()
+        self.dim = dim
 
-class NetVLADLoopClosureDetection(object):
+    def forward(self, input):
+        return F.normalize(input, p=2, dim=self.dim)
+
+class ViTLoopClosureDetection(object):
     def __init__(self, params):
         self.params = params
         self.nns = NearestNeighbors()
@@ -41,20 +44,12 @@ class NetVLADLoopClosureDetection(object):
         else:
             self.device = torch.device("cpu")
 
-        encoder_dim = 512
-        encoder = models.vgg16(pretrained=True)
-        # capture only feature part and remove last relu and maxpool
-        layers = list(encoder.features.children())[:-2] 
-        # if using pretrained then only train conv5_1, conv5_2, and conv5_3
-        for l in layers[:-5]: 
-            for p in l.parameters():
-                p.requires_grad = False
-
-        encoder = nn.Sequential(*layers)
+        encoder_dim = 768
+        encoder = timm.create_model('vit_base_patch16_224', pretrained=True)
+        
         self.model = nn.Module() 
         self.model.add_module('encoder', encoder)  
-        net_vlad = netvlad.NetVLAD(num_clusters=64, dim=encoder_dim, vladv2=False)
-        self.model.add_module('pool', net_vlad)
+        self.model.add_module('pool', nn.Sequential(*[L2Norm()]))
 
         self.isParallel = False
         print('=> Number of CUDA devices = ' + str(torch.cuda.device_count()))
@@ -79,9 +74,6 @@ class NetVLADLoopClosureDetection(object):
         self.model.eval()
         with torch.no_grad():
             print('====> Extracting Features')
-            pool_size = encoder_dim
-            pool_size *= 64
-
             self.transform = transforms.Compose([
                                 transforms.Resize(224, interpolation=3),
                                 transforms.CenterCrop(224),
@@ -89,7 +81,6 @@ class NetVLADLoopClosureDetection(object):
                                 transforms.Normalize(IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD),
                             ])  
         
-        self.pca = pickle.load(open(self.params["pca"],'rb'))
         self.counter = 0
         os.system('rm best_matches_netvlad_distances.csv')
         os.system('rm tuples.txt')
@@ -100,18 +91,13 @@ class NetVLADLoopClosureDetection(object):
             input = self.transform(image)
             input = torch.unsqueeze(input, 0)
             input = input.to(self.device)
-            image_encoding = self.model.encoder(input)
+            image_encoding = self.model.encoder.forward_features(input)
             vlad_encoding = self.model.pool(image_encoding) 
 
-            # Compute NetVLAD
-            embedding = vlad_encoding.detach().cpu().numpy()
-
-            # Run PCA transform    
-            reduced_embedding = self.pca.transform(embedding)
-            normalized_embedding = sklearn.preprocessing.normalize(reduced_embedding)
-            output = normalized_embedding[0]
+            # Compute embedding
+            output = vlad_encoding.detach().cpu().numpy()
             
-            del input, image_encoding, vlad_encoding, reduced_embedding, normalized_embedding, image 
+            del input, image_encoding, vlad_encoding, image 
             
         return output
 
