@@ -1,6 +1,5 @@
 <!-- -->
 <launch>
-  <arg name="lcd_min_inbetween_keyframes" default="10"/>
   <arg name="lcd_threshold" default="1.5"/>
   <arg name="lcd_min_inliers" default="6"/>
   <arg name="lcd_technique" default="ViT"/> 
@@ -9,6 +8,8 @@
   <!--arg name="lcd_checkpoint" default="/home/lajoiepy/Documents/projects/SelfSupervisedPlaceRecognition/pytorch-NetVlad/runs/Nov24_23-21-16_vgg16_netvlad-Pit-Baseline/checkpoints/model_best.pth.tar"/-->
   <arg name="lcd_pca" default="/home/lajoiepy/Documents/projects/SelfSupervisedPlaceRecognition/pytorch-NetVlad/pca.pkl"/>
   <arg name="lcd_consider_other_matches" default="false"/>
+  <arg name="lcd_min_inbetween_keyframes" default="5"/>
+  <arg name="lcd_nb_best_matches" default="30"/>
 
   <!-- Choose between depth and stereo, set both to false to do only scan -->      
   <arg name="stereo"                    default="true"/>
@@ -404,6 +405,7 @@
     <node name="loop_closure_detection" pkg="external_loop_closure_detection" type="loop_closure_detection.py" clear_params="$(arg clear_params)" output="$(arg output)" launch-prefix="$(arg launch_prefix)">
       <param name="threshold" type="double" value="$(arg lcd_threshold)"/>
       <param name="min_inbetween_keyframes" type="int" value="$(arg lcd_min_inbetween_keyframes)"/>
+      <param name="nb_best_matches" type="int" value="$(arg lcd_nb_best_matches)"/>
       <param name="technique" type="string" value="$(arg lcd_technique)"/>
       <param name="resume" type="bool" value="$(arg lcd_resume)"/>
       <param name="checkpoint" type="string" value="$(arg lcd_checkpoint)"/>
@@ -413,6 +415,7 @@
     <node name="external_loop_closure_detection" pkg="external_loop_closure_detection" type="external_loop_closure_detection_tuple" clear_params="$(arg clear_params)" output="$(arg output)" launch-prefix="$(arg launch_prefix)">
       <param name="min_inliers" type="int" value="$(arg lcd_min_inliers)"/>
       <param name="consider_other_matches" type="bool" value="$(arg lcd_consider_other_matches)" />
+      <param name="min_inbetween_keyframes" type="int" value="$(arg lcd_min_inbetween_keyframes)"/>
     </node>
   
     <!-- Visualisation RTAB-Map -->

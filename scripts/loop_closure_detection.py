@@ -18,6 +18,7 @@ class LoopClosureDetection(object):
         params = {}
         params['threshold'] = rospy.get_param('~threshold')
         params['min_inbetween_keyframes'] = rospy.get_param('~min_inbetween_keyframes')
+        params['nb_best_matches'] = rospy.get_param('~nb_best_matches')
         params['technique'] = rospy.get_param('~technique')
         if params['technique'].lower() == 'netvlad':
             params['pca'] = rospy.get_param('~pca')

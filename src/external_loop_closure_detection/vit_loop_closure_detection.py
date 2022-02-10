@@ -106,7 +106,7 @@ class ViTLoopClosureDetection(object):
         self.nns.add_item(embedding, id)
 
     def detect(self, embedding, id):
-        kfs, ds = self.nns.search(embedding, k=self.params['min_inbetween_keyframes'])
+        kfs, ds = self.nns.search(embedding, k=self.params['nb_best_matches'])
 
         if len(kfs) > 0 and kfs[0] == id:
             kfs, ds = kfs[1:], ds[1:]
@@ -114,7 +114,6 @@ class ViTLoopClosureDetection(object):
             return None
 
         for kf, d in zip(kfs, ds):
-            #TODO: restablish condition
             if abs(kf - id) < self.params['min_inbetween_keyframes']:
                 continue
 
@@ -126,7 +125,7 @@ class ViTLoopClosureDetection(object):
             if d > self.params['threshold']:
                 continue
     
-            return kf, [i for i in kfs if abs(i - id) >= self.params['min_inbetween_keyframes']]
+            return kf, kfs
         return None, None
 
     def detect_loop_closure_service(self, req):

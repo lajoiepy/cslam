@@ -45,7 +45,8 @@ std::map<int, rtabmap::SensorData> localData;
 class ExternalLoopClosureService
 {
 	public:
-	ExternalLoopClosureService(bool consider_other_matches = false): consider_other_matches_(consider_other_matches){};
+	ExternalLoopClosureService(bool consider_other_matches = false, int min_inbetween_keyframes = 5): 
+		consider_other_matches_(consider_other_matches), min_inbetween_keyframes_(min_inbetween_keyframes) {};
 
 	~ExternalLoopClosureService(){};
 
@@ -73,7 +74,7 @@ class ExternalLoopClosureService
 		{
 			loop_closure_id_ = srv.response.detected_loop_closure_id;
 			best_matches_ = srv.response.best_matches;
-			ROS_DEBUG("Loop Closure Detection service success: %d", ((int) srv.response.is_detected));
+			ROS_WARN("Loop Closure Detection service success: %d", ((int) srv.response.is_detected));
 			return srv.response.is_detected;
 		}
 		else
@@ -99,11 +100,17 @@ class ExternalLoopClosureService
 		return consider_other_matches_;
 	}
 
+	int getMinInBetweenKeyframes() const
+	{
+		return min_inbetween_keyframes_;
+	}
+
 	private:
 	ros::ServiceClient client_;
 	int loop_closure_id_ = 0;
 	std::vector<int> best_matches_;
 	bool consider_other_matches_;
+	int min_inbetween_keyframes_;
 
 };
 
@@ -137,16 +144,19 @@ void extractTuples(const int fromId, const int toId, rtabmap::RegistrationInfo& 
 		// Try next one
 		it++;
 	}
-	ROS_INFO("Failed match found. Tuples= (%d,%d,%d)", fromId, toId, match_id);
-	std::ofstream tuples_file;
-	tuples_file.open ("tuples.txt", std::ios::app);
-	tuples_file << std::to_string(fromId) << " " << std::to_string(toId);
-	for (auto neg_id : neg_ids)
+	if (neg_ids.size() > 0)
 	{
-		tuples_file << " " << std::to_string(neg_id);
+		ROS_INFO("Failed match found. Tuples= (%d,%d,%d)", fromId, toId, match_id);
+		std::ofstream tuples_file;
+		tuples_file.open ("tuples.txt", std::ios::app);
+		tuples_file << std::to_string(fromId) << " " << std::to_string(toId);
+		for (auto neg_id : neg_ids)
+		{
+			tuples_file << " " << std::to_string(neg_id);
+		}
+		tuples_file << "\n";
+		tuples_file.close();
 	}
-	tuples_file << "\n";
-	tuples_file.close();
 }
 
 void mapDataCallback(const rtabmap_ros::MapDataConstPtr & mapDataMsg, const rtabmap_ros::InfoConstPtr & infoMsg)
@@ -162,7 +172,7 @@ void mapDataCallback(const rtabmap_ros::MapDataConstPtr & mapDataMsg, const rtab
 	if(smallMovement || fastMovement)
 	{
 		// The signature has been ignored from rtabmap, don't process it
-		ROS_DEBUG("Ignore keyframe. Small movement=%d, Fast movement=%d", (int)smallMovement, (int)fastMovement);
+		ROS_WARN("Ignore keyframe. Small movement=%d, Fast movement=%d", (int)smallMovement, (int)fastMovement);
 		return;
 	}
 
@@ -188,7 +198,13 @@ void mapDataCallback(const rtabmap_ros::MapDataConstPtr & mapDataMsg, const rtab
 			{
 				int fromId = id;
 				int toId = loopClosureDetector.getBestMatches()[match_candidate];
-				ROS_DEBUG("Compute loop closure between %d and %d", fromId, toId);
+				if (std::abs(toId - fromId) < loopClosureDetector.getMinInBetweenKeyframes())
+				{
+					ROS_WARN("Not enough keyframes between %d and %d", fromId, toId);
+					match_candidate++;
+					continue;
+				}
+				ROS_INFO("Compute loop closure between %d and %d", fromId, toId);
 				if(localData.find(toId) != localData.end())
 				{
 					//Compute transformation
@@ -258,8 +274,12 @@ int main(int argc, char** argv)
 	bool consider_other_matches = false;
 	if (ros::param::has("~consider_other_matches")) {
 		ros::param::get("~consider_other_matches", consider_other_matches);
-		loopClosureDetector = ExternalLoopClosureService(consider_other_matches);
 	}
+	int min_inbetween_keyframes = 10;
+	if (ros::param::has("~min_inbetween_keyframes")) {
+		ros::param::get("~min_inbetween_keyframes", min_inbetween_keyframes);
+	}
+	loopClosureDetector = ExternalLoopClosureService(consider_other_matches, min_inbetween_keyframes);
 	loopClosureDetector.init(nh);
 	
 	rtabmap::ParametersMap params;
