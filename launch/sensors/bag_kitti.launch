@@ -1,10 +1,11 @@
 <launch>
     <arg name="sequence" default="00"/>
     
-    <!--arg name="bag" value="/home/lajoiepy/Documents/datasets/KITTI/data_odometry_color/dataset/kitti_data_odometry_color_sequence_$(arg sequence).bag"/-->
-    <arg name="bag" value="/home/lajoiepy/Documents/datasets/KITTI360/perspective_images/KITTI-360/data_2d_raw/kitti_data_odometry_color_sequence_$(arg sequence).bag"/>
+    <!--arg name="bag" default="/home/lajoiepy/Documents/datasets/KITTI/data_odometry_color/dataset/kitti_data_odometry_color_sequence_$(arg sequence).bag"/-->
+    <arg name="bag" default="/home/lajoiepy/Documents/datasets/KITTI360/perspective_images/KITTI-360/data_2d_raw/kitti_data_odometry_color_sequence_$(arg sequence).bag"/>
+    <arg name="rate" default="1.0"/>
     <node pkg="rosbag" type="play" name="rosbag_play"
-        args="$(arg bag) --clock" />
+        args="$(arg bag) --clock -r $(arg rate)" />
 
      <node pkg="tf2_ros" type="static_transform_publisher" name="kitti_camera_link" args="0 0 0 0 0 0 camera_link camera_gray_left" />       
 </launch>
