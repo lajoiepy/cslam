@@ -105,7 +105,43 @@ ExternalLoopClosureService loopClosureDetector;
 
 rtabmap::RegistrationVis reg;
 
-//bool g_localizationMode = false;
+void extractTuples(const int fromId, const int toId, rtabmap::RegistrationInfo& regInfo, rtabmap::SensorData& tmpFrom)
+{
+	// Find the closest match (VPR-wise) for which we cannot compute a transform
+	std::vector<int> best_matches = loopClosureDetector.getBestMatches();
+	auto it = best_matches.begin();
+	int match_id;
+	std::vector<int> neg_ids;
+	while (it != best_matches.end())
+	{
+		if (*it != toId)
+		{
+			int match_id = *it;
+			// Test this match if we can compute a transform
+			//Compute transformation
+			rtabmap::SensorData tmpTo = localData.at(match_id);
+			tmpFrom.uncompressData();
+			tmpTo.uncompressData();
+			auto t = reg.computeTransformation(tmpFrom, tmpTo, rtabmap::Transform(), &regInfo);
+			if(t.isNull())
+			{
+				neg_ids.push_back(match_id);
+			}
+		}
+		// Try next one
+		it++;
+	}
+	ROS_INFO("Failed match found. Tuples= (%d,%d,%d)", fromId, toId, match_id);
+	std::ofstream tuples_file;
+	tuples_file.open ("tuples.txt", std::ios::app);
+	tuples_file << std::to_string(fromId) << " " << std::to_string(toId);
+	for (auto neg_id : neg_ids)
+	{
+		tuples_file << " " << std::to_string(neg_id);
+	}
+	tuples_file << "\n";
+	tuples_file.close();
+}
 
 void mapDataCallback(const rtabmap_ros::MapDataConstPtr & mapDataMsg, const rtabmap_ros::InfoConstPtr & infoMsg)
 {
@@ -137,17 +173,17 @@ void mapDataCallback(const rtabmap_ros::MapDataConstPtr & mapDataMsg, const rtab
 		int id = signatures.rbegin()->first;
 		const rtabmap::SensorData & s =  signatures.rbegin()->second.sensorData();
 		cv::Mat rgb;
-		//rtabmap::LaserScan scan;
 		s.uncompressDataConst(&rgb, 0/*, &scan*/);
-		//pcl::PointCloud<pcl::PointXYZ>::Ptr cloud = rtabmap::util3d::laserScanToPointCloud(scan, scan.localTransform());
 
 		if(loopClosureDetector.process(rgb, id))
 		{
-			if(loopClosureDetector.getLoopClosureId()>0)
+			bool loop_success = false;
+			int match_candidate = 0;
+			while(match_candidate < loopClosureDetector.getBestMatches().size() && !loop_success)
 			{
 				int fromId = id;
-				int toId = loopClosureDetector.getLoopClosureId();
-				ROS_DEBUG("Detected loop closure between %d and %d", fromId, toId);
+				int toId = loopClosureDetector.getBestMatches()[match_candidate];
+				ROS_DEBUG("Compute loop closure between %d and %d", fromId, toId);
 				if(localData.find(toId) != localData.end())
 				{
 					//Compute transformation
@@ -170,43 +206,15 @@ void mapDataCallback(const rtabmap_ros::MapDataConstPtr & mapDataMsg, const rtab
 						}
 						else
 						{
-							// Find the closest match (NetVLAD-wise) for which we cannot compute a transform
-							std::vector<int> best_matches = loopClosureDetector.getBestMatches();
-							auto it = std::find(best_matches.begin(), best_matches.end(), toId)++;
-							int match_id;
-							std::vector<int> neg_ids;
-							while (it != best_matches.end())
-							{
-								int match_id = *it;
-								// Test this match if we can compute a transform
-								//Compute transformation
-								tmpTo = localData.at(match_id);
-								tmpFrom.uncompressData();
-								tmpTo.uncompressData();
-								t = reg.computeTransformation(tmpFrom, tmpTo, rtabmap::Transform(), &regInfo);
-								if(t.isNull())
-								{
-									neg_ids.push_back(match_id);
-								}
-								// Try next one
-								it++;
-							}
-							ROS_INFO("Failed match found. Tuples= (%d,%d,%d)", fromId, toId, match_id);
-							std::ofstream tuples_file;
-							tuples_file.open ("tuples.txt", std::ios::app);
-							tuples_file << std::to_string(fromId) << " " << std::to_string(toId);
-							for (auto neg_id : neg_ids)
-							{
-								tuples_file << " " << std::to_string(neg_id);
-							}
-							tuples_file << "\n";
-							tuples_file.close();
+							extractTuples(fromId, toId, regInfo, tmpFrom);
+							loop_success = true;
 						}
 					}
 					else
 					{
 						ROS_WARN("Could not compute transformation between %d and %d: %s", fromId, toId, regInfo.rejectedMsg.c_str());
 					}
+					match_candidate++;
 				}
 				else
 				{
