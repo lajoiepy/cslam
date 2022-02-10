@@ -1,12 +1,13 @@
 <!-- -->
 <launch>
-  <arg name="min_inbetween_keyframes" default="20"/>
-  <arg name="threshold" default="1.5"/>
-  <arg name="min_inliers" default="6"/>
-  <!--arg name="checkpoint" default="/home/lajoiepy/Documents/projects/SelfSupervisedPlaceRecognition/pytorch-NetVlad/runs/Nov24_23-21-16_vgg16_netvlad-Pit-Baseline/checkpoints/model_best.pth.tar"/-->
-  <arg name="checkpoint" default="/home/lajoiepy/Documents/projects/SelfSupervisedPlaceRecognition/pytorch-NetVlad/runs/Feb09_10-29-55_vgg16_netvlad/checkpoints/model_refined.pth.tar"/>
-  <arg name="pca" default="/home/lajoiepy/Documents/projects/SelfSupervisedPlaceRecognition/pytorch-NetVlad/pca.pkl"/>
-     
+  <arg name="lcd_min_inbetween_keyframes" default="10"/>
+  <arg name="lcd_threshold" default="1.5"/>
+  <arg name="lcd_min_inliers" default="6"/>
+  <arg name="lcd_technique" default="ViT"/> 
+  <arg name="lcd_resume" default="false"/> 
+  <arg name="lcd_checkpoint" default="/home/lajoiepy/Documents/projects/SelfSupervisedPlaceRecognition/pytorch-NetVlad/runs/Nov24_23-21-16_vgg16_netvlad-Pit-Baseline/checkpoints/model_best.pth.tar"/>
+  <arg name="lcd_pca" default="/home/lajoiepy/Documents/projects/SelfSupervisedPlaceRecognition/pytorch-NetVlad/pca.pkl"/>
+      
   <!-- Choose between depth and stereo, set both to false to do only scan -->      
   <arg name="stereo"                    default="true"/>
   <arg     if="$(arg stereo)" name="depth"  default="false"/>
@@ -399,14 +400,16 @@
 
     <!-- Loop Closure Detection nodes -->
     <node name="loop_closure_detection" pkg="external_loop_closure_detection" type="loop_closure_detection.py" clear_params="$(arg clear_params)" output="$(arg output)" launch-prefix="$(arg launch_prefix)">
-      <param name="threshold" type="double" value="$(arg threshold)"/>
-      <param name="min_inbetween_keyframes" type="int" value="$(arg min_inbetween_keyframes)"/>
-      <param name="checkpoint" type="string" value="$(arg checkpoint)"/>
-      <param name="pca" type="string" value="$(arg pca)"/>
+      <param name="threshold" type="double" value="$(arg lcd_threshold)"/>
+      <param name="min_inbetween_keyframes" type="int" value="$(arg lcd_min_inbetween_keyframes)"/>
+      <param name="technique" type="string" value="$(arg lcd_technique)"/>
+      <param name="resume" type="bool" value="$(arg lcd_resume)"/>
+      <param name="checkpoint" type="string" value="$(arg lcd_checkpoint)"/>
+      <param name="pca" type="string" value="$(arg lcd_pca)"/>
     </node>
     
     <node name="external_loop_closure_detection" pkg="external_loop_closure_detection" type="external_loop_closure_detection_tuple" clear_params="$(arg clear_params)" output="$(arg output)" launch-prefix="$(arg launch_prefix)">
-      <param name="min_inliers" type="int" value="$(arg min_inliers)"/>
+      <param name="min_inliers" type="int" value="$(arg lcd_min_inliers)"/>
     </node>
   
     <!-- Visualisation RTAB-Map -->

@@ -58,19 +58,20 @@ class ViTLoopClosureDetection(object):
             self.model.pool = nn.DataParallel(self.model.pool)
             self.isParallel = True     
 
-        resume_ckpt = self.params['checkpoint']
-        if isfile(resume_ckpt):
-            print("=> loading checkpoint '{}'".format(resume_ckpt))
-            checkpoint = torch.load(resume_ckpt, map_location=lambda storage, loc: storage)
-            start_epoch = checkpoint['epoch']
-            best_metric = checkpoint['best_score']
-            self.model.load_state_dict(checkpoint['state_dict'])
-            self.model = self.model.to(self.device)
-            print("=> loaded checkpoint '{}' (epoch {})"
-                  .format(resume_ckpt, checkpoint['epoch']))   
-        else: 
-            print("Error: Checkpoint path is incorrect")
+        if self.params['resume']:
+            resume_ckpt = self.params['checkpoint']
+            if isfile(resume_ckpt):
+                print("=> loading checkpoint '{}'".format(resume_ckpt))
+                checkpoint = torch.load(resume_ckpt, map_location=lambda storage, loc: storage)
+                start_epoch = checkpoint['epoch']
+                best_metric = checkpoint['best_score']
+                self.model.load_state_dict(checkpoint['state_dict'])
+                print("=> loaded checkpoint '{}' (epoch {})"
+                    .format(resume_ckpt, checkpoint['epoch']))   
+            else: 
+                print("Error: Checkpoint path is incorrect")
 
+        self.model = self.model.to(self.device)
         self.model.eval()
         with torch.no_grad():
             print('====> Extracting Features')
@@ -92,13 +93,13 @@ class ViTLoopClosureDetection(object):
             input = torch.unsqueeze(input, 0)
             input = input.to(self.device)
             image_encoding = self.model.encoder.forward_features(input)
-            vlad_encoding = self.model.pool(image_encoding) 
+            normalized_embedding = self.model.pool(image_encoding) 
 
             # Compute embedding
-            output = vlad_encoding.detach().cpu().numpy()
+            output = normalized_embedding.detach().cpu().numpy()[0]
             
-            del input, image_encoding, vlad_encoding, image 
-            
+            del input, image_encoding, normalized_embedding, image 
+             
         return output
 
     def add_keyframe(self, embedding, id):

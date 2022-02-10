@@ -8,6 +8,7 @@ from sensor_msgs.msg import Image
 
 from external_loop_closure_detection.srv import DetectLoopClosure, DetectLoopClosureResponse
 from external_loop_closure_detection.netvlad_loop_closure_detection import NetVLADLoopClosureDetection
+from external_loop_closure_detection.vit_loop_closure_detection import ViTLoopClosureDetection
 
 class LoopClosureDetection(object):
 
@@ -17,9 +18,11 @@ class LoopClosureDetection(object):
         params = {}
         params['threshold'] = rospy.get_param('~threshold')
         params['min_inbetween_keyframes'] = rospy.get_param('~min_inbetween_keyframes')
-        params['checkpoint'] = rospy.get_param('~checkpoint')
-        params['pca'] = rospy.get_param('~pca')
         params['technique'] = rospy.get_param('~technique')
+        if params['technique'].lower() == 'netvlad':
+            params['pca'] = rospy.get_param('~pca')
+        params['resume'] = rospy.get_param('~resume', False)
+        params['checkpoint'] = rospy.get_param('~checkpoint', 'none')
 
         if params['technique'].lower() == 'netvlad':
             self.lcd = NetVLADLoopClosureDetection(params)
