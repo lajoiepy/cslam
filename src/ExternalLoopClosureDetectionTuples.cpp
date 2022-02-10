@@ -45,7 +45,7 @@ std::map<int, rtabmap::SensorData> localData;
 class ExternalLoopClosureService
 {
 	public:
-	ExternalLoopClosureService(){};
+	ExternalLoopClosureService(bool consider_other_matches = false): consider_other_matches_(consider_other_matches){};
 
 	~ExternalLoopClosureService(){};
 
@@ -94,10 +94,16 @@ class ExternalLoopClosureService
 		return best_matches_;
 	}
 
+	bool getConsiderOtherMatches() const
+	{
+		return consider_other_matches_;
+	}
+
 	private:
 	ros::ServiceClient client_;
 	int loop_closure_id_ = 0;
 	std::vector<int> best_matches_;
+	bool consider_other_matches_;
 
 };
 
@@ -177,9 +183,8 @@ void mapDataCallback(const rtabmap_ros::MapDataConstPtr & mapDataMsg, const rtab
 
 		if(loopClosureDetector.process(rgb, id))
 		{
-			bool loop_success = false;
 			int match_candidate = 0;
-			while(match_candidate < loopClosureDetector.getBestMatches().size() && !loop_success)
+			while(match_candidate < loopClosureDetector.getBestMatches().size())
 			{
 				int fromId = id;
 				int toId = loopClosureDetector.getBestMatches()[match_candidate];
@@ -207,18 +212,24 @@ void mapDataCallback(const rtabmap_ros::MapDataConstPtr & mapDataMsg, const rtab
 						else
 						{
 							extractTuples(fromId, toId, regInfo, tmpFrom);
-							loop_success = true;
+							break;
 						}
 					}
 					else
 					{
 						ROS_WARN("Could not compute transformation between %d and %d: %s", fromId, toId, regInfo.rejectedMsg.c_str());
+						
 					}
 					match_candidate++;
 				}
 				else
 				{
 					ROS_WARN("Could not compute transformation between %d and %d because node data %d is not in cache.", fromId, toId, toId);
+					break;
+				}
+				if (!loopClosureDetector.getConsiderOtherMatches())
+				{
+					break;
 				}
 			}
 		}
@@ -239,13 +250,18 @@ int main(int argc, char** argv)
 	ros::NodeHandle nh;
 	ros::NodeHandle pnh("~");
 
-	loopClosureDetector.init(nh);
-
 	// Registration params
 	int min_inliers = 20;
 	if (ros::param::has("~min_inliers")) {
 		ros::param::get("~min_inliers", min_inliers);
 	}
+	bool consider_other_matches = false;
+	if (ros::param::has("~consider_other_matches")) {
+		ros::param::get("~consider_other_matches", consider_other_matches);
+		loopClosureDetector = ExternalLoopClosureService(consider_other_matches);
+	}
+	loopClosureDetector.init(nh);
+	
 	rtabmap::ParametersMap params;
 	params.insert(rtabmap::ParametersPair(rtabmap::Parameters::kVisMinInliers(), std::to_string(min_inliers)));
 	reg.parseParameters(params);

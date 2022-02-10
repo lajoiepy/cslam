@@ -7,7 +7,8 @@
   <arg name="lcd_resume" default="false"/> 
   <arg name="lcd_checkpoint" default="/home/lajoiepy/Documents/projects/SelfSupervisedPlaceRecognition/pytorch-NetVlad/runs/Nov24_23-21-16_vgg16_netvlad-Pit-Baseline/checkpoints/model_best.pth.tar"/>
   <arg name="lcd_pca" default="/home/lajoiepy/Documents/projects/SelfSupervisedPlaceRecognition/pytorch-NetVlad/pca.pkl"/>
-     
+  <arg name="lcd_consider_other_matches" default="false"/>
+
   <!-- Choose between depth and stereo, set both to false to do only scan -->      
   <arg name="stereo"                    default="false"/>
   <arg     if="$(arg stereo)" name="depth"  default="false"/>
@@ -408,6 +409,7 @@
     
     <node name="external_loop_closure_detection" pkg="external_loop_closure_detection" type="external_loop_detection" clear_params="$(arg clear_params)" output="$(arg output)" launch-prefix="$(arg launch_prefix)">
       <param name="min_inliers" type="int" value="$(arg lcd_min_inliers)"/>
+      <param name="consider_other_matches" type="bool" value="$(arg lcd_consider_other_matches)" />
     </node>
   
     <!-- Visualisation RTAB-Map -->

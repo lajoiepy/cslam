@@ -139,7 +139,7 @@ class NetVLADLoopClosureDetection(object):
             if d > self.params['threshold']:
                 continue
     
-            return kf, kfs
+            return kf, [i for i in kfs if abs(i - id) >= self.params['min_inbetween_keyframes']]
         return None, None
 
     def detect_loop_closure_service(self, req):

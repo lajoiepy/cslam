@@ -118,7 +118,7 @@ class ViTLoopClosureDetection(object):
             if abs(kf - id) < self.params['min_inbetween_keyframes']:
                 continue
 
-            rospy.loginfo("Match: id0= " + str(kf) + ", id1= " + str(id) + ", distance= " + str(d))
+            rospy.loginfo("Match: id0= " + str(id) + ", id1= " + str(kf) + ", distance= " + str(d))
             f = open("best_matches_distances.csv", "a")
             f.write(str(id)+","+str(kf) +","+str(d)+'\n')
             f.close()
@@ -126,7 +126,7 @@ class ViTLoopClosureDetection(object):
             if d > self.params['threshold']:
                 continue
     
-            return kf, kfs
+            return kf, [i for i in kfs if abs(i - id) >= self.params['min_inbetween_keyframes']]
         return None, None
 
     def detect_loop_closure_service(self, req):
