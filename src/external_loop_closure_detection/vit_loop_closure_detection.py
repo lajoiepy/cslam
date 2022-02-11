@@ -76,12 +76,12 @@ class ViTLoopClosureDetection(object):
         with torch.no_grad():
             print('====> Extracting Features')
             self.transform = transforms.Compose([
+                                transforms.CenterCrop(self.params["crop_size"]),
                                 transforms.Resize(224, interpolation=3),
-                                transforms.CenterCrop(224),
                                 transforms.ToTensor(),
                                 transforms.Normalize(IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD),
-                            ])  
-        
+                            ])
+
         self.counter = 0
         os.system('rm best_matches_netvlad_distances.csv')
         os.system('rm tuples.txt')

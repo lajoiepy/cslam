@@ -9,6 +9,7 @@
   <arg name="lcd_consider_other_matches" default="false"/>
   <arg name="lcd_min_inbetween_keyframes" default="5"/>
   <arg name="lcd_nb_best_matches" default="20"/>
+  <arg name="lcd_crop_size" default="376"/>
 
   <!-- Choose between depth and stereo, set both to false to do only scan -->      
   <arg name="stereo"                    default="false"/>
@@ -407,6 +408,7 @@
       <param name="resume" type="bool" value="$(arg lcd_resume)"/>
       <param name="checkpoint" type="string" value="$(arg lcd_checkpoint)"/>
       <param name="pca" type="string" value="$(arg lcd_pca)"/>
+      <param name="crop_size" type="int" value="$(arg lcd_crop_size)"/>
     </node>
     
     <node name="external_loop_closure_detection" pkg="external_loop_closure_detection" type="external_loop_detection" clear_params="$(arg clear_params)" output="$(arg output)" launch-prefix="$(arg launch_prefix)">

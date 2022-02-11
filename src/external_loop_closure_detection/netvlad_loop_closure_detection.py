@@ -83,11 +83,11 @@ class NetVLADLoopClosureDetection(object):
             pool_size *= 64
 
             self.transform = transforms.Compose([
+                                transforms.CenterCrop(self.params["crop_size"]),
                                 transforms.Resize(224, interpolation=3),
-                                transforms.CenterCrop(224),
                                 transforms.ToTensor(),
                                 transforms.Normalize(IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD),
-                            ])  
+                            ])
         
         self.pca = pickle.load(open(self.params["pca"],'rb'))
         self.counter = 0

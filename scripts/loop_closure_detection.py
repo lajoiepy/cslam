@@ -24,6 +24,7 @@ class LoopClosureDetection(object):
             params['pca'] = rospy.get_param('~pca')
         params['resume'] = rospy.get_param('~resume', False)
         params['checkpoint'] = rospy.get_param('~checkpoint', 'none')
+        params['crop_size'] = rospy.get_param('~crop_size', 376)
 
         if params['technique'].lower() == 'netvlad':
             self.lcd = NetVLADLoopClosureDetection(params)
