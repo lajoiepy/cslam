@@ -83,7 +83,7 @@ class ViTLoopClosureDetection(object):
                             ])
 
         self.counter = 0
-        os.system('rm best_matches_netvlad_distances.csv')
+        os.system('rm best_matches_distances.csv')
         os.system('rm tuples.txt')
 
     def compute_embedding(self, keyframe):
