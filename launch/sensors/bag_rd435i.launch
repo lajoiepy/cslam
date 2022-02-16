@@ -1,12 +1,14 @@
 <launch>
-    <param name="use_sim_time" value="true"/>
-    <arg name="bag" default="/home/lajoiepy/Documents/datasets/Poly4eCorridorsRealsense/16Feb2022/Train1_fixed.bag"/>
-    <arg name="rate" default="1.0"/>
-    <node pkg="image_transport" type="republish" name="decompress_color" 
+    <!--param name="unregister_timeout" value="100000"/-->
+    <!--param name="use_sim_time" value="true"/-->
+    <arg name="bag" default="/home/lajoiepy/Documents/datasets/Poly4eCorridorsRealsense/16Feb2022/Train1_decompressed.bag"/>
+    <arg name="rate" default="0.1"/>
+    <!--node pkg="image_transport" type="republish" name="decompress_color" 
         args="compressed in:=/camera/color/image_raw raw out:=/camera/color/image_raw"/>
     <node pkg="image_transport" type="republish" name="decompress_depth" 
-        args="compressedDepth in:=/camera/aligned_depth_to_color/image_raw raw out:=/camera/aligned_depth_to_color/image_raw"/>
+        args="compressedDepth in:=/camera/aligned_depth_to_color/image_raw raw out:=/camera/aligned_depth_to_color/image_raw"/-->
     <node pkg="rosbag" type="play" name="rosbag_play"
         args="$(arg bag) --clock -r $(arg rate)" launch-prefix="bash -c 'sleep 1.0; $0 $@' "/>
-    <node pkg="tf" type="static_transform_publisher" name="camera_imu" args="-0.03 0.007 0.016 0.5 -0.5 0.5 0.5 /camera_imu_optical_frame /camera_link 10" />
+    <node pkg="tf2_ros" type="static_transform_publisher" name="camera_imu_tf" args="-0.016 -0.03 0.007 -0.5 0.5 -0.5 0.5 camera_link camera_imu_optical_frame" />
+    <node pkg="tf2_ros" type="static_transform_publisher" name="camera_color_tf" args="0.0 0.0 0.0 0.0 0.0 0.0 1.0 /camera_imu_optical_frame /camera_color_optical_frame" />
 </launch>
