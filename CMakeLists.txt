@@ -1,71 +1,78 @@
-cmake_minimum_required(VERSION 2.8.3)
+cmake_minimum_required(VERSION 3.5)
 project(external_loop_closure_detection)
 
+# Default to C99
+if(NOT CMAKE_C_STANDARD)
+  set(CMAKE_C_STANDARD 99)
+endif()
 
-## Find catkin macros and libraries
-## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
-## is used, also find other catkin packages
-find_package(catkin REQUIRED COMPONENTS
-             cv_bridge roscpp rospy sensor_msgs std_msgs std_srvs nav_msgs geometry_msgs
-             image_transport tf tf_conversions tf2_ros 
-             nodelet message_filters class_loader rosgraph_msgs
-             genmsg stereo_msgs image_geometry pluginlib
-)
+# Default to C++14
+if(NOT CMAKE_CXX_STANDARD)
+  set(CMAKE_CXX_STANDARD 14)
+endif()
 
-# Optional components
+if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+  add_compile_options(-Wall -Wextra -Wpedantic -march=native)
+endif()
+
+# find dependencies
+find_package(ament_cmake REQUIRED)
+find_package(builtin_interfaces REQUIRED)
+find_package(rosidl_default_generators REQUIRED)
+find_package(rclcpp REQUIRED)
+find_package(rclcpp_components REQUIRED)
+# uncomment the following section in order to fill in
+# further dependencies manually.
+# find_package(<dependency> REQUIRED)
+find_package(cv_bridge REQUIRED)
+find_package(sensor_msgs REQUIRED)
+find_package(std_msgs REQUIRED)
+find_package(std_srvs REQUIRED)
+find_package(nav_msgs REQUIRED)
+find_package(nav2_msgs REQUIRED)
+find_package(stereo_msgs REQUIRED)
+find_package(geometry_msgs REQUIRED)
+find_package(visualization_msgs REQUIRED)
+find_package(image_transport REQUIRED)
+find_package(tf2 REQUIRED)
+find_package(tf2_eigen REQUIRED)
+find_package(tf2_ros REQUIRED)
+find_package(tf2_geometry_msgs REQUIRED)
+find_package(pcl_ros REQUIRED)
+find_package(pcl_msgs REQUIRED)
+find_package(perception_pcl REQUIRED)
+#find_package(eigen_conversions REQUIRED)
+find_package(laser_geometry REQUIRED)
+find_package(pcl_conversions REQUIRED)
+#find_package(pcl_ros REQUIRED)
+#find_package(dynamic_reconfigure REQUIRED)
+find_package(message_filters REQUIRED)
+find_package(class_loader REQUIRED)
+#find_package(rosgraph_msgs REQUIRED)
+find_package(image_geometry REQUIRED)
+#find_package(pluginlib REQUIRED)
 find_package(rtabmap_ros REQUIRED)
 
-## System dependencies are found with CMake's conventions
-# find_package(Boost REQUIRED COMPONENTS system)
-find_package(RTABMap REQUIRED)
+# Optional components
+#find_package(costmap_2d)
+find_package(octomap_msgs)
+#find_package(apriltag_msgs)
+#find_package(find_object_2d)
+#find_package(fiducial_msgs)
 
-find_package(OpenCV REQUIRED)
+find_package(RTABMap 0.20.18 REQUIRED)
+
+# kinetic issue, rtabmap now requires at least c++11
+include(CheckCXXCompilerFlag)
+CHECK_CXX_COMPILER_FLAG("-std=c++14" COMPILER_SUPPORTS_CXX14)
+set(CMAKE_CXX_STANDARD 14)
 
 #######################################
 ## Declare ROS messages and services ##
 #######################################
 
-## Generate messages in the 'msg' folder
-# add_message_files(
-#    FILES
-# )
-
-## Generate services in the 'srv' folder
- add_service_files(
-   FILES
-   DetectLoopClosure.srv
- )
-
-catkin_python_setup()
-
-## Generate added messages and services with any dependencies listed here
-generate_messages(
-   DEPENDENCIES
-   std_msgs
-   geometry_msgs
-   sensor_msgs
-)
-
-
-###################################
-## catkin specific configuration ##
-###################################
-## The catkin_package macro generates cmake config files for your package
-## Declare things to be passed to dependent projects
-## INCLUDE_DIRS: uncomment this if you package contains header files
-## LIBRARIES: libraries you create in this project that dependent projects also need
-## CATKIN_DEPENDS: catkin_packages dependent projects also need
-## DEPENDS: system dependencies of this project that dependent projects also need
-
-catkin_package(
-  INCLUDE_DIRS #include
-  LIBRARIES external_loop_closure_detection
-  CATKIN_DEPENDS cv_bridge roscpp rospy sensor_msgs std_msgs std_srvs nav_msgs geometry_msgs
-                 image_transport tf tf_conversions tf2_ros 
-                 nodelet message_filters class_loader rosgraph_msgs
-                 stereo_msgs image_geometry ${optional_dependencies}
-  DEPENDS RTABMap OpenCV rtabmap_ros
-)
+#find_package(Boost REQUIRED COMPONENTS system) # dependencies from PCL
+find_package(PCL 1.7 REQUIRED QUIET COMPONENTS common io kdtree search surface filters registration sample_consensus segmentation) #This crashes idl generation if all components are found?! see https://github.com/ros2/rosidl/issues/402#issuecomment-565586908
 
 ###########
 ## Build ##
@@ -75,47 +82,79 @@ catkin_package(
 ## Your package locations should be listed before other locations
 # include_directories(include)
 include_directories(
-  #${CMAKE_CURRENT_SOURCE_DIR}/include
+#  ${CMAKE_CURRENT_SOURCE_DIR}/include
   ${RTABMap_INCLUDE_DIRS}
-  ${rtabmap_ros_INCLUDE_DIRS}
-  ${OpenCV_INCLUDE_DIRS}
   ${PCL_INCLUDE_DIRS}
-  ${catkin_INCLUDE_DIRS}
 )
 
 # libraries
 SET(Libraries
-   ${OpenCV_LIBRARIES}
-   ${PCL_LIBRARIES}
-   ${catkin_LIBRARIES}
-   ${RTABMap_LIBRARIES}
-   ${rtabmap_ros_LIBRARIES}
+   pcl_conversions
+   cv_bridge
+   rclcpp
+   rclcpp_components
+   sensor_msgs
+   std_msgs
+   nav_msgs
+   nav2_msgs
+   geometry_msgs
+   image_transport
+   tf2
+   tf2_eigen
+   tf2_ros
+   laser_geometry
+   message_filters
+   class_loader
+   visualization_msgs
+   image_geometry
+   stereo_msgs
+   tf2_geometry_msgs
+   pcl_ros
+   pcl_msgs
+   perception_pcl
+   rtabmap_ros
 )
+
+############################
+## Declare a cpp library
+############################
+
+find_package(cslam_interfaces REQUIRED)
 
 add_executable(external_loop_closure_detection src/ExternalLoopClosureDetection.cpp)
-target_link_libraries(external_loop_closure_detection ${Libraries})
+add_dependencies(external_loop_closure_detection external_loop_closure_detection)
+ament_target_dependencies(external_loop_closure_detection ${Libraries} cslam_interfaces)
 set_target_properties(external_loop_closure_detection PROPERTIES OUTPUT_NAME "external_loop_closure_detection")
 
-add_executable(external_loop_closure_detection_tuple src/ExternalLoopClosureDetectionTuples.cpp)
-target_link_libraries(external_loop_closure_detection_tuple ${Libraries})
-set_target_properties(external_loop_closure_detection_tuple PROPERTIES OUTPUT_NAME "external_loop_closure_detection_tuple")
+# Only required when using messages built from the same package
+# https://index.ros.org/doc/ros2/Tutorials/Rosidl-Tutorial/
+get_default_rmw_implementation(rmw_implementation)
+find_package("${rmw_implementation}" REQUIRED)
+get_rmw_typesupport(typesupport_impls "${rmw_implementation}" LANGUAGE "cpp")
 
-catkin_install_python(PROGRAMS
-  scripts/loop_closure_detection.py
-  src/external_loop_closure_detection/nearest_neighbors.py
-  src/external_loop_closure_detection/netvlad_loop_closure_detection.py
-  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+## Mark cpp header files for installation
+install(DIRECTORY include/${PROJECT_NAME}/
+   DESTINATION include/${PROJECT_NAME}
+   FILES_MATCHING PATTERN "*.h"
+   PATTERN ".svn" EXCLUDE
 )
 
-## Mark executables and/or libraries for installation
-install(TARGETS 
-   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+install(DIRECTORY 
+   launch 
+   DESTINATION share/${PROJECT_NAME}/
 )
 
-## Mark other files for installation (e.g. launch and bag files, etc.)
-install(FILES
-   launch/external_loop_closure_detection.launch
-   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/launch
+# Install nodes
+install(
+  TARGETS external_loop_closure_detection
+  DESTINATION lib/${PROJECT_NAME}
 )
+
+# Install Python modules
+ament_python_install_package(${PROJECT_NAME})
+
+install(PROGRAMS 
+scripts/loop_closure_detection.py 
+DESTINATION lib/${PROJECT_NAME})
+
+ament_package()
