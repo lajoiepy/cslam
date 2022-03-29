@@ -83,6 +83,7 @@ def launch_setup(context, *args, **kwargs):
                 "min_inliers": LaunchConfiguration('lcd_min_inliers'),
                 "consider_other_matches": LaunchConfiguration('lcd_consider_other_matches'),
                 "min_inbetween_keyframes": LaunchConfiguration('lcd_min_inbetween_keyframes')}],
+            prefix=LaunchConfiguration('launch_prefix'),
             namespace=LaunchConfiguration('namespace')),
 
         # Relays RGB-Depth
@@ -413,7 +414,7 @@ def generate_launch_description():
         DeclareLaunchArgument('odom_frame_id',  default_value='',                   description='If set, TF is used to get odometry instead of the topic.'),
         DeclareLaunchArgument('map_frame_id',   default_value='map',                description='Output map frame id (TF).'),
         DeclareLaunchArgument('publish_tf_map', default_value='true',               description='Publish TF between map and odomerty.'),
-        DeclareLaunchArgument('namespace',      default_value='rtabmap',            description=''),
+        DeclareLaunchArgument('namespace',      default_value='r0',            description=''),
         DeclareLaunchArgument('database_path',  default_value='~/.ros/rtabmap.db',  description='Where is the map saved/loaded.'),
         DeclareLaunchArgument('queue_size',     default_value='10',                 description=''),
         DeclareLaunchArgument('qos',            default_value='2',                  description='General QoS used for sensor input data: 0=system default, 1=Reliable, 2=Best Effort.'),
