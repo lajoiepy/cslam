@@ -40,6 +40,7 @@
   <build_depend>message_filters</build_depend>
   <build_depend>class_loader</build_depend>
   <build_depend>rtabmap</build_depend>
+  <build_depend>rtabmap_ros</build_depend>
   <build_depend>octomap</build_depend>
   <build_depend>octomap_msgs</build_depend>
   <build_depend>image_geometry</build_depend>
@@ -73,6 +74,7 @@
   <exec_depend>message_filters</exec_depend>
   <exec_depend>class_loader</exec_depend>
   <exec_depend>rtabmap</exec_depend>
+  <exec_depend>rtabmap_ros</exec_depend>
   <exec_depend>octomap</exec_depend>
   <exec_depend>octomap_msgs</exec_depend>
   <exec_depend>image_geometry</exec_depend>
@@ -88,8 +90,8 @@
   <depend>pcl_ros</depend>
   <depend>pcl_msgs</depend>
   <depend>perception_pcl</depend>
-  <depend>rtabmap_ros</depend>
-  <depend>cslam_interfaces</depend>
+  <depend>cslam_utils</depend>
+  <depend>cslam_loop_detection</depend>
   
   <export>
 	<build_type>ament_cmake</build_type>

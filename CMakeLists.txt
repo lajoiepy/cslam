@@ -12,7 +12,7 @@ if(NOT CMAKE_CXX_STANDARD)
 endif()
 
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-  add_compile_options(-Wall -Wextra -Wpedantic -march=native)
+  add_compile_options(-Wall -Wextra -Wpedantic)
 endif()
 
 # find dependencies
@@ -51,7 +51,7 @@ find_package(class_loader REQUIRED)
 #find_package(rosgraph_msgs REQUIRED)
 find_package(image_geometry REQUIRED)
 #find_package(pluginlib REQUIRED)
-find_package(rtabmap_ros REQUIRED)
+find_package(rtabmap_ros 0.20.18 REQUIRED)
 
 # Optional components
 #find_package(costmap_2d)
@@ -82,8 +82,9 @@ find_package(PCL 1.7 REQUIRED QUIET COMPONENTS common io kdtree search surface f
 ## Your package locations should be listed before other locations
 # include_directories(include)
 include_directories(
-#  ${CMAKE_CURRENT_SOURCE_DIR}/include
+  ${CMAKE_CURRENT_SOURCE_DIR}/include
   ${RTABMap_INCLUDE_DIRS}
+  ${rtabmap_ros_INCLUDE_DIRS}
   ${PCL_INCLUDE_DIRS}
 )
 
@@ -112,6 +113,7 @@ SET(Libraries
    pcl_ros
    pcl_msgs
    perception_pcl
+   RTABMap
    rtabmap_ros
 )
 
@@ -119,12 +121,18 @@ SET(Libraries
 ## Declare a cpp library
 ############################
 
-find_package(cslam_interfaces REQUIRED)
+find_package(cslam_utils REQUIRED)
+find_package(cslam_loop_detection REQUIRED)
 
-add_executable(external_loop_closure_detection src/ExternalLoopClosureDetection.cpp)
-add_dependencies(external_loop_closure_detection external_loop_closure_detection)
-ament_target_dependencies(external_loop_closure_detection ${Libraries} cslam_interfaces)
+add_executable(external_loop_closure_detection src/ExternalLoopClosureDetection.cpp src/MsgConversion.cpp)
+add_dependencies(external_loop_closure_detection external_loop_closure_detection ${${PROJECT_NAME}_EXPORTED_TARGETS})
+ament_target_dependencies(external_loop_closure_detection ${Libraries} cslam_utils cslam_loop_detection)
 set_target_properties(external_loop_closure_detection PROPERTIES OUTPUT_NAME "external_loop_closure_detection")
+
+#add_executable(rtabmap_external_loop_detectionexample src/ExternalLoopDetectionExample.cpp)
+#add_dependencies(rtabmap_external_loop_detectionexample ${${PROJECT_NAME}_EXPORTED_TARGETS})
+#ament_target_dependencies(rtabmap_external_loop_detectionexample ${Libraries} rtabmap_common)
+#set_target_properties(rtabmap_external_loop_detectionexample PROPERTIES OUTPUT_NAME "external_loop_detection_example")
 
 # Only required when using messages built from the same package
 # https://index.ros.org/doc/ros2/Tutorials/Rosidl-Tutorial/

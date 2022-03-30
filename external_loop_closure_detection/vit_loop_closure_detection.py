@@ -23,7 +23,7 @@ from timm.data.constants import IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD
 
 from external_loop_closure_detection.nearest_neighbors import NearestNeighbors
 
-from cslam_interfaces.srv import DetectLoopClosure
+from cslam_loop_detection.srv import DetectLoopClosure
 
 class L2Norm(nn.Module):
     def __init__(self, dim=1):
@@ -34,8 +34,9 @@ class L2Norm(nn.Module):
         return F.normalize(input, p=2, dim=self.dim)
 
 class ViTLoopClosureDetection(object):
-    def __init__(self, params):
+    def __init__(self, params, node):
         self.params = params
+        self.node = node
         self.nns = NearestNeighbors()
 
         if torch.cuda.is_available():
@@ -51,7 +52,7 @@ class ViTLoopClosureDetection(object):
         self.model.add_module('pool', nn.Sequential(*[L2Norm()]))
 
         self.isParallel = False
-        print('=> Number of CUDA devices = ' + str(torch.cuda.device_count()))
+        self.node.get_logger().info('=> Number of CUDA devices = ' + str(torch.cuda.device_count()))
         if torch.cuda.device_count() > 1:
             self.model.encoder = nn.DataParallel(self.model.encoder)
             self.model.pool = nn.DataParallel(self.model.pool)
@@ -60,20 +61,20 @@ class ViTLoopClosureDetection(object):
         if self.params['resume']:
             resume_ckpt = self.params['checkpoint']
             if isfile(resume_ckpt):
-                print("=> loading checkpoint '{}'".format(resume_ckpt))
+                self.node.get_logger().info("=> loading checkpoint '{}'".format(resume_ckpt))
                 checkpoint = torch.load(resume_ckpt, map_location=lambda storage, loc: storage)
                 start_epoch = checkpoint['epoch']
                 best_metric = checkpoint['best_score']
                 self.model.load_state_dict(checkpoint['state_dict'])
-                print("=> loaded checkpoint '{}' (epoch {})"
+                self.node.get_logger().info("=> loaded checkpoint '{}' (epoch {})"
                     .format(resume_ckpt, checkpoint['epoch']))   
             else: 
-                print("Error: Checkpoint path is incorrect")
+                self.node.get_logger().info("Error: Checkpoint path is incorrect")
 
         self.model = self.model.to(self.device)
         self.model.eval()
         with torch.no_grad():
-            print('====> Extracting Features')
+            self.node.get_logger().info('====> Extracting Features')
             self.transform = transforms.Compose([
                                 transforms.CenterCrop(self.params["crop_size"]),
                                 transforms.Resize(224, interpolation=3),
@@ -116,7 +117,7 @@ class ViTLoopClosureDetection(object):
             if abs(kf - id) < self.params['min_inbetween_keyframes']:
                 continue
 
-            print("Match: id0= " + str(id) + ", id1= " + str(kf) + ", distance= " + str(d))
+            self.node.get_logger().info("Match: id0= " + str(id) + ", id1= " + str(kf) + ", distance= " + str(d))
             f = open("best_matches_distances.csv", "a")
             f.write(str(id)+","+str(kf) +","+str(d)+'\n')
             f.close()
@@ -127,19 +128,25 @@ class ViTLoopClosureDetection(object):
             return kf, kfs
         return None, None
 
-    def detect_loop_closure_service(self, req):
+    def detect_loop_closure_service(self, req, res):
         bridge = CvBridge()
-        cv_image = bridge.imgmsg_to_cv2(req.image, desired_encoding='passthrough')
+        cv_image = bridge.imgmsg_to_cv2(req.image.image, desired_encoding='passthrough')
         embedding = self.compute_embedding(cv_image)
 
         # Netvlad processing
         match = None
         if self.counter > 0:
-            match, best_matches = self.detect(embedding, req.image.header.seq) # Systematic evaluation
-        self.add_keyframe(embedding, req.image.header.seq)
+            match, best_matches = self.detect(embedding, req.image.id) # Systematic evaluation
+        self.add_keyframe(embedding, req.image.id)
         self.counter = self.counter + 1
 
         if match is not None:
-            return DetectLoopClosureResponse(is_detected=True, detected_loop_closure_id=match, best_matches=np.asarray(best_matches))
+            res.is_detected=True
+            res.detected_loop_closure_id=match
+            res.best_matches=best_matches
         else:
-            return DetectLoopClosureResponse(is_detected=False, detected_loop_closure_id=-1, best_matches=np.array([]))
+            res.is_detected=False
+            res.detected_loop_closure_id=-1
+            res.best_matches=[]
+
+        return res

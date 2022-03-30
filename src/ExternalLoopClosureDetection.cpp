@@ -4,10 +4,11 @@
 
 #include <rtabmap_ros/msg/map_data.hpp>
 #include <rtabmap_ros/msg/info.hpp>
-#include <rtabmap_ros/MsgConversion.h>
 #include <rtabmap_ros/srv/add_link.hpp>
 #include <rtabmap_ros/srv/get_map.hpp>
+#include <external_loop_closure_detection/MsgConversion.h>
 
+#include <rtabmap/core/SensorData.h>
 #include <rtabmap/core/Rtabmap.h>
 #include <rtabmap/core/Memory.h>
 #include <rtabmap/core/VWDictionary.h>
@@ -20,21 +21,15 @@
 #include <message_filters/time_synchronizer.h>
 #include <message_filters/sync_policies/exact_time.h>
 
-#include <cslam_interfaces/srv/detect_loop_closure.hpp>
 #include <cv_bridge/cv_bridge.h>
 
-/*
- * Test:
- * $ roslaunch rtabmap_ros demo_robot_mapping.launch
- * Disable internal loop closure detection, in rtabmapviz->Preferences:
- *    ->Vocabulary, set Max words to -1 (loop closure detection disabled)
- *    ->Proximity Detection, uncheck proximity detection by space
- * $ rosrun rtabmap_ros external_loop_detection_example
- * $ rosbag play --clock demo_mapping.bag
- */
+#include <cslam_loop_detection/srv/detect_loop_closure.hpp>
+#include <cslam_utils/msg/image_id.hpp>
+#include <thread> 
+#include <chrono> 
 
+// Message filters to sync callbacks
 typedef message_filters::sync_policies::ExactTime<rtabmap_ros::msg::MapData, rtabmap_ros::msg::Info> MyInfoMapSyncPolicy;
-
 
 // Use an external service for loop closure detection
 class ExternalLoopClosureService
@@ -47,38 +42,36 @@ class ExternalLoopClosureService
 	void init(std::shared_ptr<rclcpp::Node>& node)
 	{
 		node_ = node;
-		client_ = node_->create_client<cslam_interfaces::srv::DetectLoopClosure>("detect_loop_closure");
+		client_ = node_->create_client<cslam_loop_detection::srv::DetectLoopClosure>("detect_loop_closure");
 	}
 
 	bool process(const rtabmap::SensorData& data, const int id)
 	{
-		RCLCPP_DEBUG(node_->get_logger(), "Process Image %d for Loop Closure Detection", id);
+		RCLCPP_INFO(node_->get_logger(), "Process Image %d for Loop Closure Detection", id);
 		// Image message
 		std_msgs::msg::Header header;
-		//header.seq = id; TODO: add id to message
 		header.stamp = node_->now();
 		cv_bridge::CvImage image_bridge = cv_bridge::CvImage(header, sensor_msgs::image_encodings::RGB8, data.imageRaw());
-		sensor_msgs::msg::Image image_msg;
-		image_bridge.toImageMsg(image_msg);
+		cslam_utils::msg::ImageId image_msg;
+		image_bridge.toImageMsg(image_msg.image);
+		image_msg.id = id;
 
 		// Service request
-		auto request = std::make_shared<cslam_interfaces::srv::DetectLoopClosure::Request>();
+		auto request = std::make_shared<cslam_loop_detection::srv::DetectLoopClosure::Request>();
 		request->image = image_msg;
 
 		auto result = client_->async_send_request(request);
+		// Wait for the result.
 		if (rclcpp::spin_until_future_complete(node_, result) ==
-    		rclcpp::FutureReturnCode::SUCCESS)
-		{
+			rclcpp::FutureReturnCode::SUCCESS)
+		{	
 			loop_closure_id_ = result.get()->detected_loop_closure_id;
-			RCLCPP_DEBUG(node_->get_logger(), "Loop Closure Detection service success: %d", ((int) result.get()->is_detected));
-			return result.get()->is_detected;
+			is_detected_ = result.get()->is_detected;
+		} else {
+			RCLCPP_ERROR(rclcpp::get_logger("rclcpp"), "Failed to call service add_two_ints");
 		}
-		else
-		{
-			RCLCPP_ERROR(node_->get_logger(), "Failed to call loop closure detection service");
-			loop_closure_id_ = 0;
-			return false;
-		}
+
+		RCLCPP_INFO(node_->get_logger(), "Image %d processed.", id);
 	}
 
 	int getLoopClosureId()
@@ -87,9 +80,12 @@ class ExternalLoopClosureService
 	}
 
 	private:
-	rclcpp::Client<cslam_interfaces::srv::DetectLoopClosure>::SharedPtr client_;
+
+	rclcpp::Client<cslam_loop_detection::srv::DetectLoopClosure>::SharedPtr client_;
 	int loop_closure_id_ = 0;
 	std::shared_ptr<rclcpp::Node> node_;
+	bool is_processed_ = false;
+	bool is_detected_ = false;
 
 };
 
@@ -104,26 +100,15 @@ class ExternalLoopClosureDetection
 		loopClosureDetector_.init(node_);
 		
 		// service to add link
-		addLinkSrv_ = node_->create_client<rtabmap_ros::srv::AddLink>("/rtabmap/add_link");
-
-		// subscription
-		message_filters::Subscriber<rtabmap_ros::msg::Info> infoTopic;
-		message_filters::Subscriber<rtabmap_ros::msg::MapData> mapDataTopic;
-		message_filters::Synchronizer<MyInfoMapSyncPolicy> * infoMapSync;
-
-		infoTopic.subscribe(node_.get(), "/rtabmap/info");
-		mapDataTopic.subscribe(node_.get(), "/rtabmap/mapData");
-		infoMapSync = new message_filters::Synchronizer<MyInfoMapSyncPolicy>(
-				MyInfoMapSyncPolicy(10),
-				mapDataTopic,
-				infoTopic);
-		infoMapSync->registerCallback(&ExternalLoopClosureDetection::mapDataCallback, this);
-
+		std::string add_link_srv;
+		node_->get_parameter("add_link_srv", add_link_srv);
+		addLinkSrv_ = node_->create_client<rtabmap_ros::srv::AddLink>(add_link_srv);
+		RCLCPP_INFO(node_->get_logger(), "Initialization done.");
 	}
 
 	void mapDataCallback(const std::shared_ptr<rtabmap_ros::msg::MapData> & mapDataMsg, const std::shared_ptr<rtabmap_ros::msg::Info> & infoMsg)
 	{
-		RCLCPP_DEBUG(node_->get_logger(), "Received map data!");
+		RCLCPP_INFO(node_->get_logger(), "Received map data!");
 
 		rtabmap::Statistics stats;
 		rtabmap_ros::infoFromROS(*infoMsg, stats);
@@ -134,7 +119,7 @@ class ExternalLoopClosureDetection
 		if(smallMovement || fastMovement)
 		{
 			// The signature has been ignored from rtabmap, don't process it
-			RCLCPP_DEBUG(node_->get_logger(), "Ignore keyframe. Small movement=%d, Fast movement=%d", (int)smallMovement, (int)fastMovement);
+			RCLCPP_INFO(node_->get_logger(), "Ignore keyframe. Small movement=%d, Fast movement=%d", (int)smallMovement, (int)fastMovement);
 			return;
 		}
 
@@ -152,7 +137,7 @@ class ExternalLoopClosureDetection
 			const rtabmap::SensorData & s =  signatures.rbegin()->second.sensorData();
 			cv::Mat rgb;
 			//rtabmap::LaserScan scan;
-			s.uncompressDataConst(&rgb, 0/*, &scan*/);
+			s.uncompressDataConst(&rgb, 0);
 			//pcl::PointCloud<pcl::PointXYZ>::Ptr cloud = rtabmap::util3d::laserScanToPointCloud(scan, scan.localTransform());
 
 			if(loopClosureDetector_.process(rgb, id))
@@ -161,15 +146,14 @@ class ExternalLoopClosureDetection
 				{
 					int fromId = id;
 					int toId = loopClosureDetector_.getLoopClosureId();
-					RCLCPP_DEBUG(node_->get_logger(), "Detected loop closure between %d and %d", fromId, toId);
+					RCLCPP_INFO(node_->get_logger(), "Detected loop closure between %d and %d", fromId, toId);
 					if(localData_.find(toId) != localData_.end())
 					{
 						//Compute transformation
 						// Registration params
-						int min_inliers = 20;
-						if (node_->has_parameter("~min_inliers")) {
-							node_->get_parameter("~min_inliers", min_inliers);
-						}
+						int min_inliers;
+						node_->get_parameter("~min_inliers", min_inliers);
+
 						rtabmap::ParametersMap params;
 						params.insert(rtabmap::ParametersPair(rtabmap::Parameters::kVisMinInliers(), std::to_string(min_inliers)));
 						rtabmap::RegistrationVis reg;
@@ -227,8 +211,33 @@ int main(int argc, char** argv)
 
 	auto node = std::make_shared<rclcpp::Node>("external_loop_closure_detection");
 
+	node->declare_parameter<std::string>("add_link_srv", "/rtabmap/add_link");
+	node->declare_parameter<std::string>("rtabmap_info_topic", "/rtabmap/info");
+	node->declare_parameter<std::string>("rtabmap_map_topic", "/rtabmap/mapData");
+	node->declare_parameter<int>("min_inliers", 20);
+
+	message_filters::Subscriber<rtabmap_ros::msg::Info> infoTopic_;
+
+	message_filters::Subscriber<rtabmap_ros::msg::MapData> mapDataTopic_;
+
+	message_filters::Synchronizer<MyInfoMapSyncPolicy> * infoMapSync_;
+
+	std::string info_topic;
+	node->get_parameter("rtabmap_info_topic", info_topic);
+	std::string map_topic;
+	node->get_parameter("rtabmap_map_topic", map_topic);
+	
+	infoTopic_.subscribe(node.get(), info_topic);
+	mapDataTopic_.subscribe(node.get(), map_topic);
+	infoMapSync_ = new message_filters::Synchronizer<MyInfoMapSyncPolicy>(
+			MyInfoMapSyncPolicy(10),
+			mapDataTopic_,
+			infoTopic_);
+
 	auto lcd = ExternalLoopClosureDetection();
-	//lcd.init(node);
+	lcd.init(node);
+
+	infoMapSync_->registerCallback(&ExternalLoopClosureDetection::mapDataCallback, &lcd);
 
 	rclcpp::Rate rate(1);
 

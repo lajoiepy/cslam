@@ -27,12 +27,13 @@ from timm.data.constants import IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD
 
 from external_loop_closure_detection.nearest_neighbors import NearestNeighbors
 
-from cslam_interfaces.srv import DetectLoopClosure
+from cslam_loop_detection.srv import DetectLoopClosure
 
 
 class NetVLADLoopClosureDetection(object):
-    def __init__(self, params):
+    def __init__(self, params, node):
         self.params = params
+        self.node = node
         self.nns = NearestNeighbors()
 
         if torch.cuda.is_available():
@@ -141,19 +142,25 @@ class NetVLADLoopClosureDetection(object):
             return kf, kfs
         return None, None
 
-    def detect_loop_closure_service(self, req):
+    def detect_loop_closure_service(self, req, res):
         bridge = CvBridge()
-        cv_image = bridge.imgmsg_to_cv2(req.image, desired_encoding='passthrough')
+        cv_image = bridge.imgmsg_to_cv2(req.image.image, desired_encoding='passthrough')
         embedding = self.compute_embedding(cv_image)
 
         # Netvlad processing
         match = None
         if self.counter > 0:
-            match, best_matches = self.detect(embedding, req.image.header.seq) # Systematic evaluation
-        self.add_keyframe(embedding, req.image.header.seq)
+            match, best_matches = self.detect(embedding, req.image.id) # Systematic evaluation
+        self.add_keyframe(embedding, req.image.id)
         self.counter = self.counter + 1
 
         if match is not None:
-            return DetectLoopClosureResponse(is_detected=True, detected_loop_closure_id=match, best_matches=np.asarray(best_matches))
+            res.is_detected=True
+            res.detected_loop_closure_id=match
+            res.best_matches=np.asarray(best_matches)
         else:
-            return DetectLoopClosureResponse(is_detected=False, detected_loop_closure_id=-1, best_matches=np.array([]))
+            res.is_detected=False
+            res.detected_loop_closure_id=-1
+            res.best_matches=np.array([])
+
+        return res
