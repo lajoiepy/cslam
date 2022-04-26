@@ -85,7 +85,8 @@ def launch_setup(context, *args, **kwargs):
                 "min_inbetween_keyframes": LaunchConfiguration('lcd_min_inbetween_keyframes'),
                 "add_link_srv": LaunchConfiguration('lcd_add_link_srv'),
                 "rtabmap_info_topic": LaunchConfiguration('lcd_rtabmap_info_topic'),
-                "rtabmap_map_topic": LaunchConfiguration('lcd_rtabmap_map_topic')                
+                "rtabmap_map_topic": LaunchConfiguration('lcd_rtabmap_map_topic'),
+                "max_queue_size": LaunchConfiguration('lcd_max_queue_size')
                 }],
             prefix=LaunchConfiguration('launch_prefix'),
             namespace=LaunchConfiguration('namespace')),
@@ -228,7 +229,10 @@ def launch_setup(context, *args, **kwargs):
                 "subscribe_rgbd": LaunchConfiguration('subscribe_rgbd'),
                 "guess_frame_id": LaunchConfiguration('odom_guess_frame_id').perform(context),
                 "guess_min_translation": LaunchConfiguration('odom_guess_min_translation'),
-                "guess_min_rotation": LaunchConfiguration('odom_guess_min_rotation')}],
+                "guess_min_rotation": LaunchConfiguration('odom_guess_min_rotation'),
+                # Ensure that we don't lose tracking
+                "Vis/MinInliers": "8"          
+                }],
             remappings=[
                 ("left/image_rect", LaunchConfiguration('left_image_topic_relay')),
                 ("right/image_rect", LaunchConfiguration('right_image_topic_relay')),
@@ -513,6 +517,7 @@ def generate_launch_description():
         DeclareLaunchArgument('lcd_min_inbetween_keyframes',            default_value='20'),
         DeclareLaunchArgument('lcd_nb_best_matches',            default_value='30'),
         DeclareLaunchArgument('lcd_crop_size',            default_value='376'),
+        DeclareLaunchArgument('lcd_max_queue_size',            default_value='10'),
         DeclareLaunchArgument('lcd_add_link_srv',            default_value=[LaunchConfiguration('namespace'),'/add_link']),
         DeclareLaunchArgument('lcd_rtabmap_info_topic',            default_value=[LaunchConfiguration('namespace'),'/info']),
         DeclareLaunchArgument('lcd_rtabmap_map_topic',            default_value=[LaunchConfiguration('namespace'),'/mapData']),

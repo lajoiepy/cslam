@@ -11,6 +11,8 @@ from cslam_loop_detection.srv import DetectLoopClosure
 from external_loop_closure_detection.netvlad_loop_closure_detection import NetVLADLoopClosureDetection
 from external_loop_closure_detection.vit_loop_closure_detection import ViTLoopClosureDetection
 
+from example_interfaces.srv import AddTwoInts
+
 class LoopClosureDetection(Node):
 
     def __init__(self):
@@ -46,20 +48,18 @@ class LoopClosureDetection(Node):
             self.lcd = ViTLoopClosureDetection(params, self)
         else:
             self.get_logger().err('ERROR: Unknown technique')
-
         self.srv = self.create_service(DetectLoopClosure, 'detect_loop_closure', self.service)
-
-    def get_node(self):
-        return self
 
     def service(self, req, res):
         # Call all methods we want to test
         res = self.lcd.detect_loop_closure_service(req, res)
+        res.from_id = req.image.id
         return res
 
 if __name__ == '__main__':
     
     rclpy.init(args=None)
     lcd = LoopClosureDetection()
+    lcd.get_logger().info('Initialization done.')
     rclpy.spin(lcd)
     rclpy.shutdown()
