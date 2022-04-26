@@ -18,23 +18,101 @@ import torchvision.datasets as datasets
 import torchvision.models as models
 import numpy as np
 import sys
-sys.path.append('/home/lajoiepy/Documents/projects/SelfSupervisedPlaceRecognition/pytorch-NetVlad') # TODO: add as submodule?
-import netvlad
 import pickle
 import sklearn
+from sklearn.neighbors import NearestNeighbors
 
 from timm.data.constants import IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD
 
-from external_loop_closure_detection.nearest_neighbors import NearestNeighbors
+class NetVLADLayer(nn.Module):
+    """ NetVLAD layer implementation
+        based on https://github.com/lyakaap/NetVLAD-pytorch/blob/master/netvlad.py
+    """
 
-from cslam_loop_detection.srv import DetectLoopClosure
+    def __init__(self, num_clusters=64, dim=128, 
+                 normalize_input=True, vladv2=False):
+        """
+        Args:
+            num_clusters : int
+                The number of clusters
+            dim : int
+                Dimension of descriptors
+            alpha : float
+                Parameter of initialization. Larger value is harder assignment.
+            normalize_input : bool
+                If true, descriptor-wise L2 normalization is applied to input.
+            vladv2 : bool
+                If true, use vladv2 otherwise use vladv1
+        """
+        super(NetVLADLayer, self).__init__()
+        self.num_clusters = num_clusters
+        self.dim = dim
+        self.alpha = 0
+        self.vladv2 = vladv2
+        self.normalize_input = normalize_input
+        self.conv = nn.Conv2d(dim, num_clusters, kernel_size=(1, 1), bias=vladv2)
+        self.centroids = nn.Parameter(torch.rand(num_clusters, dim))
+
+    def init_params(self, clsts, traindescs):
+        #TODO replace numpy ops with pytorch ops
+        if self.vladv2 == False:
+            clstsAssign = clsts / np.linalg.norm(clsts, axis=1, keepdims=True)
+            dots = np.dot(clstsAssign, traindescs.T)
+            dots.sort(0)
+            dots = dots[::-1, :] # sort, descending
+
+            self.alpha = (-np.log(0.01) / np.mean(dots[0,:] - dots[1,:])).item()
+            self.centroids = nn.Parameter(torch.from_numpy(clsts))
+            self.conv.weight = nn.Parameter(torch.from_numpy(self.alpha*clstsAssign).unsqueeze(2).unsqueeze(3))
+            self.conv.bias = None
+        else:
+            knn = NearestNeighbors(n_jobs=-1) #TODO faiss?
+            knn.fit(traindescs)
+            del traindescs
+            dsSq = np.square(knn.kneighbors(clsts, 2)[1])
+            del knn
+            self.alpha = (-np.log(0.01) / np.mean(dsSq[:,1] - dsSq[:,0])).item()
+            self.centroids = nn.Parameter(torch.from_numpy(clsts))
+            del clsts, dsSq
+
+            self.conv.weight = nn.Parameter(
+                (2.0 * self.alpha * self.centroids).unsqueeze(-1).unsqueeze(-1)
+            )
+            self.conv.bias = nn.Parameter(
+                - self.alpha * self.centroids.norm(dim=1)
+            )
+
+    def forward(self, x):
+        N, C = x.shape[:2]
+
+        if self.normalize_input:
+            x = F.normalize(x, p=2, dim=1)  # across descriptor dim
+
+        # soft-assignment
+        soft_assign = self.conv(x).view(N, self.num_clusters, -1)
+        soft_assign = F.softmax(soft_assign, dim=1)
+
+        x_flatten = x.view(N, C, -1)
+        
+        # calculate residuals to each clusters
+        vlad = torch.zeros([N, self.num_clusters, C], dtype=x.dtype, layout=x.layout, device=x.device)
+        for C in range(self.num_clusters): # slower than non-looped, but lower memory usage 
+            residual = x_flatten.unsqueeze(0).permute(1, 0, 2, 3) - \
+                    self.centroids[C:C+1, :].expand(x_flatten.size(-1), -1, -1).permute(1, 2, 0).unsqueeze(0)
+            residual *= soft_assign[:,C:C+1,:].unsqueeze(2)
+            vlad[:,C:C+1,:] = residual.sum(dim=-1)
+
+        vlad = F.normalize(vlad, p=2, dim=2)  # intra-normalization
+        vlad = vlad.view(x.size(0), -1)  # flatten
+        vlad = F.normalize(vlad, p=2, dim=1)  # L2 normalize
+
+        return vlad
 
 
-class NetVLADLoopClosureDetection(object):
+class NetVLAD(object):
     def __init__(self, params, node):
         self.params = params
         self.node = node
-        self.nns = NearestNeighbors()
 
         if torch.cuda.is_available():
             self.device = torch.device("cuda")
@@ -53,8 +131,8 @@ class NetVLADLoopClosureDetection(object):
         encoder = nn.Sequential(*layers)
         self.model = nn.Module() 
         self.model.add_module('encoder', encoder)  
-        net_vlad = netvlad.NetVLAD(num_clusters=64, dim=encoder_dim, vladv2=False)
-        self.model.add_module('pool', net_vlad)
+        netvlad_layer = NetVLADLayer(num_clusters=64, dim=encoder_dim, vladv2=False)
+        self.model.add_module('pool', netvlad_layer)
 
         self.isParallel = False
         print('=> Number of CUDA devices = ' + str(torch.cuda.device_count()))
@@ -90,9 +168,6 @@ class NetVLADLoopClosureDetection(object):
                             ])
         
         self.pca = pickle.load(open(self.params["pca"],'rb'))
-        self.counter = 0
-        os.system('rm best_matches_distances.csv')
-        os.system('rm tuples.txt')
 
     def compute_embedding(self, keyframe):
         with torch.no_grad():    
@@ -114,53 +189,3 @@ class NetVLADLoopClosureDetection(object):
             del input, image_encoding, vlad_encoding, reduced_embedding, normalized_embedding, image 
             
         return output
-
-    def add_keyframe(self, embedding, id):
-        self.nns.add_item(embedding, id)
-
-    def detect(self, embedding, id):
-        kfs, ds = self.nns.search(embedding, k=self.params['nb_best_matches'])
-
-        if len(kfs) > 0 and kfs[0] == id:
-            kfs, ds = kfs[1:], ds[1:]
-        if len(kfs) == 0:
-            return None
-
-        for kf, d in zip(kfs, ds):
-            #TODO: restablish condition
-            if abs(kf - id) < self.params['min_inbetween_keyframes']:
-                continue
-
-            print("Match: id0= " + str(kf) + ", id1= " + str(id) + ", distance= " + str(d))
-            f = open("best_matches_distances.csv", "a")
-            f.write(str(id)+","+str(kf) +","+str(d)+'\n')
-            f.close()
-
-            if d > self.params['threshold']:
-                continue
-    
-            return kf, kfs
-        return None, None
-
-    def detect_loop_closure_service(self, req, res):
-        bridge = CvBridge()
-        cv_image = bridge.imgmsg_to_cv2(req.image.image, desired_encoding='passthrough')
-        embedding = self.compute_embedding(cv_image)
-
-        # Netvlad processing
-        match = None
-        if self.counter > 0:
-            match, best_matches = self.detect(embedding, req.image.id) # Systematic evaluation
-        self.add_keyframe(embedding, req.image.id)
-        self.counter = self.counter + 1
-
-        if match is not None:
-            res.is_detected=True
-            res.detected_loop_closure_id=match
-            res.best_matches=np.asarray(best_matches)
-        else:
-            res.is_detected=False
-            res.detected_loop_closure_id=-1
-            res.best_matches=np.array([])
-
-        return res

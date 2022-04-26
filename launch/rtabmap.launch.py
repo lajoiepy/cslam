@@ -508,10 +508,9 @@ def generate_launch_description():
         # External Loop Closure Detection
         DeclareLaunchArgument('lcd_threshold',            default_value='1.5'),
         DeclareLaunchArgument('lcd_min_inliers',            default_value='6'),
-        DeclareLaunchArgument('lcd_technique',            default_value='ViT'),
+        DeclareLaunchArgument('lcd_technique',            default_value='netvlad'),
         DeclareLaunchArgument('lcd_resume',            default_value='true'),
-        DeclareLaunchArgument('lcd_checkpoint',            default_value='/home/lajoiepy/Documents/projects/SelfSupervisedPlaceRecognition/pytorch-NetVlad/runs/Feb11_20-23-30_vit_none_tune_best_so_far/checkpoints/model_tuned.pth.tar'),
-        #DeclareLaunchArgument('lcd_checkpoint',            default_value='/home/lajoiepy/Documents/projects/SelfSupervisedPlaceRecognition/pytorch-NetVlad/runs/Nov24_23-21-16_vgg16_netvlad-Pit-Baseline/checkpoints/model_best.pth.tar'),
+        DeclareLaunchArgument('lcd_checkpoint',            default_value='/home/lajoiepy/Documents/projects/SelfSupervisedPlaceRecognition/pytorch-NetVlad/runs/Nov24_23-21-16_vgg16_netvlad-Pit-Baseline/checkpoints/model_best.pth.tar'),
         DeclareLaunchArgument('lcd_pca',            default_value='/home/lajoiepy/Documents/projects/SelfSupervisedPlaceRecognition/pytorch-NetVlad/pca.pkl'),
         DeclareLaunchArgument('lcd_consider_other_matches',            default_value='false'),
         DeclareLaunchArgument('lcd_min_inbetween_keyframes',            default_value='20'),

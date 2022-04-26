@@ -8,8 +8,7 @@ from rclpy.node import Node
 from sensor_msgs.msg import Image
 
 from cslam_loop_detection.srv import DetectLoopClosure
-from external_loop_closure_detection.netvlad_loop_closure_detection import NetVLADLoopClosureDetection
-from external_loop_closure_detection.vit_loop_closure_detection import ViTLoopClosureDetection
+from external_loop_closure_detection.global_image_descriptor_loop_closure_detection import GlobalImageDescriptorLoopClosureDetection
 
 from example_interfaces.srv import AddTwoInts
 
@@ -36,18 +35,11 @@ class LoopClosureDetection(Node):
         params['min_inbetween_keyframes'] = self.get_parameter('min_inbetween_keyframes').value
         params['nb_best_matches'] = self.get_parameter('nb_best_matches').value
         params['technique'] = self.get_parameter('technique').value
-        if params['technique'].lower() == 'netvlad':
-            params['pca'] = self.get_parameter('pca').value
         params['resume'] = self.get_parameter('resume').value
         params['checkpoint'] = self.get_parameter('checkpoint').value
         params['crop_size'] = self.get_parameter('crop_size').value
-
-        if params['technique'].lower() == 'netvlad':
-            self.lcd = NetVLADLoopClosureDetection(params, self)
-        elif params['technique'].lower() == 'vit':
-            self.lcd = ViTLoopClosureDetection(params, self)
-        else:
-            self.get_logger().err('ERROR: Unknown technique')
+        
+        self.lcd = GlobalImageDescriptorLoopClosureDetection(params, self)
         self.srv = self.create_service(DetectLoopClosure, 'detect_loop_closure', self.service)
 
     def service(self, req, res):

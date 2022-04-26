@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 import numpy as np
 
-class NearestNeighbors(object):
+class NearestNeighborsMatching(object):
     def __init__(self, dim=None):
         self.n = 0
         self.dim = dim
