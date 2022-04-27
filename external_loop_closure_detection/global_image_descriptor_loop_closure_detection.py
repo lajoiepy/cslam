@@ -10,14 +10,14 @@ import sys
 from external_loop_closure_detection.nearest_neighbors_matching import NearestNeighborsMatching
 from external_loop_closure_detection.netvlad import NetVLAD
 
-from cslam_loop_detection.srv import DetectLoopClosure
+from cslam_loop_detection.msg import GlobalImageDescriptor
 
 
 class GlobalImageDescriptorLoopClosureDetection(object):
     def __init__(self, params, node):
         self.params = params
         self.node = node
-        self.nns = NearestNeighborsMatching()
+        self.local_nnsm = NearestNeighborsMatching()
         self.counter = 0
 
         if self.params['technique'].lower() == 'netvlad':
@@ -28,11 +28,20 @@ class GlobalImageDescriptorLoopClosureDetection(object):
             self.params['pca'] = self.node.get_parameter('pca').value
             self.global_descriptor = NetVLAD(self.params, self.node)
 
+        self.params['global_descriptor_topic'] = self.node.get_parameter('global_descriptor_topic').value
+        self.global_descriptor_publisher = self.node.create_publisher(GlobalImageDescriptor, self.params['global_descriptor_topic'], 10)
+
     def add_keyframe(self, embedding, id):
-        self.nns.add_item(embedding, id)
+        self.local_nnsm.add_item(embedding, id)
+        msg = GlobalImageDescriptor()
+        msg.image_id = id
+        msg.robot_id = self.params['robot_id']
+        msg.descriptor = embedding.tolist()
+        self.global_descriptor_publisher.publish(msg)
+        self.node.get_logger().error('Publish message.')
 
     def detect(self, embedding, id):
-        kfs, ds = self.nns.search(embedding, k=self.params['nb_best_matches'])
+        kfs, ds = self.local_nnsm.search(embedding, k=self.params['nb_best_matches'])
 
         if len(kfs) > 0 and kfs[0] == id:
             kfs, ds = kfs[1:], ds[1:]

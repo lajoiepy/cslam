@@ -27,7 +27,9 @@ class LoopClosureDetection(Node):
                 ('pca', None),
                 ('resume', None),
                 ('checkpoint', None),
-                ('crop_size', None)
+                ('crop_size', None),
+                ('robot_id', None),
+                ('global_descriptor_topic', None)
             ]
         )
         params = {}
@@ -38,6 +40,7 @@ class LoopClosureDetection(Node):
         params['resume'] = self.get_parameter('resume').value
         params['checkpoint'] = self.get_parameter('checkpoint').value
         params['crop_size'] = self.get_parameter('crop_size').value
+        params['robot_id'] = self.get_parameter('robot_id').value
         
         self.lcd = GlobalImageDescriptorLoopClosureDetection(params, self)
         self.srv = self.create_service(DetectLoopClosure, 'detect_loop_closure', self.service)

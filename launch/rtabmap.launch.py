@@ -74,6 +74,8 @@ def launch_setup(context, *args, **kwargs):
                 "pca": LaunchConfiguration('lcd_pca'),
                 "crop_size": LaunchConfiguration('lcd_crop_size'),
                 "technique": LaunchConfiguration('lcd_technique'),
+                "global_descriptor_topic": LaunchConfiguration('lcd_global_descriptor_topic'),
+                "robot_id": LaunchConfiguration('lcd_robot_id'),
                 "resume": LaunchConfiguration('lcd_resume')}],
             namespace=LaunchConfiguration('namespace')),
 
@@ -520,6 +522,8 @@ def generate_launch_description():
         DeclareLaunchArgument('lcd_add_link_srv',            default_value=[LaunchConfiguration('namespace'),'/add_link']),
         DeclareLaunchArgument('lcd_rtabmap_info_topic',            default_value=[LaunchConfiguration('namespace'),'/info']),
         DeclareLaunchArgument('lcd_rtabmap_map_topic',            default_value=[LaunchConfiguration('namespace'),'/mapData']),
+        DeclareLaunchArgument('lcd_global_descriptor_topic',            default_value='/global_descriptor'),
+        DeclareLaunchArgument('lcd_robot_id',            default_value='0'),
         
         OpaqueFunction(function=launch_setup)
     ])
