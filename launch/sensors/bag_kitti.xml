@@ -1,8 +1,8 @@
 <launch>
-    <arg name="sequence" default="5"/>
+    <arg name="sequence" default="2"/>
     <arg name="namespace" default="/r0"/>
     
-    <arg name="bag" default="/home/lajoiepy/Documents/datasets/ROS2-bags/KITTI0$(var sequence)"/>
+    <arg name="bag" default="/home/lajoiepy/Documents/datasets/ROS2-bags/KITTI00-SPLIT/KITTI00-$(var sequence)"/>
     <arg name="rate" default="1.0"/>
     <executable cmd="ros2 bag play $(var bag) -r $(var rate) --remap    /kitti/camera_color/left/camera_info:=$(var namespace)/stereo_camera/left/camera_info \
                                                                         /kitti/camera_color/left/image_rect_color:=$(var namespace)/stereo_camera/left/image_rect_color \

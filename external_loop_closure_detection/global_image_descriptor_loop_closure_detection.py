@@ -29,16 +29,26 @@ class GlobalImageDescriptorLoopClosureDetection(object):
             self.global_descriptor = NetVLAD(self.params, self.node)
 
         self.params['global_descriptor_topic'] = self.node.get_parameter('global_descriptor_topic').value
-        self.global_descriptor_publisher = self.node.create_publisher(GlobalImageDescriptor, self.params['global_descriptor_topic'], 10)
+        self.global_descriptor_publisher = self.node.create_publisher(
+            GlobalImageDescriptor, 
+            self.params['global_descriptor_topic'], 
+            10)
+        self.global_descriptor_subscriber = self.node.create_subscription(
+            GlobalImageDescriptor, 
+            self.params['global_descriptor_topic'],
+            self.global_descriptor_callback,
+            10)
+        self.other_robots_global_descriptors = {}
+        self.robot_id = self.params['robot_id']
+        
 
     def add_keyframe(self, embedding, id):
         self.local_nnsm.add_item(embedding, id)
         msg = GlobalImageDescriptor()
         msg.image_id = id
-        msg.robot_id = self.params['robot_id']
+        msg.robot_id = self.robot_id
         msg.descriptor = embedding.tolist()
         self.global_descriptor_publisher.publish(msg)
-        self.node.get_logger().error('Publish message.')
 
     def detect(self, embedding, id):
         kfs, ds = self.local_nnsm.search(embedding, k=self.params['nb_best_matches'])
@@ -80,3 +90,14 @@ class GlobalImageDescriptorLoopClosureDetection(object):
             res.best_matches=[]
 
         return res
+
+    def global_descriptor_callback(self, msg):
+        #if msg.robot_id not self.robot_id:
+        if self.other_robots_global_descriptors.get(msg.robot_id):
+            # Add to the NNS
+            self.other_robots_global_descriptors[msg.robot_id].add_item(np.asarray(msg.descriptor), msg.image_id)
+            self.node.get_logger().error('New descriptor added. ' + str(len(self.other_robots_global_descriptors[msg.robot_id].items)))
+        else:
+            # Create a new NNS
+            self.other_robots_global_descriptors[msg.robot_id] = NearestNeighborsMatching()
+            self.node.get_logger().error('New nns added.')
