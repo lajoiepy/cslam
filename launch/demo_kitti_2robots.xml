@@ -1,0 +1,22 @@
+<launch>
+    <!-- Robot 0 -->
+    <include file="$(find-pkg-share external_loop_closure_detection)/launch/sensors/bag_kitti.xml">
+       <arg name="bag_start_delay" value="10.0"/>
+       <arg name="namespace" value="/r0"/>
+       <arg name="sequence" value="0"/>
+    </include>
+    <include file="$(find-pkg-share external_loop_closure_detection)/launch/rtabmap.launch.py">
+       <arg name="namespace" value="/r0"/>
+       <arg name="rtabmapviz" value="false"/>
+    </include>
+    <!-- Robot 1 -->
+    <include file="$(find-pkg-share external_loop_closure_detection)/launch/sensors/bag_kitti.xml">
+       <arg name="bag_start_delay" value="10.0"/>
+       <arg name="namespace" value="/r1"/>
+       <arg name="sequence" value="1"/>
+    </include>
+    <include file="$(find-pkg-share external_loop_closure_detection)/launch/rtabmap.launch.py">
+       <arg name="namespace" value="/r1"/>
+       <arg name="rtabmapviz" value="false"/>
+    </include>
+</launch>
