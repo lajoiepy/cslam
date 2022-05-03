@@ -145,7 +145,7 @@ class ExternalLoopClosureDetection
 		// Publishers to other robots local descriptors subscribers
 		for (int id = 0; id < nbRobots_; id++) {
 			if (id != robotID_) {
-				std::string topic = "r" + std::to_string(id) + "/local_descriptors";
+				std::string topic = "/r" + std::to_string(id) + "/local_descriptors";
 				local_descriptors_publishers_.insert({id, node_->create_publisher<cslam_loop_detection::msg::LocalImageDescriptors>(topic, 10)});
 			}
 		}
@@ -352,6 +352,8 @@ int main(int argc, char** argv)
 	node->declare_parameter<std::string>("rtabmap_map_topic", "/rtabmap/mapData");
 	node->declare_parameter<int>("min_inliers", 20);
 	node->declare_parameter<int>("max_queue_size", 10);
+	node->declare_parameter<int>("number_of_robots", 1);
+	node->declare_parameter<int>("robot_id", 0);
 
 	message_filters::Subscriber<rtabmap_ros::msg::Info> infoTopic_;
 

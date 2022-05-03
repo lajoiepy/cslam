@@ -11,7 +11,10 @@ from external_loop_closure_detection.nearest_neighbors_matching import NearestNe
 from external_loop_closure_detection.netvlad import NetVLAD
 
 from cslam_loop_detection.msg import GlobalImageDescriptor
-from cslam_loop_detection.srv import LocalImageDescriptors
+from cslam_loop_detection.srv import SendLocalImageDescriptors
+
+import rclpy
+from rclpy.node import Node
 
 
 class GlobalImageDescriptorLoopClosureDetection(object):
@@ -42,10 +45,7 @@ class GlobalImageDescriptorLoopClosureDetection(object):
         # self.other_robots_global_descriptors = {}
         self.robot_id = self.params['robot_id']
 
-        self.send_local_descriptors_srv = self.create_client(LocalImageDescriptors, 'send_local_image_descriptors')
-        while not self.send_local_descriptors_srv.wait_for_service(timeout_sec=1.0):
-            self.get_logger().info('service not available, waiting again...')
-        
+        self.send_local_descriptors_srv = self.node.create_client(SendLocalImageDescriptors, 'send_local_image_descriptors')      
 
     def add_keyframe(self, embedding, id):
         self.local_nnsm.add_item(embedding, id)
