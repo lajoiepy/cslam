@@ -154,6 +154,9 @@ class ExternalLoopClosureDetection
 		local_descriptors_subscriber_ = node->create_subscription<cslam_loop_detection::msg::LocalImageDescriptors>(
 			"local_descriptors", 10, std::bind(&ExternalLoopClosureDetection::receive_local_image_descriptors, this, std::placeholders::_1));
 
+		// Registration parameters
+		
+
 		RCLCPP_INFO(node_->get_logger(), "Initialization done.");
 	}
 
@@ -269,6 +272,10 @@ class ExternalLoopClosureDetection
 	{
 		// Extract local descriptors
 		rtabmap::SensorData frame_data = localData_.at(request->image_id);
+		frame_data.uncompressData();
+		
+
+		// Build message
 		rtabmap::Signature local_descriptors(frame_data);
 		rtabmap_ros::msg::NodeData data;
 		rtabmap_ros::nodeDataToROS(local_descriptors, data);
@@ -305,7 +312,7 @@ class ExternalLoopClosureDetection
 		rtabmap::RegistrationInfo regInfo;
 		rtabmap::SensorData tmpFrom = localData_.at(msg->receptor_image_id);
 		tmpFrom.uncompressData();
-		rtabmap::Transform t = reg.computeTransformation(tmpFrom, local_descriptors.sensorData(), rtabmap::Transform(), &regInfo);
+		rtabmap::Transform t = reg.computeTransformation(tmpFrom, local_descriptors, rtabmap::Transform(), &regInfo);
 
 		// Store using pairs (robot_id, image_id)
 		if(!t.isNull())

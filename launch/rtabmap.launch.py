@@ -76,7 +76,8 @@ def launch_setup(context, *args, **kwargs):
                 "technique": LaunchConfiguration('lcd_technique'),
                 "global_descriptor_topic": LaunchConfiguration('lcd_global_descriptor_topic'),
                 "robot_id": LaunchConfiguration('lcd_robot_id'),
-                "resume": LaunchConfiguration('lcd_resume')}],
+                "resume": LaunchConfiguration('lcd_resume')
+                }],
             namespace=LaunchConfiguration('namespace')),
 
         Node(
@@ -509,7 +510,7 @@ def generate_launch_description():
         DeclareLaunchArgument('fiducial_topic',       default_value='/fiducial_transforms', description='aruco_detect async subscription, use tag_linear_variance and tag_angular_variance to set covariance.'),
         
         # External Loop Closure Detection
-        DeclareLaunchArgument('lcd_threshold',            default_value='1.5'),
+        DeclareLaunchArgument('lcd_threshold',            default_value='1.0'),
         DeclareLaunchArgument('lcd_min_inliers',            default_value='6'),
         DeclareLaunchArgument('lcd_technique',            default_value='netvlad'),
         DeclareLaunchArgument('lcd_resume',            default_value='true'),

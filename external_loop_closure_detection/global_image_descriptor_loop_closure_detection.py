@@ -127,7 +127,7 @@ class GlobalImageDescriptorLoopClosureDetection(object):
             # Extract and publish local descriptors
             if match is not None:
                 # Call C++ code to send publish local descriptors
-                req = LocalImageDescriptors.Request()
+                req = SendLocalImageDescriptors.Request()
                 req.image_id = match
                 req.receptor_robot_id = msg.robot_id
                 req.receptor_image_id = msg.image_id
