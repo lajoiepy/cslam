@@ -25,6 +25,7 @@
 
 #include <cslam_loop_detection/srv/detect_loop_closure.hpp>
 #include <cslam_loop_detection/srv/send_local_image_descriptors.hpp>
+#include <cslam_loop_detection/msg/local_image_descriptors.hpp>
 #include <cslam_utils/msg/image_id.hpp>
 #include <thread> 
 #include <chrono> 
@@ -138,6 +139,20 @@ class ExternalLoopClosureDetection
 		// Parameters
 		node_->get_parameter("max_queue_size", maxQueueSize_);
 		node_->get_parameter("min_inliers", minInliers_);
+		node_->get_parameter("number_of_robots", nbRobots_);
+		node_->get_parameter("robot_id", robotID_);
+
+		// Publishers to other robots local descriptors subscribers
+		for (int id = 0; id < nbRobots_; id++) {
+			if (id != robotID_) {
+				std::string topic = "r" + std::to_string(id) + "/local_descriptors";
+				local_descriptors_publishers_.insert({id, node_->create_publisher<cslam_loop_detection::msg::LocalImageDescriptors>(topic, 10)});
+			}
+		}
+		
+		// Subscriber for local descriptors
+		local_descriptors_subscriber_ = node->create_subscription<cslam_loop_detection::msg::LocalImageDescriptors>(
+			"local_descriptors", 10, std::bind(&ExternalLoopClosureDetection::receive_local_image_descriptors, this, std::placeholders::_1));
 
 		RCLCPP_INFO(node_->get_logger(), "Initialization done.");
 	}
@@ -255,22 +270,53 @@ class ExternalLoopClosureDetection
 		// Extract local descriptors
 		rtabmap::SensorData frame_data = localData_.at(request->image_id);
 		rtabmap::Signature local_descriptors(frame_data);
-		rtabmap_ros::msg::NodeData msg;
-		rtabmap_ros::nodeDataToROS(local_descriptors, msg);
+		rtabmap_ros::msg::NodeData data;
+		rtabmap_ros::nodeDataToROS(local_descriptors, data);
 
 		// Clear images in message to save bandwidth
-		msg.image = {};
-		msg.depth = {};
-		msg.user_data = {};
-		msg.laser_scan = {};
+		data.image = {};
+		data.depth = {};
+		data.user_data = {};
+		data.laser_scan = {};
 
-		// Select topic based on robot id
+		// Fill msg
+		cslam_loop_detection::msg::LocalImageDescriptors msg;
+		msg.data = data;
+		msg.image_id = request->image_id;
+		msg.robot_id = robotID_;
+		msg.receptor_image_id = request->receptor_image_id;
 
 		// Publish local descriptors
+		local_descriptors_publishers_.at(request->receptor_robot_id)->publish(msg);
 
 		response->success = true;
 	}
 
+	void receive_local_image_descriptors(const std::shared_ptr<cslam_loop_detection::msg::LocalImageDescriptors> msg)
+	{
+		rtabmap::Signature local_descriptors = rtabmap_ros::nodeDataFromROS(msg->data);
+
+		//Compute transformation
+		// Registration params
+		rtabmap::ParametersMap params;
+		params.insert(rtabmap::ParametersPair(rtabmap::Parameters::kVisMinInliers(), std::to_string(minInliers_)));
+		rtabmap::RegistrationVis reg;
+		reg.parseParameters(params);
+		rtabmap::RegistrationInfo regInfo;
+		rtabmap::SensorData tmpFrom = localData_.at(msg->receptor_image_id);
+		tmpFrom.uncompressData();
+		rtabmap::Transform t = reg.computeTransformation(tmpFrom, local_descriptors.sensorData(), rtabmap::Transform(), &regInfo);
+
+		// Store using pairs (robot_id, image_id)
+		if(!t.isNull())
+		{
+			RCLCPP_ERROR(node_->get_logger(), "Inter-Robot Link computed");
+		}
+		else
+		{
+			RCLCPP_ERROR(node_->get_logger(), "Could not compute transformation between (%d,%d) and (%d,%d): %s", robotID_, msg->receptor_image_id, msg->robot_id, msg->image_id, regInfo.rejectedMsg.c_str());
+		}
+	}
 
 	private:
 
@@ -286,9 +332,11 @@ class ExternalLoopClosureDetection
 
 	std::deque<std::shared_ptr<rtabmap_ros::msg::MapData>> receivedDataQueue_;
 
-	int maxQueueSize_;
+	int maxQueueSize_, minInliers_, nbRobots_, robotID_;
 
-	int minInliers_;
+	std::map<int, rclcpp::Publisher<cslam_loop_detection::msg::LocalImageDescriptors>::SharedPtr> local_descriptors_publishers_;
+
+	rclcpp::Subscription<cslam_loop_detection::msg::LocalImageDescriptors>::SharedPtr local_descriptors_subscriber_;
 	
 };
 

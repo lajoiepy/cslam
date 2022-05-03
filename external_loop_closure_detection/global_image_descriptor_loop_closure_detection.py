@@ -11,6 +11,7 @@ from external_loop_closure_detection.nearest_neighbors_matching import NearestNe
 from external_loop_closure_detection.netvlad import NetVLAD
 
 from cslam_loop_detection.msg import GlobalImageDescriptor
+from cslam_loop_detection.srv import LocalImageDescriptors
 
 
 class GlobalImageDescriptorLoopClosureDetection(object):
@@ -38,8 +39,12 @@ class GlobalImageDescriptorLoopClosureDetection(object):
             self.params['global_descriptor_topic'],
             self.global_descriptor_callback,
             10)
-        self.other_robots_global_descriptors = {}
+        # self.other_robots_global_descriptors = {}
         self.robot_id = self.params['robot_id']
+
+        self.send_local_descriptors_srv = self.create_client(LocalImageDescriptors, 'send_local_image_descriptors')
+        while not self.send_local_descriptors_srv.wait_for_service(timeout_sec=1.0):
+            self.get_logger().info('service not available, waiting again...')
         
 
     def add_keyframe(self, embedding, id):
@@ -103,7 +108,7 @@ class GlobalImageDescriptorLoopClosureDetection(object):
         return res
 
     def global_descriptor_callback(self, msg):
-        if msg.robot_id not self.robot_id:
+        if msg.robot_id != self.robot_id:
             # # Save other robots' global descriptors
             # if self.other_robots_global_descriptors.get(msg.robot_id):
             #     # Add to the NNS
@@ -117,9 +122,14 @@ class GlobalImageDescriptorLoopClosureDetection(object):
             #     self.node.get_logger().error('New nns added.')
             
             # Match against current global descriptors
-            match = self.detect_inter(embedding)
+            match = self.detect_inter(np.asarray(msg.descriptor))
             
             # Extract and publish local descriptors
             if match is not None:
                 # Call C++ code to send publish local descriptors
-                
+                req = LocalImageDescriptors.Request()
+                req.image_id = match
+                req.receptor_robot_id = msg.robot_id
+                req.receptor_image_id = msg.image_id
+
+                self.send_local_descriptors_srv.call_async(req)

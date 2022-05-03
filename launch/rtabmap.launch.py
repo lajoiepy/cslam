@@ -88,7 +88,9 @@ def launch_setup(context, *args, **kwargs):
                 "add_link_srv": LaunchConfiguration('lcd_add_link_srv'),
                 "rtabmap_info_topic": LaunchConfiguration('lcd_rtabmap_info_topic'),
                 "rtabmap_map_topic": LaunchConfiguration('lcd_rtabmap_map_topic'),
-                "max_queue_size": LaunchConfiguration('lcd_max_queue_size')
+                "max_queue_size": LaunchConfiguration('lcd_max_queue_size'),
+                "number_of_robots": LaunchConfiguration('lcd_number_of_robots'),
+                "robot_id": LaunchConfiguration('lcd_robot_id')
                 }],
             prefix=LaunchConfiguration('launch_prefix'),
             namespace=LaunchConfiguration('namespace')),
@@ -523,6 +525,7 @@ def generate_launch_description():
         DeclareLaunchArgument('lcd_rtabmap_map_topic',            default_value=[LaunchConfiguration('namespace'),'/mapData']),
         DeclareLaunchArgument('lcd_global_descriptor_topic',            default_value='/global_descriptor'),
         DeclareLaunchArgument('lcd_robot_id',            default_value='0'),
+        DeclareLaunchArgument('lcd_number_of_robots',            default_value='1'),
         DeclareLaunchArgument('database_path',  default_value='~/.ros/',  description='Where is the map saved/loaded.'),
         
         OpaqueFunction(function=launch_setup)
