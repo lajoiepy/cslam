@@ -8,6 +8,7 @@
     <include file="$(find-pkg-share external_loop_closure_detection)/launch/rtabmap.launch.py">
        <arg name="namespace" value="/r0"/>
        <arg name="rtabmapviz" value="false"/>
+       <arg name="lcd_robot_id" value="0"/>
     </include>
     <!-- Robot 1 -->
     <include file="$(find-pkg-share external_loop_closure_detection)/launch/sensors/bag_kitti.xml">
@@ -18,5 +19,6 @@
     <include file="$(find-pkg-share external_loop_closure_detection)/launch/rtabmap.launch.py">
        <arg name="namespace" value="/r1"/>
        <arg name="rtabmapviz" value="false"/>
+       <arg name="lcd_robot_id" value="1"/>
     </include>
 </launch>

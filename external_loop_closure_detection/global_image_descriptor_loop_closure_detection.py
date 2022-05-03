@@ -50,7 +50,7 @@ class GlobalImageDescriptorLoopClosureDetection(object):
         msg.descriptor = embedding.tolist()
         self.global_descriptor_publisher.publish(msg)
 
-    def detect(self, embedding, id):
+    def detect_intra(self, embedding, id):
         kfs, ds = self.local_nnsm.search(embedding, k=self.params['nb_best_matches'])
 
         if len(kfs) > 0 and kfs[0] == id:
@@ -68,18 +68,29 @@ class GlobalImageDescriptorLoopClosureDetection(object):
             return kf, kfs
         return None, None
 
+    def detect_inter(self, embedding):
+        kfs, ds = self.local_nnsm.search(embedding, k=self.params['nb_best_matches'])
+
+        for kf, d in zip(kfs, ds):
+            if d > self.params['threshold']:
+                continue
+            return kf
+        return None
+
     def detect_loop_closure_service(self, req, res):
+        # Netvlad processing
         bridge = CvBridge()
         cv_image = bridge.imgmsg_to_cv2(req.image.image, desired_encoding='passthrough')
         embedding = self.global_descriptor.compute_embedding(cv_image)
 
-        # Netvlad processing
+        # Global descriptors matching
         match = None
         if self.counter > 0:
-            match, best_matches = self.detect(embedding, req.image.id) # Systematic evaluation
+            match, best_matches = self.detect_intra(embedding, req.image.id) # Systematic evaluation
         self.add_keyframe(embedding, req.image.id)
         self.counter = self.counter + 1
 
+        # Service result
         if match is not None:
             res.is_detected=True
             res.detected_loop_closure_id=match
@@ -92,12 +103,23 @@ class GlobalImageDescriptorLoopClosureDetection(object):
         return res
 
     def global_descriptor_callback(self, msg):
-        #if msg.robot_id not self.robot_id:
-        if self.other_robots_global_descriptors.get(msg.robot_id):
-            # Add to the NNS
-            self.other_robots_global_descriptors[msg.robot_id].add_item(np.asarray(msg.descriptor), msg.image_id)
-            self.node.get_logger().error('New descriptor added. ' + str(len(self.other_robots_global_descriptors[msg.robot_id].items)))
-        else:
-            # Create a new NNS
-            self.other_robots_global_descriptors[msg.robot_id] = NearestNeighborsMatching()
-            self.node.get_logger().error('New nns added.')
+        if msg.robot_id not self.robot_id:
+            # # Save other robots' global descriptors
+            # if self.other_robots_global_descriptors.get(msg.robot_id):
+            #     # Add to the NNS
+            #     self.other_robots_global_descriptors[msg.robot_id].add_item(np.asarray(msg.descriptor), msg.image_id)
+            #     self.node.get_logger().error('New descriptor added. ' + str(len(self.other_robots_global_descriptors[msg.robot_id].items)))
+            # else:
+            #     # Create a new NNS
+            #     self.other_robots_global_descriptors[msg.robot_id] = NearestNeighborsMatching()
+            #     # Add to the NNS
+            #     self.other_robots_global_descriptors[msg.robot_id].add_item(np.asarray(msg.descriptor), msg.image_id)
+            #     self.node.get_logger().error('New nns added.')
+            
+            # Match against current global descriptors
+            match = self.detect_inter(embedding)
+            
+            # Extract and publish local descriptors
+            if match is not None:
+                # Call C++ code to send publish local descriptors
+                

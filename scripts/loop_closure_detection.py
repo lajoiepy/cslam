@@ -42,12 +42,12 @@ class LoopClosureDetection(Node):
         params['crop_size'] = self.get_parameter('crop_size').value
         params['robot_id'] = self.get_parameter('robot_id').value
         
-        self.lcd = GlobalImageDescriptorLoopClosureDetection(params, self)
+        self.glcd = GlobalImageDescriptorLoopClosureDetection(params, self)
         self.srv = self.create_service(DetectLoopClosure, 'detect_loop_closure', self.service)
 
     def service(self, req, res):
         # Call all methods we want to test
-        res = self.lcd.detect_loop_closure_service(req, res)
+        res = self.glcd.detect_loop_closure_service(req, res)
         res.from_id = req.image.id
         return res
 

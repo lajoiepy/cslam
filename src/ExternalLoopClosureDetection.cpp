@@ -24,10 +24,13 @@
 #include <cv_bridge/cv_bridge.h>
 
 #include <cslam_loop_detection/srv/detect_loop_closure.hpp>
+#include <cslam_loop_detection/srv/send_local_image_descriptors.hpp>
 #include <cslam_utils/msg/image_id.hpp>
 #include <thread> 
 #include <chrono> 
 #include <deque>
+#include <functional>
+
 
 // Message filters to sync callbacks
 typedef message_filters::sync_policies::ExactTime<rtabmap_ros::msg::MapData, rtabmap_ros::msg::Info> MyInfoMapSyncPolicy;
@@ -116,7 +119,7 @@ class ExternalLoopClosureDetection
 		node_ = node;
 		loopClosureDetector_.init(node_);
 		
-		// service to add link
+		// Service to add a link in the local pose graph
 		std::string AddLinkSrv;
 		node_->get_parameter("add_link_srv", AddLinkSrv);
 		addLinkSrv_ = node_->create_client<rtabmap_ros::srv::AddLink>(AddLinkSrv);
@@ -128,6 +131,11 @@ class ExternalLoopClosureDetection
 			RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "service not available, waiting again...");
 		}
 
+		// Service to extract and publish local image descriptors to another robot
+		sendLocalDescriptorsSrv_ = node_->create_service<cslam_loop_detection::srv::SendLocalImageDescriptors>("send_local_image_descriptors", 
+							std::bind(&ExternalLoopClosureDetection::send_local_image_descriptors, this, std::placeholders::_1, std::placeholders::_2));
+
+		// Parameters
 		node_->get_parameter("max_queue_size", maxQueueSize_);
 		node_->get_parameter("min_inliers", minInliers_);
 
@@ -241,12 +249,36 @@ class ExternalLoopClosureDetection
 		}
 	}
 
+	void send_local_image_descriptors(const std::shared_ptr<cslam_loop_detection::srv::SendLocalImageDescriptors::Request> request,
+          std::shared_ptr<cslam_loop_detection::srv::SendLocalImageDescriptors::Response>      response)
+	{
+		// Extract local descriptors
+		rtabmap::SensorData frame_data = localData_.at(request->image_id);
+		rtabmap::Signature local_descriptors(frame_data);
+		rtabmap_ros::msg::NodeData msg;
+		rtabmap_ros::nodeDataToROS(local_descriptors, msg);
+
+		// Clear images in message to save bandwidth
+		msg.image = {};
+		msg.depth = {};
+		msg.user_data = {};
+		msg.laser_scan = {};
+
+		// Select topic based on robot id
+
+		// Publish local descriptors
+
+		response->success = true;
+	}
+
 
 	private:
 
 	ExternalLoopClosureService loopClosureDetector_;
 
 	rclcpp::Client<rtabmap_ros::srv::AddLink>::SharedPtr addLinkSrv_;
+
+	rclcpp::Service<cslam_loop_detection::srv::SendLocalImageDescriptors>::SharedPtr sendLocalDescriptorsSrv_;
 
 	std::map<int, rtabmap::SensorData> localData_;
 

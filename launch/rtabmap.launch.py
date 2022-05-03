@@ -297,7 +297,7 @@ def launch_setup(context, *args, **kwargs):
                 "odom_tf_linear_variance": LaunchConfiguration('odom_tf_linear_variance'),
                 "odom_sensor_sync": LaunchConfiguration('odom_sensor_sync'),
                 "wait_for_transform": LaunchConfiguration('wait_for_transform'),
-                "database_path": LaunchConfiguration('database_path'),
+                "database_path": [LaunchConfiguration('database_path'),'rtabmap_robot',LaunchConfiguration('lcd_robot_id'),'.db'],
                 "approx_sync": LaunchConfiguration('approx_sync'),
                 "config_path": LaunchConfiguration('cfg').perform(context),
                 "queue_size": LaunchConfiguration('queue_size'),
@@ -431,8 +431,7 @@ def generate_launch_description():
         DeclareLaunchArgument('map_frame_id',   default_value='map',                description='Output map frame id (TF).'),
         DeclareLaunchArgument('publish_tf_map', default_value='true',               description='Publish TF between map and odomerty.'),
         DeclareLaunchArgument('namespace',      default_value='/r0',            description=''),
-        DeclareLaunchArgument('database_path',  default_value='~/.ros/rtabmap.db',  description='Where is the map saved/loaded.'),
-        DeclareLaunchArgument('queue_size',     default_value='10',                 description=''),
+         DeclareLaunchArgument('queue_size',     default_value='10',                 description=''),
         DeclareLaunchArgument('qos',            default_value='2',                  description='General QoS used for sensor input data: 0=system default, 1=Reliable, 2=Best Effort.'),
         DeclareLaunchArgument('wait_for_transform', default_value='0.2',            description=''),
         DeclareLaunchArgument('rtabmap_args',   default_value='',                   description='Backward compatibility, use "args" instead.'),
@@ -524,6 +523,7 @@ def generate_launch_description():
         DeclareLaunchArgument('lcd_rtabmap_map_topic',            default_value=[LaunchConfiguration('namespace'),'/mapData']),
         DeclareLaunchArgument('lcd_global_descriptor_topic',            default_value='/global_descriptor'),
         DeclareLaunchArgument('lcd_robot_id',            default_value='0'),
+        DeclareLaunchArgument('database_path',  default_value='~/.ros/',  description='Where is the map saved/loaded.'),
         
         OpaqueFunction(function=launch_setup)
     ])
