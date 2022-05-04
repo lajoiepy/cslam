@@ -6,14 +6,17 @@
 #include <rtabmap_ros/msg/info.hpp>
 #include <rtabmap_ros/srv/add_link.hpp>
 #include <rtabmap_ros/srv/get_map.hpp>
-#include <external_loop_closure_detection/MsgConversion.h>
+
+#include <rtabmap_ros/MsgConversion.h>
 
 #include <rtabmap/core/SensorData.h>
 #include <rtabmap/core/Rtabmap.h>
 #include <rtabmap/core/Memory.h>
 #include <rtabmap/core/VWDictionary.h>
 #include <rtabmap/core/util3d.h>
+#include <rtabmap/core/util2d.h>
 #include <rtabmap/core/RegistrationVis.h>
+#include <rtabmap/core/Compression.h>
 #include <rtabmap/utilite/UStl.h>
 
 #include <message_filters/subscriber.h>
@@ -155,11 +158,9 @@ class ExternalLoopClosureDetection
 			"local_descriptors", 10, std::bind(&ExternalLoopClosureDetection::receive_local_image_descriptors, this, std::placeholders::_1));
 
 		// Registration settings
-		registration_params_ = rtabmap::Parameters::getDefaultParameters();
-		registration_params_.insert(rtabmap::ParametersPair(rtabmap::Parameters::kVisMinInliers(), std::to_string(minInliers_)));
-
-		features_extractor_ = Feature2D::create(registration_params_);
-		registration_.parseParameters(registration_params_);
+		rtabmap::ParametersMap registration_params;
+		registration_params.insert(rtabmap::ParametersPair(rtabmap::Parameters::kVisMinInliers(), std::to_string(minInliers_)));
+		registration_.parseParameters(registration_params);
 
 		RCLCPP_INFO(node_->get_logger(), "Initialization done.");
 	}
@@ -300,22 +301,25 @@ class ExternalLoopClosureDetection
 			}
 		}
 
-		kpts = features_extractor_->generateKeypoints(image, depthMask);
-		descriptors = features_extractor_->generateDescriptors(	image, kpts);
-		kpts3D = feature_extractor_->generateKeypoints3D(frame_data, kpts)
+		rtabmap::ParametersMap registration_params;
+		registration_params.insert(rtabmap::ParametersPair(rtabmap::Parameters::kVisMinInliers(), std::to_string(minInliers_)));
+		auto detector = rtabmap::Feature2D::create(registration_params);
 
-		frame_data.setFeatures(kpts, , descriptors)
+		auto kpts = detector->generateKeypoints(image, depthMask);
+		auto descriptors = detector->generateDescriptors(image, kpts);
+		auto kpts3D = detector->generateKeypoints3D(frame_data, kpts);
 
 		// Build message
-		rtabmap::Signature local_descriptors(frame_data);
-		rtabmap_ros::msg::NodeData data;
-		rtabmap_ros::nodeDataToROS(local_descriptors, data);
+		frame_data.setFeatures(kpts, kpts3D, descriptors);
+		rtabmap_ros::msg::RGBDImage data;
+		rtabmap_ros::rgbdImageToROS(frame_data, data, "camera");
 
 		// Clear images in message to save bandwidth
-		data.image = {};
-		data.depth = {};
-		data.user_data = {};
-		data.laser_scan = {};
+		data.rgb = sensor_msgs::msg::Image();
+		data.depth = sensor_msgs::msg::Image();
+		data.rgb_compressed = sensor_msgs::msg::CompressedImage();
+		data.depth_compressed = sensor_msgs::msg::CompressedImage();
+		data.global_descriptor = rtabmap_ros::msg::GlobalDescriptor();
 
 		// Fill msg
 		cslam_loop_detection::msg::LocalImageDescriptors msg;
@@ -332,14 +336,29 @@ class ExternalLoopClosureDetection
 
 	void receive_local_image_descriptors(const std::shared_ptr<cslam_loop_detection::msg::LocalImageDescriptors> msg)
 	{
-		rtabmap::Signature local_descriptors = rtabmap_ros::nodeDataFromROS(msg->data);
+		// Fill keypoints
+		rtabmap::StereoCameraModel stereoModel = rtabmap_ros::stereoCameraModelFromROS(msg->data.rgb_camera_info, 
+			msg->data.depth_camera_info, rtabmap::Transform::getIdentity());
+		rtabmap::SensorData tmpTo(
+				cv::Mat(),
+				cv::Mat(),
+				stereoModel,
+				0,
+				rtabmap_ros::timestampFromROS(msg->data.header.stamp));
+
+		std::vector<cv::KeyPoint> kpts;
+		rtabmap_ros::keypointsFromROS(msg->data.key_points, kpts);
+		std::vector<cv::Point3f> kpts3D;
+		rtabmap_ros::points3fFromROS(msg->data.points, kpts3D);
+		auto descriptors = rtabmap::uncompressData(msg->data.descriptors);
+		tmpTo.setFeatures(kpts, kpts3D, descriptors);
 
 		//Compute transformation
 		// Registration params
 		rtabmap::RegistrationInfo regInfo;
 		rtabmap::SensorData tmpFrom = localData_.at(msg->receptor_image_id);
 		tmpFrom.uncompressData();
-		rtabmap::Transform t = registration_.computeTransformation(tmpFrom, local_descriptors, rtabmap::Transform(), &regInfo);
+		rtabmap::Transform t = registration_.computeTransformation(tmpFrom, tmpTo, rtabmap::Transform(), &regInfo);
 
 		// Store using pairs (robot_id, image_id)
 		if(!t.isNull())
@@ -371,10 +390,6 @@ class ExternalLoopClosureDetection
 	std::map<int, rclcpp::Publisher<cslam_loop_detection::msg::LocalImageDescriptors>::SharedPtr> local_descriptors_publishers_;
 
 	rclcpp::Subscription<cslam_loop_detection::msg::LocalImageDescriptors>::SharedPtr local_descriptors_subscriber_;
-
-	rtabmap::Parameters registration_params_;
-
-	rtabmap::Feature2D features_extractor_;
 
 	rtabmap::RegistrationVis registration_;
 	
