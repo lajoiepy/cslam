@@ -154,141 +154,12 @@ class ExternalLoopClosureDetection
 		local_descriptors_subscriber_ = node->create_subscription<cslam_loop_detection::msg::LocalImageDescriptors>(
 			"local_descriptors", 10, std::bind(&ExternalLoopClosureDetection::receive_local_image_descriptors, this, std::placeholders::_1));
 
-		// Registration parameters
-		Parameters::parse(parameters, Parameters::kVisMinInliers(), _minInliers);
-		Parameters::parse(parameters, Parameters::kVisInlierDistance(), _inlierDistance);
-		Parameters::parse(parameters, Parameters::kVisIterations(), _iterations);
-		Parameters::parse(parameters, Parameters::kVisRefineIterations(), _refineIterations);
-		Parameters::parse(parameters, Parameters::kVisEstimationType(), _estimationType);
-		Parameters::parse(parameters, Parameters::kVisForwardEstOnly(), _forwardEstimateOnly);
-		Parameters::parse(parameters, Parameters::kVisEpipolarGeometryVar(), _epipolarGeometryVar);
-		Parameters::parse(parameters, Parameters::kVisPnPReprojError(), _PnPReprojError);
-		Parameters::parse(parameters, Parameters::kVisPnPFlags(), _PnPFlags);
-		Parameters::parse(parameters, Parameters::kVisPnPRefineIterations(), _PnPRefineIterations);
-		Parameters::parse(parameters, Parameters::kVisCorType(), _correspondencesApproach);
-		Parameters::parse(parameters, Parameters::kVisCorFlowWinSize(), _flowWinSize);
-		Parameters::parse(parameters, Parameters::kVisCorFlowIterations(), _flowIterations);
-		Parameters::parse(parameters, Parameters::kVisCorFlowEps(), _flowEps);
-		Parameters::parse(parameters, Parameters::kVisCorFlowMaxLevel(), _flowMaxLevel);
-		Parameters::parse(parameters, Parameters::kVisCorNNDR(), _nndr);
-		Parameters::parse(parameters, Parameters::kVisCorNNType(), _nnType);
-		Parameters::parse(parameters, Parameters::kGMSWithRotation(), _gmsWithRotation);
-		Parameters::parse(parameters, Parameters::kGMSWithScale(), _gmsWithScale);
-		Parameters::parse(parameters, Parameters::kGMSThresholdFactor(), _gmsThresholdFactor);
-		Parameters::parse(parameters, Parameters::kVisCorGuessWinSize(), _guessWinSize);
-		Parameters::parse(parameters, Parameters::kVisCorGuessMatchToProjection(), _guessMatchToProjection);
-		Parameters::parse(parameters, Parameters::kVisBundleAdjustment(), _bundleAdjustment);
-		Parameters::parse(parameters, Parameters::kVisDepthAsMask(), _depthAsMask);
-		Parameters::parse(parameters, Parameters::kVisMinInliersDistribution(), _minInliersDistributionThr);
-		Parameters::parse(parameters, Parameters::kVisMeanInliersDistance(), _maxInliersMeanDistance);
-		uInsert(_bundleParameters, parameters);
+		// Registration settings
+		registration_params_ = rtabmap::Parameters::getDefaultParameters();
+		registration_params_.insert(rtabmap::ParametersPair(rtabmap::Parameters::kVisMinInliers(), std::to_string(minInliers_)));
 
-		if(_minInliers < 6)
-		{
-			UWARN("%s should be >= 6 but it is set to %d, setting to 6.", Parameters::kVisMinInliers().c_str(), _minInliers);
-			_minInliers = 6;
-		}
-		UASSERT_MSG(_inlierDistance > 0.0f, uFormat("value=%f", _inlierDistance).c_str());
-		UASSERT_MSG(_iterations > 0, uFormat("value=%d", _iterations).c_str());
-
-		if(_nnType == 6)
-		{
-			verify that we have Python3 support
-			int iterations = _pyMatcher?_pyMatcher->iterations():Parameters::defaultPyMatcherIterations();
-			float matchThr = _pyMatcher?_pyMatcher->matchThreshold():Parameters::defaultPyMatcherThreshold();
-			std::string path = _pyMatcher?_pyMatcher->path():Parameters::defaultPyMatcherPath();
-			bool cuda = _pyMatcher?_pyMatcher->cuda():Parameters::defaultPyMatcherCuda();
-			std::string model = _pyMatcher?_pyMatcher->model():Parameters::defaultPyMatcherModel();
-			Parameters::parse(parameters, Parameters::kPyMatcherIterations(), iterations);
-			Parameters::parse(parameters, Parameters::kPyMatcherThreshold(), matchThr);
-			Parameters::parse(parameters, Parameters::kPyMatcherPath(), path);
-			Parameters::parse(parameters, Parameters::kPyMatcherCuda(), cuda);
-			Parameters::parse(parameters, Parameters::kPyMatcherModel(), model);
-			if(path.empty())
-			{
-				UERROR("%s parameter should be set to use Python3 matching (%s=6), using default %d.",
-						Parameters::kPyMatcherPath().c_str(),
-						Parameters::kVisCorNNType().c_str(),
-						Parameters::defaultVisCorNNType());
-				_nnType = Parameters::defaultVisCorNNType();
-			}
-			else
-			{
-				delete _pyMatcher;
-				_pyMatcher = new PyMatcher(path, matchThr, iterations, cuda, model);
-			}
-		}
-
-		override feature parameters
-		for(ParametersMap::const_iterator iter=parameters.begin(); iter!=parameters.end(); ++iter)
-		{
-			std::string group = uSplit(iter->first, '/').front();
-			if(Parameters::isFeatureParameter(iter->first) || group.compare("Stereo") == 0)
-			{
-				uInsert(_featureParameters, ParametersPair(iter->first, iter->second));
-			}
-		}
-
-		if(uContains(parameters, Parameters::kVisCorNNType()))
-		{
-			if(_nnType<VWDictionary::kNNUndef)
-			{
-				uInsert(_featureParameters, ParametersPair(Parameters::kKpNNStrategy(), uNumber2Str(_nnType)));
-			}
-		}
-		if(uContains(parameters, Parameters::kVisCorNNDR()))
-		{
-			uInsert(_featureParameters, ParametersPair(Parameters::kKpNndrRatio(), parameters.at(Parameters::kVisCorNNDR())));
-		}
-		if(uContains(parameters, Parameters::kKpByteToFloat()))
-		{
-			uInsert(_featureParameters, ParametersPair(Parameters::kKpByteToFloat(), parameters.at(Parameters::kKpByteToFloat())));
-		}
-		if(uContains(parameters, Parameters::kVisFeatureType()))
-		{
-			uInsert(_featureParameters, ParametersPair(Parameters::kKpDetectorStrategy(), parameters.at(Parameters::kVisFeatureType())));
-		}
-		if(uContains(parameters, Parameters::kVisMaxFeatures()))
-		{
-			uInsert(_featureParameters, ParametersPair(Parameters::kKpMaxFeatures(), parameters.at(Parameters::kVisMaxFeatures())));
-		}
-		if(uContains(parameters, Parameters::kVisMaxDepth()))
-		{
-			uInsert(_featureParameters, ParametersPair(Parameters::kKpMaxDepth(), parameters.at(Parameters::kVisMaxDepth())));
-		}
-		if(uContains(parameters, Parameters::kVisMinDepth()))
-		{
-			uInsert(_featureParameters, ParametersPair(Parameters::kKpMinDepth(), parameters.at(Parameters::kVisMinDepth())));
-		}
-		if(uContains(parameters, Parameters::kVisRoiRatios()))
-		{
-			uInsert(_featureParameters, ParametersPair(Parameters::kKpRoiRatios(), parameters.at(Parameters::kVisRoiRatios())));
-		}
-		if(uContains(parameters, Parameters::kVisSubPixEps()))
-		{
-			uInsert(_featureParameters, ParametersPair(Parameters::kKpSubPixEps(), parameters.at(Parameters::kVisSubPixEps())));
-		}
-		if(uContains(parameters, Parameters::kVisSubPixIterations()))
-		{
-			uInsert(_featureParameters, ParametersPair(Parameters::kKpSubPixIterations(), parameters.at(Parameters::kVisSubPixIterations())));
-		}
-		if(uContains(parameters, Parameters::kVisSubPixWinSize()))
-		{
-			uInsert(_featureParameters, ParametersPair(Parameters::kKpSubPixWinSize(), parameters.at(Parameters::kVisSubPixWinSize())));
-		}
-		if(uContains(parameters, Parameters::kVisGridRows()))
-		{
-			uInsert(_featureParameters, ParametersPair(Parameters::kKpGridRows(), parameters.at(Parameters::kVisGridRows())));
-		}
-		if(uContains(parameters, Parameters::kVisGridCols()))
-		{
-			uInsert(_featureParameters, ParametersPair(Parameters::kKpGridCols(), parameters.at(Parameters::kVisGridCols())));
-		}
-
-		delete _detectorFrom;
-		delete _detectorTo;
-		_detectorFrom = Feature2D::create(_featureParameters);
-		_detectorTo = Feature2D::create(_featureParameters);
+		features_extractor_ = Feature2D::create(registration_params_);
+		registration_.parseParameters(registration_params_);
 
 		RCLCPP_INFO(node_->get_logger(), "Initialization done.");
 	}
@@ -336,17 +207,12 @@ class ExternalLoopClosureDetection
 				{
 					//Compute transformation
 					// Registration params
-					rtabmap::ParametersMap params;
-					params.insert(rtabmap::ParametersPair(rtabmap::Parameters::kVisMinInliers(), std::to_string(minInliers_)));
-				
-					rtabmap::RegistrationVis reg;
-					reg.parseParameters(params);
 					rtabmap::RegistrationInfo regInfo;
 					rtabmap::SensorData tmpFrom = localData_.at(fromId);
 					rtabmap::SensorData tmpTo = localData_.at(toId);
 					tmpFrom.uncompressData();
 					tmpTo.uncompressData();
-					rtabmap::Transform t = reg.computeTransformation(tmpFrom, tmpTo, rtabmap::Transform(), &regInfo);
+					rtabmap::Transform t = registration_.computeTransformation(tmpFrom, tmpTo, rtabmap::Transform(), &regInfo);
 
 					if(!t.isNull())
 					{
@@ -408,35 +274,37 @@ class ExternalLoopClosureDetection
 		rtabmap::SensorData frame_data = localData_.at(request->image_id);
 		frame_data.uncompressData();
 		std::vector<cv::KeyPoint> kptsFrom;
-		cv::Mat imageFrom = frame_data.imageRaw();
-		if(imageFrom.channels() > 1)
+		cv::Mat image = frame_data.imageRaw();
+		if(image.channels() > 1)
 		{
 			cv::Mat tmp;
-			cv::cvtColor(imageFrom, tmp, cv::COLOR_BGR2GRAY);
-			imageFrom = tmp;
+			cv::cvtColor(image, tmp, cv::COLOR_BGR2GRAY);
+			image = tmp;
 		}
 
 		cv::Mat depthMask;
 		if(!frame_data.depthRaw().empty())
 		{
-			if(imageFrom.rows % frame_data.depthRaw().rows == 0 &&
-				imageFrom.cols % frame_data.depthRaw().cols == 0 &&
-				imageFrom.rows/frame_data.depthRaw().rows == frame_data.imageRaw().cols/frame_data.depthRaw().cols)
+			if(image.rows % frame_data.depthRaw().rows == 0 &&
+				image.cols % frame_data.depthRaw().cols == 0 &&
+				image.rows/frame_data.depthRaw().rows == frame_data.imageRaw().cols/frame_data.depthRaw().cols)
 			{
-				depthMask = util2d::interpolate(frame_data.depthRaw(), frame_data.imageRaw().rows/frame_data.depthRaw().rows, 0.1f);
+				depthMask = rtabmap::util2d::interpolate(frame_data.depthRaw(), frame_data.imageRaw().rows/frame_data.depthRaw().rows, 0.1f);
 			}
 			else
 			{
 				UWARN("%s is true, but RGB size (%dx%d) modulo depth size (%dx%d) is not 0. Ignoring depth mask for feature detection.",
-						Parameters::kVisDepthAsMask().c_str(),
+						rtabmap::Parameters::kVisDepthAsMask().c_str(),
 						frame_data.imageRaw().rows, frame_data.imageRaw().cols,
 						frame_data.depthRaw().rows, frame_data.depthRaw().cols);
 			}
 		}
 
-		kptsFrom = _detectorFrom->generateKeypoints(
-				imageFrom,
-				depthMask);
+		kpts = features_extractor_->generateKeypoints(image, depthMask);
+		descriptors = features_extractor_->generateDescriptors(	image, kpts);
+		kpts3D = feature_extractor_->generateKeypoints3D(frame_data, kpts)
+
+		frame_data.setFeatures(kpts, , descriptors)
 
 		// Build message
 		rtabmap::Signature local_descriptors(frame_data);
@@ -468,14 +336,10 @@ class ExternalLoopClosureDetection
 
 		//Compute transformation
 		// Registration params
-		rtabmap::ParametersMap params;
-		params.insert(rtabmap::ParametersPair(rtabmap::Parameters::kVisMinInliers(), std::to_string(minInliers_)));
-		rtabmap::RegistrationVis reg;
-		reg.parseParameters(params);
 		rtabmap::RegistrationInfo regInfo;
 		rtabmap::SensorData tmpFrom = localData_.at(msg->receptor_image_id);
 		tmpFrom.uncompressData();
-		rtabmap::Transform t = reg.computeTransformation(tmpFrom, local_descriptors, rtabmap::Transform(), &regInfo);
+		rtabmap::Transform t = registration_.computeTransformation(tmpFrom, local_descriptors, rtabmap::Transform(), &regInfo);
 
 		// Store using pairs (robot_id, image_id)
 		if(!t.isNull())
@@ -507,6 +371,12 @@ class ExternalLoopClosureDetection
 	std::map<int, rclcpp::Publisher<cslam_loop_detection::msg::LocalImageDescriptors>::SharedPtr> local_descriptors_publishers_;
 
 	rclcpp::Subscription<cslam_loop_detection::msg::LocalImageDescriptors>::SharedPtr local_descriptors_subscriber_;
+
+	rtabmap::Parameters registration_params_;
+
+	rtabmap::Feature2D features_extractor_;
+
+	rtabmap::RegistrationVis registration_;
 	
 };
 
