@@ -28,7 +28,7 @@ class GlobalImageDescriptorLoopClosureDetection(object):
             self.params['pca'] = self.node.get_parameter('pca').value
             self.global_descriptor = NetVLAD(self.params, self.node)
         else:
-            self.get_logger().err('ERROR: Unknown technique. Using NetVLAD as default.')
+            self.node.get_logger().err('ERROR: Unknown technique. Using NetVLAD as default.')
             self.params['pca'] = self.node.get_parameter('pca').value
             self.global_descriptor = NetVLAD(self.params, self.node)
 
@@ -75,6 +75,8 @@ class GlobalImageDescriptorLoopClosureDetection(object):
 
     def detect_inter(self, embedding):
         kfs, ds = self.local_nnsm.search(embedding, k=self.params['nb_best_matches'])
+
+        self.node.get_logger().error("Robot " + str(self.robot_id) + " Inter-detection: " + str(ds))
 
         for kf, d in zip(kfs, ds):
             if d > self.params['threshold']:

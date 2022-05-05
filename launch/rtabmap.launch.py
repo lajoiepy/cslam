@@ -53,13 +53,6 @@ def launch_setup(context, *args, **kwargs):
         DeclareLaunchArgument('qos_imu',         default_value=LaunchConfiguration('qos'), description='Specific QoS used for imu input data: 0=system default, 1=Reliable, 2=Best Effort.'),
         DeclareLaunchArgument('qos_gps',         default_value=LaunchConfiguration('qos'), description='Specific QoS used for gps input data: 0=system default, 1=Reliable, 2=Best Effort.'),
         
-        #These arguments should not be modified directly, see referred topics without "_relay" suffix above
-        DeclareLaunchArgument('rgb_topic_relay',      default_value=ConditionalText(''.join([LaunchConfiguration('rgb_topic').perform(context), "_relay"]), ''.join(LaunchConfiguration('rgb_topic').perform(context)), LaunchConfiguration('compressed').perform(context)), description='Should not be modified manually!'),
-        DeclareLaunchArgument('depth_topic_relay',      default_value=ConditionalText(''.join([LaunchConfiguration('depth_topic').perform(context), "_relay"]), ''.join(LaunchConfiguration('depth_topic').perform(context)), LaunchConfiguration('compressed').perform(context)), description='Should not be modified manually!'),
-        DeclareLaunchArgument('left_image_topic_relay',      default_value=ConditionalText(''.join([LaunchConfiguration('left_image_topic').perform(context), "_relay"]), ''.join(LaunchConfiguration('left_image_topic').perform(context)), LaunchConfiguration('compressed').perform(context)), description='Should not be modified manually!'),
-        DeclareLaunchArgument('right_image_topic_relay',      default_value=ConditionalText(''.join([LaunchConfiguration('right_image_topic').perform(context), "_relay"]), ''.join(LaunchConfiguration('right_image_topic').perform(context)), LaunchConfiguration('compressed').perform(context)), description='Should not be modified manually!'),
-        DeclareLaunchArgument('rgbd_topic_relay',      default_value=ConditionalText(''.join(LaunchConfiguration('rgbd_topic').perform(context)), ''.join([LaunchConfiguration('rgbd_topic').perform(context), "_relay"]), LaunchConfiguration('rgbd_sync').perform(context)), description='Should not be modified manually!'),
-    
         SetParameter(name='use_sim_time', value=LaunchConfiguration('use_sim_time')),
         # 'use_sim_time' will be set on all nodes following the line above
     
@@ -86,9 +79,9 @@ def launch_setup(context, *args, **kwargs):
                 "min_inliers": LaunchConfiguration('lcd_min_inliers'),
                 "consider_other_matches": LaunchConfiguration('lcd_consider_other_matches'),
                 "min_inbetween_keyframes": LaunchConfiguration('lcd_min_inbetween_keyframes'),
-                "add_link_srv": LaunchConfiguration('lcd_add_link_srv'),
-                "rtabmap_info_topic": LaunchConfiguration('lcd_rtabmap_info_topic'),
-                "rtabmap_map_topic": LaunchConfiguration('lcd_rtabmap_map_topic'),
+                "add_link_srv": [LaunchConfiguration('namespace'),'/add_link'],
+                "rtabmap_info_topic": [LaunchConfiguration('namespace'),'/info'],
+                "rtabmap_map_topic": [LaunchConfiguration('namespace'),'/mapData'],
                 "max_queue_size": LaunchConfiguration('lcd_max_queue_size'),
                 "number_of_robots": LaunchConfiguration('lcd_number_of_robots'),
                 "robot_id": LaunchConfiguration('lcd_robot_id')
@@ -102,7 +95,7 @@ def launch_setup(context, *args, **kwargs):
             condition=IfCondition(PythonExpression(["'", LaunchConfiguration('stereo'), "' != 'true' and ('", LaunchConfiguration('subscribe_rgbd'), "' != 'true' or '", LaunchConfiguration('rgbd_sync'),"'=='true') and '", LaunchConfiguration('compressed'), "' == 'true'"])),
             remappings=[
                 (['in/', LaunchConfiguration('rgb_image_transport')], [LaunchConfiguration('rgb_topic'), '/', LaunchConfiguration('rgb_image_transport')]),
-                ('out', LaunchConfiguration('rgb_topic_relay'))], 
+                ('out', ConditionalText(''.join([LaunchConfiguration('namespace').perform(context), LaunchConfiguration('stereo_namespace').perform(context), LaunchConfiguration('rgb_topic').perform(context), "_relay"]), ''.join([LaunchConfiguration('namespace').perform(context), LaunchConfiguration('stereo_namespace').perform(context),LaunchConfiguration('rgb_topic').perform(context)]), LaunchConfiguration('compressed').perform(context)))], 
             arguments=[LaunchConfiguration('rgb_image_transport'), 'raw'],
             namespace=LaunchConfiguration('namespace')),
         Node(
@@ -110,7 +103,7 @@ def launch_setup(context, *args, **kwargs):
             condition=IfCondition(PythonExpression(["'", LaunchConfiguration('stereo'), "' != 'true' and ('", LaunchConfiguration('subscribe_rgbd'), "' != 'true' or '", LaunchConfiguration('rgbd_sync'),"'=='true') and '", LaunchConfiguration('compressed'), "' == 'true'"])),
             remappings=[
                 (['in/', LaunchConfiguration('depth_image_transport')], [LaunchConfiguration('depth_topic'), '/', LaunchConfiguration('depth_image_transport')]),
-                ('out', LaunchConfiguration('depth_topic_relay'))], 
+                ('out', ConditionalText(''.join([LaunchConfiguration('namespace').perform(context), LaunchConfiguration('stereo_namespace').perform(context),LaunchConfiguration('depth_topic').perform(context), "_relay"]), ''.join([LaunchConfiguration('namespace').perform(context), LaunchConfiguration('stereo_namespace').perform(context),LaunchConfiguration('depth_topic').perform(context)]), LaunchConfiguration('compressed').perform(context)))], 
             arguments=[LaunchConfiguration('depth_image_transport'), 'raw'],
             namespace=LaunchConfiguration('namespace')),
         Node(
@@ -123,10 +116,10 @@ def launch_setup(context, *args, **kwargs):
                 "qos_camera_info": LaunchConfiguration('qos_camera_info'),
                 "depth_scale": LaunchConfiguration('depth_scale')}],
             remappings=[
-                ("rgb/image", LaunchConfiguration('rgb_topic_relay')),
-                ("depth/image", LaunchConfiguration('depth_topic_relay')),
+                ("rgb/image", ConditionalText(''.join([LaunchConfiguration('namespace').perform(context), LaunchConfiguration('stereo_namespace').perform(context), LaunchConfiguration('rgb_topic').perform(context), "_relay"]), ''.join([LaunchConfiguration('namespace').perform(context), LaunchConfiguration('stereo_namespace').perform(context),LaunchConfiguration('rgb_topic').perform(context)]), LaunchConfiguration('compressed').perform(context))),
+                ("depth/image", ConditionalText(''.join([LaunchConfiguration('namespace').perform(context), LaunchConfiguration('stereo_namespace').perform(context),LaunchConfiguration('depth_topic').perform(context), "_relay"]), ''.join([LaunchConfiguration('namespace').perform(context), LaunchConfiguration('stereo_namespace').perform(context),LaunchConfiguration('depth_topic').perform(context)]), LaunchConfiguration('compressed').perform(context))),
                 ("rgb/camera_info", LaunchConfiguration('camera_info_topic')),
-                ("rgbd_image", LaunchConfiguration('rgbd_topic_relay'))],
+                ("rgbd_image", ConditionalText(''.join([LaunchConfiguration('namespace').perform(context), LaunchConfiguration('stereo_namespace').perform(context),LaunchConfiguration('rgbd_topic').perform(context)]), ''.join([LaunchConfiguration('namespace').perform(context), LaunchConfiguration('stereo_namespace').perform(context),LaunchConfiguration('rgbd_topic').perform(context), "_relay"]), LaunchConfiguration('rgbd_sync').perform(context)))],
             namespace=LaunchConfiguration('namespace')),
             
         # Relays Stereo
@@ -135,7 +128,7 @@ def launch_setup(context, *args, **kwargs):
             condition=IfCondition(PythonExpression(["'", LaunchConfiguration('stereo'), "' == 'true' and ('", LaunchConfiguration('subscribe_rgbd'), "' != 'true' or '", LaunchConfiguration('rgbd_sync'),"'=='true') and '", LaunchConfiguration('compressed'), "' == 'true'"])),
             remappings=[
                 (['in/', LaunchConfiguration('rgb_image_transport')], [LaunchConfiguration('left_image_topic'), '/', LaunchConfiguration('rgb_image_transport')]),
-                ('out', LaunchConfiguration('left_image_topic_relay'))], 
+                ('out', ConditionalText(''.join([LaunchConfiguration('namespace').perform(context), LaunchConfiguration('stereo_namespace').perform(context),LaunchConfiguration('left_image_topic').perform(context), "_relay"]), ''.join([LaunchConfiguration('namespace').perform(context), LaunchConfiguration('stereo_namespace').perform(context),LaunchConfiguration('left_image_topic').perform(context)]), LaunchConfiguration('compressed').perform(context)))], 
             arguments=[LaunchConfiguration('rgb_image_transport'), 'raw'],
             namespace=LaunchConfiguration('namespace')),
         Node(
@@ -143,7 +136,7 @@ def launch_setup(context, *args, **kwargs):
             condition=IfCondition(PythonExpression(["'", LaunchConfiguration('stereo'), "' == 'true' and ('", LaunchConfiguration('subscribe_rgbd'), "' != 'true' or '", LaunchConfiguration('rgbd_sync'),"'=='true') and '", LaunchConfiguration('compressed'), "' == 'true'"])),
             remappings=[
                 (['in/', LaunchConfiguration('rgb_image_transport')], [LaunchConfiguration('right_image_topic'), '/', LaunchConfiguration('rgb_image_transport')]),
-                ('out', LaunchConfiguration('right_image_topic_relay'))], 
+                ('out', ConditionalText(''.join([LaunchConfiguration('namespace').perform(context), LaunchConfiguration('stereo_namespace').perform(context),LaunchConfiguration('right_image_topic').perform(context), "_relay"]), ''.join([LaunchConfiguration('namespace').perform(context), LaunchConfiguration('stereo_namespace').perform(context),LaunchConfiguration('right_image_topic').perform(context)]), LaunchConfiguration('compressed').perform(context)))], 
             arguments=[LaunchConfiguration('rgb_image_transport'), 'raw'],
             namespace=LaunchConfiguration('namespace')),
         Node(
@@ -155,11 +148,11 @@ def launch_setup(context, *args, **kwargs):
                 "qos": LaunchConfiguration('qos_image'),
                 "qos_camera_info": LaunchConfiguration('qos_camera_info')}],
             remappings=[
-                ("left/image_rect", LaunchConfiguration('left_image_topic_relay')),
-                ("right/image_rect", LaunchConfiguration('right_image_topic_relay')),
-                ("left/camera_info", LaunchConfiguration('left_camera_info_topic')),
-                ("right/camera_info", LaunchConfiguration('right_camera_info_topic')),
-                ("rgbd_image", LaunchConfiguration('rgbd_topic_relay'))],
+                ("left/image_rect", ConditionalText(''.join([LaunchConfiguration('namespace').perform(context), LaunchConfiguration('stereo_namespace').perform(context),LaunchConfiguration('left_image_topic').perform(context), "_relay"]), ''.join([LaunchConfiguration('namespace').perform(context), LaunchConfiguration('stereo_namespace').perform(context),LaunchConfiguration('left_image_topic').perform(context)]), LaunchConfiguration('compressed').perform(context))),
+                ("right/image_rect", ConditionalText(''.join([LaunchConfiguration('namespace').perform(context), LaunchConfiguration('stereo_namespace').perform(context),LaunchConfiguration('right_image_topic').perform(context), "_relay"]), ''.join([LaunchConfiguration('namespace').perform(context), LaunchConfiguration('stereo_namespace').perform(context),LaunchConfiguration('right_image_topic').perform(context)]), LaunchConfiguration('compressed').perform(context))),
+                ("left/camera_info", [LaunchConfiguration('namespace').perform(context), LaunchConfiguration('stereo_namespace').perform(context), LaunchConfiguration('left_camera_info_topic').perform(context)]),
+                ("right/camera_info", [LaunchConfiguration('namespace').perform(context), LaunchConfiguration('stereo_namespace').perform(context), LaunchConfiguration('right_camera_info_topic').perform(context)]),
+                ("rgbd_image", ConditionalText(''.join([LaunchConfiguration('namespace').perform(context), LaunchConfiguration('stereo_namespace').perform(context),LaunchConfiguration('rgbd_topic').perform(context)]), ''.join([LaunchConfiguration('namespace').perform(context), LaunchConfiguration('stereo_namespace').perform(context),LaunchConfiguration('rgbd_topic').perform(context), "_relay"]), LaunchConfiguration('rgbd_sync').perform(context)))],
             namespace=LaunchConfiguration('namespace')),
             
         # Relay rgbd_image
@@ -177,7 +170,7 @@ def launch_setup(context, *args, **kwargs):
                 "qos": LaunchConfiguration('qos_image')}],
             remappings=[
                 ("rgbd_image", [LaunchConfiguration('rgbd_topic'), "/compressed"]),
-                ([LaunchConfiguration('rgbd_topic'), "/compressed_relay"], LaunchConfiguration('rgbd_topic_relay'))],
+                ([LaunchConfiguration('rgbd_topic'), "/compressed_relay"], ConditionalText(''.join([LaunchConfiguration('namespace').perform(context), LaunchConfiguration('stereo_namespace').perform(context),LaunchConfiguration('rgbd_topic').perform(context)]), ''.join([LaunchConfiguration('namespace').perform(context), LaunchConfiguration('stereo_namespace').perform(context),LaunchConfiguration('rgbd_topic').perform(context), "_relay"]), LaunchConfiguration('rgbd_sync').perform(context)))],
             namespace=LaunchConfiguration('namespace')),
                 
         # RGB-D odometry
@@ -203,10 +196,10 @@ def launch_setup(context, *args, **kwargs):
                 "guess_min_translation": LaunchConfiguration('odom_guess_min_translation'),
                 "guess_min_rotation": LaunchConfiguration('odom_guess_min_rotation')}],
             remappings=[
-                ("rgb/image", LaunchConfiguration('rgb_topic_relay')),
-                ("depth/image", LaunchConfiguration('depth_topic_relay')),
+                ("rgb/image", ConditionalText(''.join([LaunchConfiguration('namespace').perform(context), LaunchConfiguration('stereo_namespace').perform(context), LaunchConfiguration('rgb_topic').perform(context), "_relay"]), ''.join([LaunchConfiguration('namespace').perform(context), LaunchConfiguration('stereo_namespace').perform(context),LaunchConfiguration('rgb_topic').perform(context)]), LaunchConfiguration('compressed').perform(context))),
+                ("depth/image", ConditionalText(''.join([LaunchConfiguration('namespace').perform(context), LaunchConfiguration('stereo_namespace').perform(context),LaunchConfiguration('depth_topic').perform(context), "_relay"]), ''.join([LaunchConfiguration('namespace').perform(context), LaunchConfiguration('stereo_namespace').perform(context),LaunchConfiguration('depth_topic').perform(context)]), LaunchConfiguration('compressed').perform(context))),
                 ("rgb/camera_info", LaunchConfiguration('camera_info_topic')),
-                ("rgbd_image", LaunchConfiguration('rgbd_topic_relay')),
+                ("rgbd_image", ConditionalText(''.join([LaunchConfiguration('namespace').perform(context), LaunchConfiguration('stereo_namespace').perform(context),LaunchConfiguration('rgbd_topic').perform(context)]), ''.join([LaunchConfiguration('namespace').perform(context), LaunchConfiguration('stereo_namespace').perform(context),LaunchConfiguration('rgbd_topic').perform(context), "_relay"]), LaunchConfiguration('rgbd_sync').perform(context))),
                 ("odom", LaunchConfiguration('odom_topic')),
                 ("imu", LaunchConfiguration('imu_topic'))],
             arguments=[LaunchConfiguration("args"), LaunchConfiguration("odom_args")],
@@ -239,11 +232,11 @@ def launch_setup(context, *args, **kwargs):
                 "Vis/MinInliers": "8"          
                 }],
             remappings=[
-                ("left/image_rect", LaunchConfiguration('left_image_topic_relay')),
-                ("right/image_rect", LaunchConfiguration('right_image_topic_relay')),
-                ("left/camera_info", LaunchConfiguration('left_camera_info_topic')),
-                ("right/camera_info", LaunchConfiguration('right_camera_info_topic')),
-                ("rgbd_image", LaunchConfiguration('rgbd_topic_relay')),
+                ("left/image_rect", ConditionalText(''.join([LaunchConfiguration('namespace').perform(context), LaunchConfiguration('stereo_namespace').perform(context),LaunchConfiguration('left_image_topic').perform(context), "_relay"]), ''.join([LaunchConfiguration('namespace').perform(context), LaunchConfiguration('stereo_namespace').perform(context),LaunchConfiguration('left_image_topic').perform(context)]), LaunchConfiguration('compressed').perform(context))),
+                ("right/image_rect", ConditionalText(''.join([LaunchConfiguration('namespace').perform(context), LaunchConfiguration('stereo_namespace').perform(context),LaunchConfiguration('right_image_topic').perform(context), "_relay"]), ''.join([LaunchConfiguration('namespace').perform(context), LaunchConfiguration('stereo_namespace').perform(context),LaunchConfiguration('right_image_topic').perform(context)]), LaunchConfiguration('compressed').perform(context))),
+                ("left/camera_info", [LaunchConfiguration('namespace').perform(context), LaunchConfiguration('stereo_namespace').perform(context), LaunchConfiguration('left_camera_info_topic').perform(context)]),
+                ("right/camera_info", [LaunchConfiguration('namespace').perform(context), LaunchConfiguration('stereo_namespace').perform(context), LaunchConfiguration('right_camera_info_topic').perform(context)]),
+                ("rgbd_image", ConditionalText(''.join([LaunchConfiguration('namespace').perform(context), LaunchConfiguration('stereo_namespace').perform(context),LaunchConfiguration('rgbd_topic').perform(context)]), ''.join([LaunchConfiguration('namespace').perform(context), LaunchConfiguration('stereo_namespace').perform(context),LaunchConfiguration('rgbd_topic').perform(context), "_relay"]), LaunchConfiguration('rgbd_sync').perform(context))),
                 ("odom", LaunchConfiguration('odom_topic')),
                 ("imu", LaunchConfiguration('imu_topic'))],
             arguments=[LaunchConfiguration("args"), LaunchConfiguration("odom_args")],
@@ -324,14 +317,14 @@ def launch_setup(context, *args, **kwargs):
                 "Optimizer/Iterations": "0"               
             }],
             remappings=[
-                ("rgb/image", LaunchConfiguration('rgb_topic_relay')),
-                ("depth/image", LaunchConfiguration('depth_topic_relay')),
+                ("rgb/image", ConditionalText(''.join([LaunchConfiguration('namespace').perform(context), LaunchConfiguration('stereo_namespace').perform(context), LaunchConfiguration('rgb_topic').perform(context), "_relay"]), ''.join([LaunchConfiguration('namespace').perform(context), LaunchConfiguration('stereo_namespace').perform(context),LaunchConfiguration('rgb_topic').perform(context)]), LaunchConfiguration('compressed').perform(context))),
+                ("depth/image", ConditionalText(''.join([LaunchConfiguration('namespace').perform(context), LaunchConfiguration('stereo_namespace').perform(context),LaunchConfiguration('depth_topic').perform(context), "_relay"]), ''.join([LaunchConfiguration('namespace').perform(context), LaunchConfiguration('stereo_namespace').perform(context),LaunchConfiguration('depth_topic').perform(context)]), LaunchConfiguration('compressed').perform(context))),
                 ("rgb/camera_info", LaunchConfiguration('camera_info_topic')),
-                ("rgbd_image", LaunchConfiguration('rgbd_topic_relay')),
-                ("left/image_rect", LaunchConfiguration('left_image_topic_relay')),
-                ("right/image_rect", LaunchConfiguration('right_image_topic_relay')),
-                ("left/camera_info", LaunchConfiguration('left_camera_info_topic')),
-                ("right/camera_info", LaunchConfiguration('right_camera_info_topic')),
+                ("rgbd_image", ConditionalText(''.join([LaunchConfiguration('namespace').perform(context), LaunchConfiguration('stereo_namespace').perform(context),LaunchConfiguration('rgbd_topic').perform(context)]), ''.join([LaunchConfiguration('namespace').perform(context), LaunchConfiguration('stereo_namespace').perform(context),LaunchConfiguration('rgbd_topic').perform(context), "_relay"]), LaunchConfiguration('rgbd_sync').perform(context))),
+                ("left/image_rect", ConditionalText(''.join([LaunchConfiguration('namespace').perform(context), LaunchConfiguration('stereo_namespace').perform(context),LaunchConfiguration('left_image_topic').perform(context), "_relay"]), ''.join([LaunchConfiguration('namespace').perform(context), LaunchConfiguration('stereo_namespace').perform(context),LaunchConfiguration('left_image_topic').perform(context)]), LaunchConfiguration('compressed').perform(context))),
+                ("right/image_rect", ConditionalText(''.join([LaunchConfiguration('namespace').perform(context), LaunchConfiguration('stereo_namespace').perform(context),LaunchConfiguration('right_image_topic').perform(context), "_relay"]), ''.join([LaunchConfiguration('namespace').perform(context), LaunchConfiguration('stereo_namespace').perform(context),LaunchConfiguration('right_image_topic').perform(context)]), LaunchConfiguration('compressed').perform(context))),
+                ("left/camera_info", [LaunchConfiguration('namespace').perform(context), LaunchConfiguration('stereo_namespace').perform(context), LaunchConfiguration('left_camera_info_topic').perform(context)]),
+                ("right/camera_info", [LaunchConfiguration('namespace').perform(context), LaunchConfiguration('stereo_namespace').perform(context), LaunchConfiguration('right_camera_info_topic').perform(context)]),
                 ("scan", LaunchConfiguration('scan_topic')),
                 ("scan_cloud", LaunchConfiguration('scan_cloud_topic')),
                 ("user_data", LaunchConfiguration('user_data_topic')),
@@ -368,14 +361,14 @@ def launch_setup(context, *args, **kwargs):
                 "qos_user_data": LaunchConfiguration('qos_user_data')
             }],
             remappings=[
-                ("rgb/image", LaunchConfiguration('rgb_topic_relay')),
-                ("depth/image", LaunchConfiguration('depth_topic_relay')),
+                ("rgb/image", ConditionalText(''.join([LaunchConfiguration('namespace').perform(context), LaunchConfiguration('stereo_namespace').perform(context), LaunchConfiguration('rgb_topic').perform(context), "_relay"]), ''.join([LaunchConfiguration('namespace').perform(context), LaunchConfiguration('stereo_namespace').perform(context),LaunchConfiguration('rgb_topic').perform(context)]), LaunchConfiguration('compressed').perform(context))),
+                ("depth/image", ConditionalText(''.join([LaunchConfiguration('namespace').perform(context), LaunchConfiguration('stereo_namespace').perform(context),LaunchConfiguration('depth_topic').perform(context), "_relay"]), ''.join([LaunchConfiguration('namespace').perform(context), LaunchConfiguration('stereo_namespace').perform(context),LaunchConfiguration('depth_topic').perform(context)]), LaunchConfiguration('compressed').perform(context))),
                 ("rgb/camera_info", LaunchConfiguration('camera_info_topic')),
-                ("rgbd_image", LaunchConfiguration('rgbd_topic_relay')),
-                ("left/image_rect", LaunchConfiguration('left_image_topic_relay')),
-                ("right/image_rect", LaunchConfiguration('right_image_topic_relay')),
-                ("left/camera_info", LaunchConfiguration('left_camera_info_topic')),
-                ("right/camera_info", LaunchConfiguration('right_camera_info_topic')),
+                ("rgbd_image", ConditionalText(''.join([LaunchConfiguration('namespace').perform(context), LaunchConfiguration('stereo_namespace').perform(context),LaunchConfiguration('rgbd_topic').perform(context)]), ''.join([LaunchConfiguration('namespace').perform(context), LaunchConfiguration('stereo_namespace').perform(context),LaunchConfiguration('rgbd_topic').perform(context), "_relay"]), LaunchConfiguration('rgbd_sync').perform(context))),
+                ("left/image_rect", ConditionalText(''.join([LaunchConfiguration('namespace').perform(context), LaunchConfiguration('stereo_namespace').perform(context),LaunchConfiguration('left_image_topic').perform(context), "_relay"]), ''.join([LaunchConfiguration('namespace').perform(context), LaunchConfiguration('stereo_namespace').perform(context),LaunchConfiguration('left_image_topic').perform(context)]), LaunchConfiguration('compressed').perform(context))),
+                ("right/image_rect", ConditionalText(''.join([LaunchConfiguration('namespace').perform(context), LaunchConfiguration('stereo_namespace').perform(context),LaunchConfiguration('right_image_topic').perform(context), "_relay"]), ''.join([LaunchConfiguration('namespace').perform(context), LaunchConfiguration('stereo_namespace').perform(context),LaunchConfiguration('right_image_topic').perform(context)]), LaunchConfiguration('compressed').perform(context))),
+                ("left/camera_info", [LaunchConfiguration('namespace').perform(context), LaunchConfiguration('stereo_namespace').perform(context), LaunchConfiguration('left_camera_info_topic').perform(context)]),
+                ("right/camera_info", [LaunchConfiguration('namespace').perform(context), LaunchConfiguration('stereo_namespace').perform(context), LaunchConfiguration('right_camera_info_topic').perform(context)]),
                 ("scan", LaunchConfiguration('scan_topic')),
                 ("scan_cloud", LaunchConfiguration('scan_cloud_topic')),
                 ("odom", LaunchConfiguration('odom_topic'))],
@@ -396,14 +389,14 @@ def launch_setup(context, *args, **kwargs):
                 "approx_sync": LaunchConfiguration('approx_sync')
             }],
             remappings=[
-                ('left/image', LaunchConfiguration('left_image_topic_relay')),
-                ('right/image', LaunchConfiguration('right_image_topic_relay')),
-                ('left/camera_info', LaunchConfiguration('left_camera_info_topic')),
-                ('right/camera_info', LaunchConfiguration('right_camera_info_topic')),
-                ('rgb/image', LaunchConfiguration('rgb_topic_relay')),
-                ('depth/image', LaunchConfiguration('depth_topic_relay')),
+                ('left/image', ConditionalText(''.join([LaunchConfiguration('namespace').perform(context), LaunchConfiguration('stereo_namespace').perform(context),LaunchConfiguration('left_image_topic').perform(context), "_relay"]), ''.join([LaunchConfiguration('namespace').perform(context), LaunchConfiguration('stereo_namespace').perform(context),LaunchConfiguration('left_image_topic').perform(context)]), LaunchConfiguration('compressed').perform(context))),
+                ('right/image', ConditionalText(''.join([LaunchConfiguration('namespace').perform(context), LaunchConfiguration('stereo_namespace').perform(context),LaunchConfiguration('right_image_topic').perform(context), "_relay"]), ''.join([LaunchConfiguration('namespace').perform(context), LaunchConfiguration('stereo_namespace').perform(context),LaunchConfiguration('right_image_topic').perform(context)]), LaunchConfiguration('compressed').perform(context))),
+                ('left/camera_info', [LaunchConfiguration('namespace').perform(context), LaunchConfiguration('stereo_namespace').perform(context), LaunchConfiguration('left_camera_info_topic').perform(context)]),
+                ('right/camera_info', [LaunchConfiguration('namespace').perform(context), LaunchConfiguration('stereo_namespace').perform(context), LaunchConfiguration('right_camera_info_topic').perform(context)]),
+                ('rgb/image', ConditionalText(''.join([LaunchConfiguration('namespace').perform(context), LaunchConfiguration('stereo_namespace').perform(context), LaunchConfiguration('rgb_topic').perform(context), "_relay"]), ''.join([LaunchConfiguration('namespace').perform(context), LaunchConfiguration('stereo_namespace').perform(context),LaunchConfiguration('rgb_topic').perform(context)]), LaunchConfiguration('compressed').perform(context))),
+                ('depth/image', ConditionalText(''.join([LaunchConfiguration('namespace').perform(context), LaunchConfiguration('stereo_namespace').perform(context),LaunchConfiguration('depth_topic').perform(context), "_relay"]), ''.join([LaunchConfiguration('namespace').perform(context), LaunchConfiguration('stereo_namespace').perform(context),LaunchConfiguration('depth_topic').perform(context)]), LaunchConfiguration('compressed').perform(context))),
                 ('rgb/camera_info', LaunchConfiguration('camera_info_topic')),
-                ('rgbd_image', LaunchConfiguration('rgbd_topic_relay')),
+                ('rgbd_image', ConditionalText(''.join([LaunchConfiguration('namespace').perform(context), LaunchConfiguration('stereo_namespace').perform(context),LaunchConfiguration('rgbd_topic').perform(context)]), ''.join([LaunchConfiguration('namespace').perform(context), LaunchConfiguration('stereo_namespace').perform(context),LaunchConfiguration('rgbd_topic').perform(context), "_relay"]), LaunchConfiguration('rgbd_sync').perform(context))),
                 ('cloud', 'voxel_cloud')]),
         ]
 
@@ -453,10 +446,10 @@ def generate_launch_description():
         
         # Stereo related topics
         DeclareLaunchArgument('stereo_namespace',        default_value='/stereo_camera', description=''),
-        DeclareLaunchArgument('left_image_topic',        default_value=[LaunchConfiguration('namespace'), LaunchConfiguration('stereo_namespace'), '/left/image_rect_color'], description=''),
-        DeclareLaunchArgument('right_image_topic',       default_value=[LaunchConfiguration('namespace'), LaunchConfiguration('stereo_namespace'), '/right/image_rect_color']),
-        DeclareLaunchArgument('left_camera_info_topic',  default_value=[LaunchConfiguration('namespace'), LaunchConfiguration('stereo_namespace'), '/left/camera_info'], description=''),
-        DeclareLaunchArgument('right_camera_info_topic', default_value=[LaunchConfiguration('namespace'), LaunchConfiguration('stereo_namespace'), '/right/camera_info'], description=''),
+        DeclareLaunchArgument('left_image_topic',        default_value='/left/image_rect_color', description=''),
+        DeclareLaunchArgument('right_image_topic',       default_value='/right/image_rect_color'),
+        DeclareLaunchArgument('left_camera_info_topic',  default_value='/left/camera_info', description=''),
+        DeclareLaunchArgument('right_camera_info_topic', default_value='/right/camera_info', description=''),
         
         # Use Pre-sync RGBDImage format
         DeclareLaunchArgument('rgbd_sync',        default_value='false',      description='Pre-sync rgb_topic, depth_topic, camera_info_topic.'),
@@ -521,9 +514,6 @@ def generate_launch_description():
         DeclareLaunchArgument('lcd_nb_best_matches',            default_value='30'),
         DeclareLaunchArgument('lcd_crop_size',            default_value='376'),
         DeclareLaunchArgument('lcd_max_queue_size',            default_value='10'),
-        DeclareLaunchArgument('lcd_add_link_srv',            default_value=[LaunchConfiguration('namespace'),'/add_link']),
-        DeclareLaunchArgument('lcd_rtabmap_info_topic',            default_value=[LaunchConfiguration('namespace'),'/info']),
-        DeclareLaunchArgument('lcd_rtabmap_map_topic',            default_value=[LaunchConfiguration('namespace'),'/mapData']),
         DeclareLaunchArgument('lcd_global_descriptor_topic',            default_value='/global_descriptor'),
         DeclareLaunchArgument('lcd_robot_id',            default_value='0'),
         DeclareLaunchArgument('lcd_number_of_robots',            default_value='1'),
