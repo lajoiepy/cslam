@@ -78,11 +78,14 @@ class GlobalImageDescriptorLoopClosureDetection(object):
 
         self.node.get_logger().error("Robot " + str(self.robot_id) + " Inter-detection: " + str(ds))
 
-        for kf, d in zip(kfs, ds):
-            if d > self.params['threshold']:
-                continue
-            return kf
-        return None
+        # for kf, d in zip(kfs, ds):
+        #     if d > self.params['threshold']:
+        #         continue
+        #     return kf
+        # return None
+
+        # Find matches that maximize the algebraic connectivity
+        
 
     def detect_loop_closure_service(self, req, res):
         # Netvlad processing
@@ -110,19 +113,7 @@ class GlobalImageDescriptorLoopClosureDetection(object):
         return res
 
     def global_descriptor_callback(self, msg):
-        if msg.robot_id != self.robot_id:
-            # # Save other robots' global descriptors
-            # if self.other_robots_global_descriptors.get(msg.robot_id):
-            #     # Add to the NNS
-            #     self.other_robots_global_descriptors[msg.robot_id].add_item(np.asarray(msg.descriptor), msg.image_id)
-            #     self.node.get_logger().error('New descriptor added. ' + str(len(self.other_robots_global_descriptors[msg.robot_id].items)))
-            # else:
-            #     # Create a new NNS
-            #     self.other_robots_global_descriptors[msg.robot_id] = NearestNeighborsMatching()
-            #     # Add to the NNS
-            #     self.other_robots_global_descriptors[msg.robot_id].add_item(np.asarray(msg.descriptor), msg.image_id)
-            #     self.node.get_logger().error('New nns added.')
-            
+        if msg.robot_id != self.robot_id:            
             # Match against current global descriptors
             match = self.detect_inter(np.asarray(msg.descriptor))
             
