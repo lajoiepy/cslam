@@ -15,6 +15,9 @@ class AlgebraicConnectivityMaximization(object):
     def add_weighted_edge(self):
         t=0
 
+    def remove_weighted_edge(self):
+        t=0 # When added as fixed, remove as putative
+
     def maximize_algebraic_connectivity(self):
         t=0
     
