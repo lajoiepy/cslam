@@ -18,8 +18,15 @@ from rclpy.node import Node
 
 
 class GlobalImageDescriptorLoopClosureDetection(object):
+    """ Global Image descriptor matching """
 
     def __init__(self, params, node):
+        """Initialization
+
+        Args:
+            params (dict): parameters
+            node (ROS 2 node handle): node handle
+        """
         self.params = params
         self.node = node
         self.local_nnsm = NearestNeighborsMatching()
@@ -48,6 +55,12 @@ class GlobalImageDescriptorLoopClosureDetection(object):
             SendLocalImageDescriptors, 'send_local_image_descriptors')
 
     def add_keyframe(self, embedding, id):
+        """ Add keyframe to matching list
+
+        Args:
+            embedding (np.array): descriptor
+            id (int): keyframe ID
+        """
         self.local_nnsm.add_item(embedding, id)
         msg = GlobalImageDescriptor()
         msg.image_id = id
@@ -56,6 +69,15 @@ class GlobalImageDescriptorLoopClosureDetection(object):
         self.global_descriptor_publisher.publish(msg)
 
     def detect_intra(self, embedding, id):
+        """ Detect intra-robot loop closures
+
+        Args:
+            embedding (np.array): descriptor
+            id (int): keyframe ID
+
+        Returns:
+            list(int): matched keyframes
+        """
         kfs, ds = self.local_nnsm.search(embedding,
                                          k=self.params['nb_best_matches'])
 
@@ -75,6 +97,14 @@ class GlobalImageDescriptorLoopClosureDetection(object):
         return None, None
 
     def detect_inter(self, embedding):
+        """ Detect inter-robot loop closures
+
+        Args:
+            embedding (np.array): descriptor
+
+        Returns:
+            list(int): matched keyframes from other robots
+        """
         kfs, ds = self.local_nnsm.search(embedding,
                                          k=self.params['nb_best_matches'])
 
@@ -87,9 +117,19 @@ class GlobalImageDescriptorLoopClosureDetection(object):
         #     return kf
         # return None
 
-        # Find matches that maximize the algebraic connectivity
+        # TODO: Find matches that maximize the algebraic connectivity
+        # TODO: Maintain list of verified matches
 
     def detect_loop_closure_service(self, req, res):
+        """Service callback to detect loop closures associate to the keyframe 
+
+        Args:
+            req (cslam_loop_detection::srv::DetectLoopClosure::req): Keyframe data
+            res (cslam_loop_detection::srv::DetectLoopClosure::res): Place recognition match data
+
+        Returns:
+            cslam_loop_detection::srv::DetectLoopClosure::res: Place recognition match data
+        """
         # Netvlad processing
         bridge = CvBridge()
         cv_image = bridge.imgmsg_to_cv2(req.image.image,
@@ -117,6 +157,11 @@ class GlobalImageDescriptorLoopClosureDetection(object):
         return res
 
     def global_descriptor_callback(self, msg):
+        """Callback for descriptors received from other robots.
+
+        Args:
+            msg (cslam_loop_detection::msg::GlobalImageDescriptor): descriptor
+        """
         if msg.robot_id != self.robot_id:
             # Match against current global descriptors
             match = self.detect_inter(np.asarray(msg.descriptor))

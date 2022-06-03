@@ -68,7 +68,7 @@ void LoopClosureDetection::processNewKeyFrames() {
     std::multimap<int, rtabmap::Link> links;
     std::map<int, rtabmap::Signature> signatures;
     rtabmap_ros::mapDataFromROS(*map_data, poses, links, signatures,
-                                 map_to_odom);
+                                map_to_odom);
 
     if (!signatures.empty() &&
         signatures.rbegin()->second.sensorData().isValid() &&
@@ -80,7 +80,7 @@ void LoopClosureDetection::processNewKeyFrames() {
       s.uncompressDataConst(&rgb, 0);
       // pcl::PointCloud<pcl::PointXYZ>::Ptr cloud =
       // rtabmap::util3d::laserScanToPointCloud(scan, scan.localTransform());
-      //  Send request for loop detection
+      // Send request for loop detection
       loop_closure_detector_.detectLoopClosures(rgb, id);
 
       local_data_.insert(std::make_pair(id, s));
@@ -98,7 +98,7 @@ void LoopClosureDetection::geometricVerification() {
                   "Detected loop closure between %d and %d", from_id, to_id);
       if (local_data_.find(to_id) != local_data_.end()) {
         // Compute transformation
-        //  Registration params
+        // Registration params
         rtabmap::RegistrationInfo reg_info;
         rtabmap::SensorData tmp_from = local_data_.at(from_id);
         rtabmap::SensorData tmp_to = local_data_.at(to_id);
@@ -249,6 +249,8 @@ void LoopClosureDetection::receiveLocalImageDescriptors(
   rtabmap_ros::points3fFromROS(msg->data.points, kpts3D);
   auto descriptors = rtabmap::uncompressData(msg->data.descriptors);
   tmp_to.setFeatures(kpts, kpts3D, descriptors);
+
+  // TODO: Store keypoints from other robots: trade-off memory/communication
 
   // Compute transformation
   //  Registration params

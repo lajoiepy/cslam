@@ -3,8 +3,15 @@ import numpy as np
 
 
 class NearestNeighborsMatching(object):
+    """Nearest Neighbor matching of description vectors
+    """
 
     def __init__(self, dim=None):
+        """Initialization
+
+        Args:
+            dim (int, optional): Global descriptor size. Defaults to None.
+        """
         self.n = 0
         self.dim = dim
         self.items = dict()
@@ -13,6 +20,12 @@ class NearestNeighborsMatching(object):
             self.data = np.zeros((1000, dim), dtype='float32')
 
     def add_item(self, vector, item):
+        """Add item to the matching list
+
+        Args:
+            vector (np.array): descriptor
+            item: identification info (e.g., int)
+        """
         assert vector.ndim == 1
         if self.n >= len(self.data):
             if self.dim is None:
@@ -26,6 +39,15 @@ class NearestNeighborsMatching(object):
         self.n += 1
 
     def search(self, query, k):  # searching from 100000 items consume 30ms
+        """Search for nearest neighbors
+
+        Args:
+            query (np.array): descriptor to match
+            k (int): number of best matches to return
+
+        Returns:
+            list(int, np.array): best matches
+        """
         if len(self.data) == 0:
             return [], []
 

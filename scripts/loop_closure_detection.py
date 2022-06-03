@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 # Loop Closure Detection service
-# Multiple implementations of loop closure detection for benchmarking
+# Abstraction to support multiple implementations of loop closure detection for benchmarking
 
 import rclpy
 from rclpy.node import Node
@@ -14,8 +14,10 @@ from example_interfaces.srv import AddTwoInts
 
 
 class LoopClosureDetection(Node):
+    """ Global image descriptor matching for loop closure detection """
 
     def __init__(self):
+        """Initialization and parameter parsing"""
         super().__init__('loop_closure_detection')
 
         self.declare_parameters(namespace='',
@@ -44,7 +46,15 @@ class LoopClosureDetection(Node):
                                        'detect_loop_closure', self.service)
 
     def service(self, req, res):
-        # Call all methods we want to test
+        """Service callback to detect loop closures associate to the keyframe 
+
+        Args:
+            req (cslam_loop_detection::srv::DetectLoopClosure::req): Keyframe data
+            res (cslam_loop_detection::srv::DetectLoopClosure::res): Place recognition match data
+
+        Returns:
+            cslam_loop_detection::srv::DetectLoopClosure::res: Place recognition match data
+        """
         res = self.glcd.detect_loop_closure_service(req, res)
         res.from_id = req.image.id
         return res

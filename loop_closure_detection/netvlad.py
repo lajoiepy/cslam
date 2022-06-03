@@ -61,7 +61,6 @@ class NetVLADLayer(nn.Module):
         self.centroids = nn.Parameter(torch.rand(num_clusters, dim))
 
     def init_params(self, clsts, traindescs):
-        #TODO replace numpy ops with pytorch ops
         if self.vladv2 == False:
             clstsAssign = clsts / np.linalg.norm(clsts, axis=1, keepdims=True)
             dots = np.dot(clstsAssign, traindescs.T)
@@ -93,6 +92,14 @@ class NetVLADLayer(nn.Module):
                                           self.centroids.norm(dim=1))
 
     def forward(self, x):
+        """Forward pass through the NetVLAD network
+
+        Args:
+            x (image): image to match
+
+        Returns:
+            torch array: Global image descriptor
+        """
         N, C = x.shape[:2]
 
         if self.normalize_input:
@@ -124,8 +131,16 @@ class NetVLADLayer(nn.Module):
 
 
 class NetVLAD(object):
+    """NetVLAD matcher
+    """
 
     def __init__(self, params, node):
+        """Initialization
+
+        Args:
+            params (dict): parameters
+            node (ROS 2 node handle): node handle
+        """
         self.params = params
         self.node = node
 
@@ -189,6 +204,14 @@ class NetVLAD(object):
         self.pca = pickle.load(open(self.params["pca"], 'rb'))
 
     def compute_embedding(self, keyframe):
+        """Load image to device and extract the global image descriptor
+
+        Args:
+            keyframe (image): image to match
+
+        Returns:
+            np.array: global image descriptor
+        """
         with torch.no_grad():
             image = Image.fromarray(keyframe)
             input = self.transform(image)

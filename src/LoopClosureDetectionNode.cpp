@@ -5,6 +5,14 @@ typedef message_filters::sync_policies::ExactTime<rtabmap_ros::msg::MapData,
                                                   rtabmap_ros::msg::Info>
     InfoMapSyncPolicy;
 
+/**
+ * @brief Node to interface with RTAB-map library for keyframe and 3D features
+ * handling
+ *
+ * @param argc
+ * @param argv
+ * @return int
+ */
 int main(int argc, char **argv) {
 
   rclcpp::init(argc, argv);

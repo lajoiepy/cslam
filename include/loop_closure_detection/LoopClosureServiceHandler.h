@@ -33,7 +33,11 @@
 #include <functional>
 #include <thread>
 
-// Response
+/**
+ * @brief Response struct indicating if the loop closure is valid or detected
+ * along with the corresponding IDs.
+ *
+ */
 struct LoopClosureResponse {
   bool is_valid;
   bool is_detected;
@@ -41,17 +45,37 @@ struct LoopClosureResponse {
   int to_id;
 };
 
-// Use an external service for loop closure detection
+/**
+ * @brief Interface with python script for loop closure detection with global
+ * image matching (e.g., NetVLAD)
+ *
+ */
 class LoopClosureServiceHandler {
 public:
   LoopClosureServiceHandler(){};
 
   ~LoopClosureServiceHandler(){};
 
+  /**
+   * @brief Initialization of service client
+   *
+   * @param node ROS 2 node handle
+   */
   void init(std::shared_ptr<rclcpp::Node> &node);
 
+  /**
+   * @brief Asynchronous call for loop closure detection python service
+   *
+   * @param data keyframe data
+   * @param id keyframe id
+   */
   void detectLoopClosures(const rtabmap::SensorData &data, const int id);
 
+  /**
+   * @brief Look for response of asynchronous call
+   *
+   * @return LoopClosureResponse
+   */
   LoopClosureResponse checkForResponse();
 
 private:
