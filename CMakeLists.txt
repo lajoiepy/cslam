@@ -72,7 +72,18 @@ set(CMAKE_CXX_STANDARD 14)
 #######################################
 
 #find_package(Boost REQUIRED COMPONENTS system) # dependencies from PCL
-find_package(PCL 1.7 REQUIRED QUIET COMPONENTS common io kdtree search surface filters registration sample_consensus segmentation) #This crashes idl generation if all components are found?! see https://github.com/ros2/rosidl/issues/402#issuecomment-565586908
+find_package(PCL 1.7 
+            REQUIRED QUIET COMPONENTS 
+            common 
+            io 
+            kdtree 
+            search 
+            surface 
+            filters 
+            registration 
+            sample_consensus 
+            segmentation
+            ) #This crashes idl generation if all components are found?! see https://github.com/ros2/rosidl/issues/402#issuecomment-565586908
 
 ###########
 ## Build ##
@@ -124,15 +135,17 @@ SET(Libraries
 find_package(cslam_utils REQUIRED)
 find_package(cslam_loop_detection REQUIRED)
 
-add_executable(external_loop_closure_detection src/ExternalLoopClosureDetection.cpp src/MsgConversion.cpp)
-add_dependencies(external_loop_closure_detection external_loop_closure_detection ${${PROJECT_NAME}_EXPORTED_TARGETS})
-ament_target_dependencies(external_loop_closure_detection ${Libraries} cslam_utils cslam_loop_detection)
-set_target_properties(external_loop_closure_detection PROPERTIES OUTPUT_NAME "external_loop_closure_detection")
-
-#add_executable(rtabmap_external_loop_detectionexample src/ExternalLoopDetectionExample.cpp)
-#add_dependencies(rtabmap_external_loop_detectionexample ${${PROJECT_NAME}_EXPORTED_TARGETS})
-#ament_target_dependencies(rtabmap_external_loop_detectionexample ${Libraries} rtabmap_common)
-#set_target_properties(rtabmap_external_loop_detectionexample PROPERTIES OUTPUT_NAME "external_loop_detection_example")
+add_executable(external_loop_closure_detection 
+  src/ExternalLoopClosureDetection.cpp 
+  src/MsgConversion.cpp)
+add_dependencies(external_loop_closure_detection 
+  external_loop_closure_detection 
+  ${${PROJECT_NAME}_EXPORTED_TARGETS})
+ament_target_dependencies(external_loop_closure_detection 
+  ${Libraries} 
+  cslam_utils cslam_loop_detection)
+set_target_properties(external_loop_closure_detection 
+  PROPERTIES OUTPUT_NAME "external_loop_closure_detection")
 
 # Only required when using messages built from the same package
 # https://index.ros.org/doc/ros2/Tutorials/Rosidl-Tutorial/

@@ -1,7 +1,9 @@
 #!/usr/bin/env python
 import numpy as np
 
+
 class NearestNeighborsMatching(object):
+
     def __init__(self, dim=None):
         self.n = 0
         self.dim = dim
@@ -17,8 +19,8 @@ class NearestNeighborsMatching(object):
                 self.dim = len(vector)
                 self.data = np.zeros((1000, self.dim), dtype='float32')
             else:
-                self.data.resize(
-                    (2 * len(self.data), self.dim) , refcheck=False)
+                self.data.resize((2 * len(self.data), self.dim),
+                                 refcheck=False)
         self.items[self.n] = item
         self.data[self.n] = vector
         self.n += 1

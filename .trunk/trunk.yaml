@@ -1,0 +1,11 @@
+version: 0.1
+cli:
+  version: 0.12.1-beta
+lint:
+  enabled:
+    - gitleaks@8.3.0
+    - shellcheck@0.7.2
+    - clang-format@13.0.0
+    - hadolint@2.9.3
+    - markdownlint@0.31.1
+    - yapf@0.32.0
