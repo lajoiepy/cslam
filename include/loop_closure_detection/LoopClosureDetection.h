@@ -1,4 +1,4 @@
-#include "loop_closure_detection/LoopClosureDetectionSrvHandler.h"
+#include "loop_closure_detection/LoopClosureServiceHandler.h"
 
 class LoopClosureDetection {
 public:
@@ -12,7 +12,7 @@ public:
   void geometricVerification();
 
   void mapDataCallback(
-      const std::shared_ptr<rtabmap_ros::msg::map_data> &map_data_msg,
+      const std::shared_ptr<rtabmap_ros::msg::MapData> &map_data_msg,
       const std::shared_ptr<rtabmap_ros::msg::Info> &info_msg);
 
   void sendLocalImageDescriptors(
@@ -39,7 +39,7 @@ private:
 
   std::shared_ptr<rclcpp::Node> node_;
 
-  std::deque<std::shared_ptr<rtabmap_ros::msg::map_data>> received_data_queue_;
+  std::deque<std::shared_ptr<rtabmap_ros::msg::MapData>> received_data_queue_;
 
   int max_queue_size_, min_inliers_, nb_robots_, robot_id_;
 

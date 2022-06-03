@@ -67,7 +67,7 @@ void LoopClosureDetection::processNewKeyFrames() {
     std::map<int, rtabmap::Transform> poses;
     std::multimap<int, rtabmap::Link> links;
     std::map<int, rtabmap::Signature> signatures;
-    rtabmap_ros::map_dataFromROS(*map_data, poses, links, signatures,
+    rtabmap_ros::mapDataFromROS(*map_data, poses, links, signatures,
                                  map_to_odom);
 
     if (!signatures.empty() &&
@@ -130,7 +130,7 @@ void LoopClosureDetection::geometricVerification() {
 }
 
 void LoopClosureDetection::mapDataCallback(
-    const std::shared_ptr<rtabmap_ros::msg::map_data> &map_data_msg,
+    const std::shared_ptr<rtabmap_ros::msg::MapData> &map_data_msg,
     const std::shared_ptr<rtabmap_ros::msg::Info> &info_msg) {
   RCLCPP_INFO(node_->get_logger(), "Received map data!");
 

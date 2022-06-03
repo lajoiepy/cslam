@@ -1,7 +1,7 @@
 #include "loop_closure_detection/LoopClosureDetection.h"
 
 // Message filters to sync callbacks
-typedef message_filters::sync_policies::ExactTime<rtabmap_ros::msg::map_data,
+typedef message_filters::sync_policies::ExactTime<rtabmap_ros::msg::MapData,
                                                   rtabmap_ros::msg::Info>
     InfoMapSyncPolicy;
 
@@ -22,7 +22,7 @@ int main(int argc, char **argv) {
 
   message_filters::Subscriber<rtabmap_ros::msg::Info> info_topic_;
 
-  message_filters::Subscriber<rtabmap_ros::msg::map_data> map_data_topic_;
+  message_filters::Subscriber<rtabmap_ros::msg::MapData> map_data_topic_;
 
   message_filters::Synchronizer<InfoMapSyncPolicy> *info_map_sync_;
 

@@ -27,7 +27,7 @@
 #include <chrono>
 #include <cslam_loop_detection/msg/local_image_descriptors.hpp>
 #include <cslam_loop_detection/srv/detect_loop_closure.hpp>
-#include <cslam_loop_detection/srv/sendLocalImageDescriptors.hpp>
+#include <cslam_loop_detection/srv/send_local_image_descriptors.hpp>
 #include <cslam_utils/msg/image_id.hpp>
 #include <deque>
 #include <functional>
