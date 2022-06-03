@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
 <package format="3">
-  <name>external_loop_closure_detection</name>
+  <name>loop_closure_detection</name>
   <version>0.0.1</version>
-  <description>External Loop Closure Detection for RTAB-Map</description>
+  <description>Loop Closure Detection for C-SLAM</description>
   <maintainer email="lajoie.py@gmail.com">Pierre-Yves Lajoie</maintainer>
   <author>Pierre-Yves Lajoie</author>
   <license>BSD</license>

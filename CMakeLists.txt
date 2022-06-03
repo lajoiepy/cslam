@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.5)
-project(external_loop_closure_detection)
+project(loop_closure_detection)
 
 # Default to C99
 if(NOT CMAKE_C_STANDARD)
@@ -135,17 +135,19 @@ SET(Libraries
 find_package(cslam_utils REQUIRED)
 find_package(cslam_loop_detection REQUIRED)
 
-add_executable(external_loop_closure_detection 
-  src/ExternalLoopClosureDetection.cpp 
+add_executable(loop_closure_detection 
+  src/LoopClosureServiceHandler.cpp 
+  src/LoopClosureDetection.cpp 
+  src/LoopClosureDetectionNode.cpp 
   src/MsgConversion.cpp)
-add_dependencies(external_loop_closure_detection 
-  external_loop_closure_detection 
+add_dependencies(loop_closure_detection 
+  loop_closure_detection 
   ${${PROJECT_NAME}_EXPORTED_TARGETS})
-ament_target_dependencies(external_loop_closure_detection 
+ament_target_dependencies(loop_closure_detection 
   ${Libraries} 
   cslam_utils cslam_loop_detection)
-set_target_properties(external_loop_closure_detection 
-  PROPERTIES OUTPUT_NAME "external_loop_closure_detection")
+set_target_properties(loop_closure_detection 
+  PROPERTIES OUTPUT_NAME "loop_closure_detection")
 
 # Only required when using messages built from the same package
 # https://index.ros.org/doc/ros2/Tutorials/Rosidl-Tutorial/
@@ -167,7 +169,7 @@ install(DIRECTORY
 
 # Install nodes
 install(
-  TARGETS external_loop_closure_detection
+  TARGETS loop_closure_detection
   DESTINATION lib/${PROJECT_NAME}
 )
 

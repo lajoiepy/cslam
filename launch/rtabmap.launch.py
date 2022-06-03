@@ -112,8 +112,8 @@ def launch_setup(context, *args, **kwargs):
                      value=LaunchConfiguration('use_sim_time')),
         # 'use_sim_time' will be set on all nodes following the line above
 
-        # External loop closure detection
-        Node(package='external_loop_closure_detection',
+        # Loop closure detection
+        Node(package='loop_closure_detection',
              executable='loop_closure_detection.py',
              name='loop_closure_detection',
              parameters=[{
@@ -139,9 +139,9 @@ def launch_setup(context, *args, **kwargs):
                  LaunchConfiguration('lcd_resume')
              }],
              namespace=LaunchConfiguration('namespace')),
-        Node(package='external_loop_closure_detection',
-             executable='external_loop_closure_detection',
-             name='external_loop_closure_detection',
+        Node(package='loop_closure_detection',
+             executable='loop_closure_detection',
+             name='loop_closure_detection',
              parameters=[{
                  "min_inliers":
                  LaunchConfiguration('lcd_min_inliers'),
@@ -1555,7 +1555,7 @@ def generate_launch_description():
             'aruco_detect async subscription, use tag_linear_variance and tag_angular_variance to set covariance.'
         ),
 
-        # External Loop Closure Detection
+        # Loop Closure Detection
         DeclareLaunchArgument('lcd_threshold', default_value='1.0'),
         DeclareLaunchArgument('lcd_min_inliers', default_value='6'),
         DeclareLaunchArgument('lcd_technique', default_value='netvlad'),
