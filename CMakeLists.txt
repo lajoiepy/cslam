@@ -177,7 +177,7 @@ install(
 ament_python_install_package(${PROJECT_NAME})
 
 install(PROGRAMS 
-scripts/loop_closure_detection.py 
+loop_closure_detection/loop_closure_detection.py 
 DESTINATION lib/${PROJECT_NAME})
 
 ament_package()

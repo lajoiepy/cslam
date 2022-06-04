@@ -1,4 +1,4 @@
-from third_party.mac import MAC
+from loop_closure_detection.third_party.mac import MAC
 
 
 class AlgebraicConnectivityMaximization(object):
