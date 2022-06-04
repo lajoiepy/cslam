@@ -1,3 +1,6 @@
+from third_party.mac import MAC
+
+
 class AlgebraicConnectivityMaximization(object):
 
     def __init__(self, params, node):
