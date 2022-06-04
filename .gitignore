@@ -1,3 +1,7 @@
 .vscode/
 src/external_loop_closure_detection/__pycache__/
 build/
+
+.flake8
+.isort.cfg
+.trunk/
