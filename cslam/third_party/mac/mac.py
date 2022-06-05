@@ -1,3 +1,5 @@
+#   Modified by Pierre-Yves Lajoie (2022)
+
 from mac.utils import *
 import numpy as np
 import networkx as nx
@@ -18,21 +20,17 @@ MACResult = namedtuple(
 
 class MAC:
 
-    def __init__(self, odom_measurements, lc_measurements, num_poses):
-        self.L_odom = weight_graph_lap_from_edge_list(odom_measurements,
+    def __init__(self, fixed_measurements, candidate_measurements, num_poses):
+        self.L_odom = weight_graph_lap_from_edge_list(fixed_measurements,
                                                       num_poses)
         self.num_poses = num_poses
-        self.laplacian_e_list = []
         self.weights = []
         self.edge_list = []
 
-        for meas in lc_measurements:
-            laplacian_e = weight_graph_lap_from_edge_list([meas], num_poses)
-            self.laplacian_e_list.append(laplacian_e)
+        for meas in candidate_measurements:
             self.weights.append(meas.weight)
             self.edge_list.append((meas.i, meas.j))
 
-        self.laplacian_e_list = np.array(self.laplacian_e_list)
         self.weights = np.array(self.weights)
         self.edge_list = np.array(self.edge_list)
 

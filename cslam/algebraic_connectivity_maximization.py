@@ -1,10 +1,11 @@
-from loop_closure_detection.third_party.mac import MAC
+from cslam.third_party.mac.mac import MAC
+from cslam.third_party.mac.utils import Edge
 
 
 class AlgebraicConnectivityMaximization(object):
 
-    def __init__(self, params, node):
-        self.node = node
+    def __init__(self, params, ros_node):
+        self.ros_node = ros_node
         self.params = params
 
     def set_fixed_graph(self):

@@ -1,14 +1,12 @@
 import numpy as np
 
-
 class NaiveGreedy:
-
     def __init__(self, G_lc):
         self.G_lc = G_lc
         self.kappas = []
         print("num edges:")
         print(len(G_lc.edges()))
-        for u, v, a in G_lc.edges(data=True):
+        for u,v,a in G_lc.edges(data=True):
             self.kappas.append(a['weight'])
         self.kappas = np.array(self.kappas)
 

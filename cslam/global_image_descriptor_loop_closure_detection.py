@@ -7,8 +7,8 @@ from os.path import join, exists, isfile, realpath, dirname
 import numpy as np
 import sys
 
-from loop_closure_detection.nearest_neighbors_matching import NearestNeighborsMatching
-from loop_closure_detection.netvlad import NetVLAD
+from cslam.nearest_neighbors_matching import NearestNeighborsMatching
+from cslam.netvlad import NetVLAD
 
 from cslam_loop_detection.msg import GlobalImageDescriptor
 from cslam_loop_detection.srv import SendLocalImageDescriptors
