@@ -7,69 +7,165 @@ import numpy as np
 from timeit import default_timer as timer
 
 
+def build_simple_graph(nb_poses, nb_candidate_edges):
+    # Build simple graph
+    fixed_weight = 1
+    fixed_edges_list = []
+    for i in range(nb_poses - 1):
+        edge = Edge(i, i + 1, fixed_weight)
+        fixed_edges_list.append(edge)
+
+    candidate_edges_list = []
+    for i in range(nb_candidate_edges):
+        edge = Edge(random.choice(range(nb_poses)),
+                    random.choice(range(nb_poses)), fixed_weight)
+        candidate_edges_list.append(edge)
+    return fixed_edges_list, candidate_edges_list
+
+
 class TestAlgebraicConnectivity(unittest.TestCase):
     """Unit tests for algebraic connectivity maximization
     """
 
     def test_simple_graph(self):
         # Build simple graph
-        num_poses = 10
-        fixed_weight = 1
-        fixed_edges_list = []
-        for i in range(num_poses - 1):
-            edge = Edge(i, i + 1, fixed_weight)
-            fixed_edges_list.append(edge)
+        nb_poses = 100
+        nb_candidate_edges = 50
+        fixed_edges_list, candidate_edges_list = build_simple_graph(
+            nb_poses, nb_candidate_edges)
 
-        candidate_edges_list = []
-        num_candidate_edges = 10
-        for i in range(num_candidate_edges):
-            edge = Edge(random.choice(range(num_poses)),
-                        random.choice(range(num_poses)), fixed_weight)
-            candidate_edges_list.append(edge)
-
-        # Initialize problem
-        mac = MAC(fixed_edges_list, candidate_edges_list, num_poses)
-        w_init = np.zeros(len(candidate_edges_list))
-        w_init[:candidate_edges_list] = 1.0
+        # Random Initialization
+        mac = MAC(fixed_edges_list, candidate_edges_list, nb_poses)
+        nb_candidates_to_choose = 10
+        ac = AlgebraicConnectivityMaximization(
+        )  # Use only for initialization here.
+        ac.set_graph(fixed_edges_list, candidate_edges_list, nb_poses)
+        ac.random_initialization(nb_candidates_to_choose)
+        w_init = ac.w_init
 
         # Solve the relaxed maximum algebraic connectivity augmentation problem.
-        num_candidates_to_choose = num_candidate_edges / 2
         start = timer()
         result, unrounded, upper = mac.fw_subset(w_init,
-                                                 num_candidates_to_choose,
+                                                 nb_candidates_to_choose,
                                                  max_iters=20)
         stop = timer()
 
-        print(result)
-        print(unrounded)
-        print(upper)
-        print(stop - start)
+        self.assertEqual(int(np.sum(result)), nb_candidates_to_choose)
+
+        # Compare with the AlgebraicConnectivityMaximization wrapper
+        ac = AlgebraicConnectivityMaximization()
+        ac.set_graph(fixed_edges_list, candidate_edges_list, nb_poses)
+        start = timer()
+        selection = ac.select_candidates(nb_candidates_to_choose)
+        stop = timer()
+        self.assertEqual(len(selection), nb_candidates_to_choose)
+
+    def test_greedy_initilization(self):
+        nb_candidates = 100
+        nb_candidates_to_choose = 10
+        scores = np.random.rand(nb_candidates)
+        ac = AlgebraicConnectivityMaximization()
+        ac.greedy_intialization(scores, nb_candidates_to_choose)
+        self.assertAlmostEqual(
+            np.sum(scores[ac.w_init.astype(bool)]),
+            np.sum(np.sort(scores)[-nb_candidates_to_choose:]))
 
     def test_add_measurements(self):
-        # Test add measurements
-        self.assertTrue("FOO".isupper())
-        self.assertFalse("Foo".isupper())
+        # Build simple graph
+        nb_poses = 100
+        nb_candidate_edges = 50
+        nb_candidates_to_choose = 10
+        fixed_edges_list, candidate_edges_list = build_simple_graph(
+            nb_poses, nb_candidate_edges)
+        ac = AlgebraicConnectivityMaximization()
+        ac.set_graph(fixed_edges_list, candidate_edges_list, nb_poses)
+
+        # Solve the initial graph
+        selection0 = ac.select_candidates(nb_candidates_to_choose)
+        self.assertEqual(len(selection0), nb_candidates_to_choose)
+
+        # Add edges
+        nb_add_edges = 10
+        for i in range(nb_add_edges):
+            ac.add_candidate_edge(
+                Edge(random.choice(range(nb_poses)),
+                     random.choice(range(nb_poses)), 1.0))
+        selection1 = ac.select_candidates(nb_candidates_to_choose)
+        self.assertEqual(len(selection1), nb_candidates_to_choose)
+
+        selection2 = ac.select_candidates(nb_candidates_to_choose + 2)
+        self.assertEqual(len(selection2), nb_candidates_to_choose + 2)
+        for i in range(nb_add_edges):
+            ac.add_candidate_edge(
+                Edge(random.choice(range(nb_poses)),
+                     random.choice(range(nb_poses)), 1.0))
+        selection3 = ac.select_candidates(nb_candidates_to_choose + 2)
+        self.assertEqual(len(selection3), nb_candidates_to_choose + 2)
 
     def test_fixed_loop_closures(self):
-        # Test fixed loop closures
-        self.assertTrue("FOO".isupper())
-        self.assertFalse("Foo".isupper())
+        # Build simple graph
+        nb_poses = 100
+        nb_candidate_edges = 50
+        nb_candidates_to_choose = 10
+        fixed_edges_list, candidate_edges_list = build_simple_graph(
+            nb_poses, nb_candidate_edges)
+        ac = AlgebraicConnectivityMaximization()
+        ac.set_graph(fixed_edges_list, candidate_edges_list, nb_poses)
 
-    def test_candidate_to_fixed(self):
-        # Test move loop closures from candidate to fixed
-        s = "hello world"
-        self.assertEqual(s.split(), ["hello", "world"])
-        # check that s.split fails when the separator is not a string
-        with self.assertRaises(TypeError):
-            s.split(2)
+        # Solve the initial graph
+        selection0 = ac.select_candidates(nb_candidates_to_choose)
+        self.assertEqual(len(selection0), nb_candidates_to_choose)
+
+        # Add edges
+        nb_add_edges = 10
+        for i in range(nb_add_edges):
+            ac.add_fixed_edge(
+                Edge(random.choice(range(nb_poses)),
+                     random.choice(range(nb_poses)), 1.0))
+        selection1 = ac.select_candidates(nb_candidates_to_choose)
+        self.assertEqual(len(selection1), nb_candidates_to_choose)
 
     def test_remove_candidate(self):
-        # Test remove candidate loop closures
-        s = "hello world"
-        self.assertEqual(s.split(), ["hello", "world"])
-        # check that s.split fails when the separator is not a string
-        with self.assertRaises(TypeError):
-            s.split(2)
+        # Build simple graph
+        nb_poses = 100
+        nb_candidate_edges = 50
+        nb_candidates_to_choose = 10
+        fixed_edges_list, candidate_edges_list = build_simple_graph(
+            nb_poses, nb_candidate_edges)
+        ac = AlgebraicConnectivityMaximization()
+        ac.set_graph(fixed_edges_list, candidate_edges_list, nb_poses)
+
+        # Solve the initial graph
+        selection0 = ac.select_candidates(nb_candidates_to_choose)
+        self.assertEqual(len(selection0), nb_candidates_to_choose)
+        nb_candidates0 = len(ac.candidate_edges)
+
+        # Remove edges
+        ac.remove_candidate_edges(selection0)
+        nb_candidates1 = len(ac.candidate_edges)
+        self.assertEqual(nb_candidates0,
+                         nb_candidates1 + nb_candidates_to_choose)
+
+    def test_candidate_to_fixed(self):
+        # Build simple graph
+        nb_poses = 100
+        nb_candidate_edges = 50
+        nb_candidates_to_choose = 10
+        fixed_edges_list, candidate_edges_list = build_simple_graph(
+            nb_poses, nb_candidate_edges)
+        ac = AlgebraicConnectivityMaximization()
+        ac.set_graph(fixed_edges_list, candidate_edges_list, nb_poses)
+
+        # Solve the initial graph
+        selection0 = ac.select_candidates(nb_candidates_to_choose)
+        self.assertEqual(len(selection0), nb_candidates_to_choose)
+
+        # Swap edge, make sure that none are the same
+        ac.candidate_edges_to_fixed(selection0)
+        selection1 = ac.select_candidates(nb_candidates_to_choose)
+        for e0 in selection0:
+            for e1 in selection1:
+                self.assertFalse(e0.i == e1.i and e0.j == e1.j)
 
 
 if __name__ == "__main__":

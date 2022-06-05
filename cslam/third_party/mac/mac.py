@@ -1,6 +1,6 @@
 #   Modified by Pierre-Yves Lajoie (2022)
 
-from mac.utils import *
+from cslam.third_party.mac.utils import *
 import numpy as np
 import networkx as nx
 import networkx.linalg as la

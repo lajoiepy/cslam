@@ -5,3 +5,4 @@ build/
 .flake8
 .isort.cfg
 .trunk/
+*__pycache__/
