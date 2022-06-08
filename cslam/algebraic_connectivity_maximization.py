@@ -105,7 +105,7 @@ class AlgebraicConnectivityMaximization(object):
             edges (list(EdgeInterRobot)): inter-robot edges
         """
         for i in range(len(edges)):
-            edges[i].weight = self.fixed_weight
+            edges[i]._replace(weight = self.fixed_weight)
         self.fixed_edges.extend(edges)
         self.remove_candidate_edges(edges)
 
@@ -184,11 +184,12 @@ class AlgebraicConnectivityMaximization(object):
         for c in range(len(edges)):
             robot0_id = 0
             robot1_id = 0
-            for o in self.offsets:
-                if edges[c].i > o:
-                    robot0_id = robot0_id + 1
-                if edges[c].j > o:
-                    robot1_id = robot1_id + 1
+            for o in range(len(self.offsets)):
+                if o != 0:
+                    if edges[c].i > self.offsets[o]:
+                        robot0_id = robot0_id + 1
+                    if edges[c].j > self.offsets[o]:
+                        robot1_id = robot1_id + 1
             robot0_image_id = edges[c].i - self.offsets[robot0_id]
             robot1_image_id = edges[c].j - self.offsets[robot1_id]
             recovered_inter_robot_edges.append(
@@ -214,8 +215,8 @@ class AlgebraicConnectivityMaximization(object):
 
         # Compute number of poses
         self.total_nb_poses = 0
-        for n in self.nb_poses:
-            self.total_nb_poses = self.total_nb_poses + n
+        for n in range(len(self.nb_poses)):
+            self.total_nb_poses = self.total_nb_poses + self.nb_poses[n]
 
         # Initial guess
         if weights is None:
@@ -228,7 +229,7 @@ class AlgebraicConnectivityMaximization(object):
                                      nb_candidates_to_choose,
                                      max_iters=self.max_iters)
         selected_edges = [
-            self.rekeyed_candidate_edges[i]
+            rekeyed_candidate_edges[i]
             for i in np.nonzero(result.astype(int))[0]
         ]
         # Return selected multi-robot edges
