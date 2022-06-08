@@ -6,11 +6,10 @@ from cv_bridge import CvBridge
 import os
 from os.path import join, exists, isfile, realpath, dirname
 import numpy as np
-from scipy.stats import logistic
 
-from cslam.nearest_neighbors_matching import NearestNeighborsMatching
 from cslam.netvlad import NetVLAD
 from cslam.algebraic_connectivity_maximization import AlgebraicConnectivityMaximization
+from cslam.loop_closure_matching import LoopClosureMatching
 
 from cslam_loop_detection.msg import GlobalImageDescriptor
 from cslam_loop_detection.srv import SendLocalImageDescriptors
@@ -31,23 +30,11 @@ class GlobalImageDescriptorLoopClosureDetection(object):
         """
         self.params = params
         self.node = node
-
-        # Multi-robot setup
-        self.robot_id = self.params['robot_id']
-        self.local_nnsm = NearestNeighborsMatching()
-        self.other_robots_nnsm = {}
-        self.best_matches = {'local_keyframe_id': []}
-        self.nb_robots = self.params['nb_robots']
-        for i in range(self.nb_robots):
-            if i != self.robot_id:
-                self.other_robots_nnsm[i] = NearestNeighborsMatching()
-                self.best_matches['robot_' + str(i) + '_image_id'] = []
-                self.best_matches['robot_' + str(i) + '_similarity'] = []
-        self.similarity_loc = self.params['similarity_loc']
-        self.similarity_scale = self.params['similarity_scale']
-        self.loop_closure_budget = self.params["loop_closure_budget"]
-
         self.counter = 0
+        self.robot_id = self.params['robot_id']
+
+        self.lcm = LoopClosureMatching(params)
+        self.loop_closure_budget = self.params["loop_closure_budget"]
 
         # Place Recognition network setup
         if self.params['technique'].lower() == 'netvlad':
@@ -71,19 +58,6 @@ class GlobalImageDescriptorLoopClosureDetection(object):
         self.send_local_descriptors_srv = self.node.create_client(
             SendLocalImageDescriptors, 'send_local_image_descriptors')
 
-    def distance_to_similarity(self, distance):
-        """Converts a distance metric into a similarity score
-
-        Args:
-            distance (float): Place recognition distance metric
-
-        Returns:
-            float: similarity score
-        """
-        return logistic.cdf(-distance,
-                            loc=self.similarity_loc,
-                            scale=self.similarity_scale)
-
     def add_keyframe(self, embedding, id):
         """ Add keyframe to matching list
 
@@ -91,7 +65,6 @@ class GlobalImageDescriptorLoopClosureDetection(object):
             embedding (np.array): descriptor
             id (int): keyframe ID
         """
-        self.local_nnsm.add_item(embedding, id)
         msg = GlobalImageDescriptor()
         msg.image_id = id
         msg.robot_id = self.robot_id
@@ -99,22 +72,8 @@ class GlobalImageDescriptorLoopClosureDetection(object):
         # TODO: publish missing descriptors when in range
         # TODO: publish in batches of non-already transmitted
         self.global_descriptor_publisher.publish(msg)
-        # Add to best matches list
-        self.best_matches['local_keyframe_id'].append(id)
-        for i in range(self.nb_robots):
-            if i != self.robot_id:
-                kf, d = self.other_robots_nnsm[i].search_best(embedding, k=1)
-                if d <= self.params['threshold']:
-                    self.best_matches['robot_' + str(i) +
-                                      '_image_id'].append(kf)
-                    self.best_matches['robot_' + str(i) +
-                                      '_similarity'].append(
-                                          self.distance_to_similarity(d))
-                else:
-                    self.best_matches['robot_' + str(i) +
-                                      '_image_id'].append(-1)
-                    self.best_matches['robot_' + str(i) +
-                                      '_similarity'].append(-1)
+        # Add to matches
+        self.lcm.add_local_keyframe(embedding, id)
 
     def detect_intra(self, embedding, id):
         """ Detect intra-robot loop closures
@@ -153,8 +112,7 @@ class GlobalImageDescriptorLoopClosureDetection(object):
         # TODO: Find matches that maximize the algebraic connectivity
         ac = AlgebraicConnectivityMaximization(self.robot_id, self.nb_robots)
         ac.set_graph(fixed_edges, candidate_edges)
-        selection = ac.select_candidates(
-             self.loop_closure_budget, weights)
+        selection = ac.select_candidates(self.loop_closure_budget)
 
     def detect_loop_closure_service(self, req, res):
         """Service callback to detect loop closures associate to the keyframe 
@@ -174,7 +132,7 @@ class GlobalImageDescriptorLoopClosureDetection(object):
 
         # Global descriptors matching
         match = None
-        if self.counter > 0:
+        if self.counter > 0: # TODO: Add param for intra-robot loop closures
             match, best_matches = self.detect_intra(
                 embedding, req.image.id)  # Systematic evaluation
         self.add_keyframe(embedding, req.image.id)
@@ -199,17 +157,7 @@ class GlobalImageDescriptorLoopClosureDetection(object):
             msg (cslam_loop_detection::msg::GlobalImageDescriptor): descriptor
         """
         if msg.robot_id != self.robot_id:
-            self.other_robots_nnsm[msg.robot_id].add_item(
-                np.asarray(msg.descriptor), msg.image_id)
-
-            kf, d = self.local_nnsm.search_best(np.asarray(msg.descriptor))
-            similarity = self.distance_to_similarity(d)
-            if d <= self.params['threshold'] and similarity > self.best_matches[
-                    'robot_' + str(msg.robot_id) + '_similarity'][kf]:
-                self.best_matches['robot_' + str(msg.robot_id) +
-                                  '_image_id'][kf] = msg.image_id
-                self.best_matches['robot_' + str(msg.robot_id) +
-                                  '_similarity'][kf] = similarity
+            self.lcm.add_other_robot_keyframe(msg)
 
         # TODO: Check for matches asynchronously
         #     # Match against current global descriptors

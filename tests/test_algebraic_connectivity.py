@@ -1,11 +1,8 @@
 from distutils.command.build import build
 import unittest
-
-import sys
-
+import sys # TODO: remove
 sys.path.append(
     '/home/lajoiepy/Documents/projects/c-slam/c-slam-ws/src/cslam/')
-
 from cslam.algebraic_connectivity_maximization import AlgebraicConnectivityMaximization, EdgeInterRobot
 from cslam.third_party.mac.utils import Edge
 from cslam.third_party.mac.mac import MAC
