@@ -1,11 +1,19 @@
 from scipy.stats import logistic
 import numpy as np
 from cslam.nearest_neighbors_matching import NearestNeighborsMatching
+from cslam.algebraic_connectivity_maximization import AlgebraicConnectivityMaximization
 
 
-class LoopClosureMatching(object):
+class LoopClosureSparseMatching(object):
+    """TODO
+    """
 
     def __init__(self, params):
+        """TODO
+
+        Args:
+            params (_type_): _description_
+        """
         self.params = params
 
         self.robot_id = self.params['robot_id']
@@ -38,6 +46,12 @@ class LoopClosureMatching(object):
                             scale=self.similarity_scale)
 
     def add_local_keyframe(self, embedding, id):
+        """TODO
+
+        Args:
+            embedding (_type_): _description_
+            id (_type_): _description_
+        """
         self.local_nnsm.add_item(embedding, id)
         self.local_keyframe_id.append(id)
         for i in range(self.nb_robots):
@@ -52,6 +66,11 @@ class LoopClosureMatching(object):
                     self.other_robots_keyframe_similarities[i].append(-1)
 
     def add_other_robot_keyframe(self, msg):
+        """TODO
+
+        Args:
+            msg (_type_): _description_
+        """
         self.other_robots_nnsm[msg.robot_id].add_item(
             np.asarray(msg.descriptor), msg.image_id)
 
@@ -62,3 +81,13 @@ class LoopClosureMatching(object):
             self.other_robots_keyframes[msg.robot_id][kf] = msg.image_id
             self.other_robots_keyframe_similarities[
                 msg.robot_id][kf] = similarity
+
+    def select_candidates(self, number_of_candidates):
+        """TODO
+
+        Args:
+            number_of_candidates (_type_): _description_
+        """
+        ac = AlgebraicConnectivityMaximization(self.robot_id, self.nb_robots) # TODO build once, reset candidates keep fixed
+        ac.set_graph(fixed_edges, candidate_edges)
+        selection = ac.select_candidates(self.loop_closure_budget)

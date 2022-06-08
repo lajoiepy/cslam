@@ -8,8 +8,7 @@ from os.path import join, exists, isfile, realpath, dirname
 import numpy as np
 
 from cslam.netvlad import NetVLAD
-from cslam.algebraic_connectivity_maximization import AlgebraicConnectivityMaximization
-from cslam.loop_closure_matching import LoopClosureMatching
+from cslam.loop_closure_sparse_matching import LoopClosureSparseMatching
 
 from cslam_loop_detection.msg import GlobalImageDescriptor
 from cslam_loop_detection.srv import SendLocalImageDescriptors
@@ -33,7 +32,7 @@ class GlobalImageDescriptorLoopClosureDetection(object):
         self.counter = 0
         self.robot_id = self.params['robot_id']
 
-        self.lcm = LoopClosureMatching(params)
+        self.lcm = LoopClosureSparseMatching(params)
         self.loop_closure_budget = self.params["loop_closure_budget"]
 
         # Place Recognition network setup
@@ -110,9 +109,7 @@ class GlobalImageDescriptorLoopClosureDetection(object):
             list(int): selected keyframes from other robots to match
         """
         # TODO: Find matches that maximize the algebraic connectivity
-        ac = AlgebraicConnectivityMaximization(self.robot_id, self.nb_robots)
-        ac.set_graph(fixed_edges, candidate_edges)
-        selection = ac.select_candidates(self.loop_closure_budget)
+        
 
     def detect_loop_closure_service(self, req, res):
         """Service callback to detect loop closures associate to the keyframe 
