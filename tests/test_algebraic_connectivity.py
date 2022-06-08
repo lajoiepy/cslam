@@ -18,9 +18,6 @@ def build_simple_graph(nb_poses, nb_candidate_edges):
     # Build simple graph
     fixed_weight = 1
     fixed_edges_list = []
-    for i in range(nb_poses - 1):
-        edge = EdgeInterRobot(0, i, 0, i + 1, fixed_weight)
-        fixed_edges_list.append(edge)
 
     candidate_edges_list = []
     for i in range(nb_candidate_edges):
@@ -34,9 +31,6 @@ def build_multi_robot_graph(nb_poses, nb_candidate_edges, robot_id, nb_robots):
     # Build simple graph for local robot
     fixed_weight = 1
     fixed_edges_list = []
-    for i in range(nb_poses - 1):
-        edge = EdgeInterRobot(robot_id, i, robot_id, i + 1, fixed_weight)
-        fixed_edges_list.append(edge)
 
     # Enforce connectivity
     for i in range(nb_robots - 1):
@@ -211,8 +205,8 @@ class TestAlgebraicConnectivity(unittest.TestCase):
         ac.set_graph(fixed_edges_list, candidate_edges_list)
 
         rekeyed_fixed_edges = ac.rekey_edges(ac.fixed_edges)
-        self.assertEqual(len(ac.fixed_edges), (nb_poses - 1) + 2)
-        rekeyed_fixed_edges.extend(ac.fill_other_robots_odometry())
+        self.assertEqual(len(ac.fixed_edges), 2)
+        rekeyed_fixed_edges.extend(ac.fill_odometry())
         self.assertEqual(len(rekeyed_fixed_edges), nb_robots * (nb_poses - 1) + 2)
         rekeyed_candidate_edges = ac.rekey_edges(ac.candidate_edges)
         for i in range(len(ac.candidate_edges)):

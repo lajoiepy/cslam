@@ -154,8 +154,8 @@ class AlgebraicConnectivityMaximization(object):
             rekeyed_edges.append(Edge(i, j, e.weight))
         return rekeyed_edges
 
-    def fill_other_robots_odometry(self):
-        """Add odometry edges from other robots
+    def fill_odometry(self):
+        """Add odometry edges
         We can infer the odometry edges directly from the number of poses,
         without communication.
 
@@ -164,11 +164,10 @@ class AlgebraicConnectivityMaximization(object):
         """
         odom_edges = []
         for i in range(len(self.nb_poses)):
-            if i != self.robot_id:
-                for k in range(self.nb_poses[i] - 1):
-                    odom_edges.append(
-                        Edge(self.offsets[i] + k, self.offsets[i] + k + 1,
-                             self.fixed_weight))
+            for k in range(self.nb_poses[i] - 1):
+                odom_edges.append(
+                    Edge(self.offsets[i] + k, self.offsets[i] + k + 1,
+                            self.fixed_weight))
         return odom_edges
 
     def recover_inter_robot_edges(self, edges):
@@ -210,7 +209,7 @@ class AlgebraicConnectivityMaximization(object):
         """
         # Rekey multi-robot edges to single robot
         rekeyed_fixed_edges = self.rekey_edges(self.fixed_edges)
-        rekeyed_fixed_edges.extend(self.fill_other_robots_odometry())
+        rekeyed_fixed_edges.extend(self.fill_odometry())
         rekeyed_candidate_edges = self.rekey_edges(self.candidate_edges)
 
         # Compute number of poses

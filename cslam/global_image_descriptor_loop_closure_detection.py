@@ -147,17 +147,14 @@ class GlobalImageDescriptorLoopClosureDetection(object):
     def detect_inter(self):
         """ Detect inter-robot loop closures
 
-        Args:
-            embedding (np.array): descriptor
-
         Returns:
-            list(int): matched keyframes from other robots
+            list(int): selected keyframes from other robots to match
         """
         # TODO: Find matches that maximize the algebraic connectivity
-        # ac = AlgebraicConnectivityMaximization()
-        # ac.set_graph(fixed_edges_list, candidate_edges_list, nb_poses)
-        # selection = ac.select_candidates_random_initialization(
-        #     nb_candidates_to_choose)
+        ac = AlgebraicConnectivityMaximization(self.robot_id, self.nb_robots)
+        ac.set_graph(fixed_edges, candidate_edges)
+        selection = ac.select_candidates(
+             self.loop_closure_budget, weights)
 
     def detect_loop_closure_service(self, req, res):
         """Service callback to detect loop closures associate to the keyframe 
