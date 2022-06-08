@@ -29,6 +29,10 @@ class LoopClosureDetection(Node):
                                             ('checkpoint', None),
                                             ('crop_size', None),
                                             ('robot_id', None),
+                                            ('nb_robots', None),
+                                            ('similarity_loc', 1.0),
+                                            ('similarity_scale', 0.25),
+                                            ('loop_closure_budget', 5),
                                             ('global_descriptor_topic', None)])
         params = {}
         params['threshold'] = self.get_parameter('threshold').value
@@ -40,6 +44,10 @@ class LoopClosureDetection(Node):
         params['checkpoint'] = self.get_parameter('checkpoint').value
         params['crop_size'] = self.get_parameter('crop_size').value
         params['robot_id'] = self.get_parameter('robot_id').value
+        params['nb_robots'] = self.get_parameter('nb_robots').value
+        params['similarity_loc'] = self.get_parameter('similarity_loc').value
+        params['similarity_scale'] = self.get_parameter('similarity_scale').value
+        params['loop_closure_budget'] = self.get_parameter('loop_closure_budget').value
 
         self.glcd = GlobalImageDescriptorLoopClosureDetection(params, self)
         self.srv = self.create_service(DetectLoopClosure,

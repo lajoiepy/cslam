@@ -56,19 +56,20 @@ class TestAlgebraicConnectivity(unittest.TestCase):
         ac = AlgebraicConnectivityMaximization()
         ac.set_graph(fixed_edges_list, candidate_edges_list, nb_poses)
         start = timer()
-        selection = ac.select_candidates(nb_candidates_to_choose)
+        selection = ac.select_candidates(
+            nb_candidates_to_choose)
         stop = timer()
         self.assertEqual(len(selection), nb_candidates_to_choose)
 
     def test_greedy_initilization(self):
         nb_candidates = 100
         nb_candidates_to_choose = 10
-        scores = np.random.rand(nb_candidates)
+        weights = np.random.rand(nb_candidates)
         ac = AlgebraicConnectivityMaximization()
-        ac.greedy_intialization(scores, nb_candidates_to_choose)
+        ac.greedy_intialization(weights, nb_candidates_to_choose)
         self.assertAlmostEqual(
-            np.sum(scores[ac.w_init.astype(bool)]),
-            np.sum(np.sort(scores)[-nb_candidates_to_choose:]))
+            np.sum(weights[ac.w_init.astype(bool)]),
+            np.sum(np.sort(weights)[-nb_candidates_to_choose:]))
 
     def test_add_measurements(self):
         # Build simple graph
@@ -81,7 +82,8 @@ class TestAlgebraicConnectivity(unittest.TestCase):
         ac.set_graph(fixed_edges_list, candidate_edges_list, nb_poses)
 
         # Solve the initial graph
-        selection0 = ac.select_candidates(nb_candidates_to_choose)
+        selection0 = ac.select_candidates(
+            nb_candidates_to_choose)
         self.assertEqual(len(selection0), nb_candidates_to_choose)
 
         # Add edges
@@ -90,16 +92,19 @@ class TestAlgebraicConnectivity(unittest.TestCase):
             ac.add_candidate_edge(
                 Edge(random.choice(range(nb_poses)),
                      random.choice(range(nb_poses)), 1.0))
-        selection1 = ac.select_candidates(nb_candidates_to_choose)
+        selection1 = ac.select_candidates(
+            nb_candidates_to_choose)
         self.assertEqual(len(selection1), nb_candidates_to_choose)
 
-        selection2 = ac.select_candidates(nb_candidates_to_choose + 2)
+        selection2 = ac.select_candidates(
+            nb_candidates_to_choose + 2)
         self.assertEqual(len(selection2), nb_candidates_to_choose + 2)
         for i in range(nb_add_edges):
             ac.add_candidate_edge(
                 Edge(random.choice(range(nb_poses)),
                      random.choice(range(nb_poses)), 1.0))
-        selection3 = ac.select_candidates(nb_candidates_to_choose + 2)
+        selection3 = ac.select_candidates(
+            nb_candidates_to_choose + 2)
         self.assertEqual(len(selection3), nb_candidates_to_choose + 2)
 
     def test_fixed_loop_closures(self):
@@ -113,7 +118,8 @@ class TestAlgebraicConnectivity(unittest.TestCase):
         ac.set_graph(fixed_edges_list, candidate_edges_list, nb_poses)
 
         # Solve the initial graph
-        selection0 = ac.select_candidates(nb_candidates_to_choose)
+        selection0 = ac.select_candidates(
+            nb_candidates_to_choose)
         self.assertEqual(len(selection0), nb_candidates_to_choose)
 
         # Add edges
@@ -122,7 +128,8 @@ class TestAlgebraicConnectivity(unittest.TestCase):
             ac.add_fixed_edge(
                 Edge(random.choice(range(nb_poses)),
                      random.choice(range(nb_poses)), 1.0))
-        selection1 = ac.select_candidates(nb_candidates_to_choose)
+        selection1 = ac.select_candidates(
+            nb_candidates_to_choose)
         self.assertEqual(len(selection1), nb_candidates_to_choose)
 
     def test_remove_candidate(self):
@@ -136,7 +143,8 @@ class TestAlgebraicConnectivity(unittest.TestCase):
         ac.set_graph(fixed_edges_list, candidate_edges_list, nb_poses)
 
         # Solve the initial graph
-        selection0 = ac.select_candidates(nb_candidates_to_choose)
+        selection0 = ac.select_candidates(
+            nb_candidates_to_choose)
         self.assertEqual(len(selection0), nb_candidates_to_choose)
         nb_candidates0 = len(ac.candidate_edges)
 
@@ -157,16 +165,20 @@ class TestAlgebraicConnectivity(unittest.TestCase):
         ac.set_graph(fixed_edges_list, candidate_edges_list, nb_poses)
 
         # Solve the initial graph
-        selection0 = ac.select_candidates(nb_candidates_to_choose)
+        selection0 = ac.select_candidates(
+            nb_candidates_to_choose)
         self.assertEqual(len(selection0), nb_candidates_to_choose)
 
         # Swap edge, make sure that none are the same
         ac.candidate_edges_to_fixed(selection0)
-        selection1 = ac.select_candidates(nb_candidates_to_choose)
+        selection1 = ac.select_candidates(
+            nb_candidates_to_choose)
         for e0 in selection0:
             for e1 in selection1:
                 self.assertFalse(e0.i == e1.i and e0.j == e1.j)
 
+    def test_multi_robot_edges(self):
+        t = 0
 
 if __name__ == "__main__":
     unittest.main()

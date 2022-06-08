@@ -54,3 +54,19 @@ class NearestNeighborsMatching(object):
         ds = np.linalg.norm(query[np.newaxis, :] - self.data[:self.n], axis=1)
         ns = np.argsort(ds)[:k]
         return [self.items[n] for n in ns], ds[ns]
+
+    def search_best(self, query):
+        """Search for the nearest neighbor
+
+        Args:
+            query (np.array): descriptor to match
+
+        Returns:
+            int, np.array: best match
+        """
+        if len(self.data) == 0:
+            return -1, -1
+
+        d = np.linalg.norm(query[np.newaxis, :] - self.data[:self.n], axis=1)
+        n = np.argsort(ds)[0]
+        return n, d[n]
