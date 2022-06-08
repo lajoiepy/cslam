@@ -1,16 +1,37 @@
 from cslam.third_party.mac.mac import MAC
-from cslam.third_party.mac.utils import Edge
+from cslam.third_party.mac.utils import Edge, weight_graph_lap_from_edge_list
 import numpy as np
-from collections import namedtuple
+from typing import NamedTuple
 
-EdgeInterRobot = namedtuple(
-    'EdgeInterRobot',
-    ['robot0_id', 'robot0_image_id', 'robot1_id', 'robot1_image_id', 'weight'])
+
+class EdgeInterRobot(NamedTuple):
+    """ Inter-robot loop closure edge
+    """
+    robot0_id: int
+    robot0_image_id: int
+    robot1_id: int
+    robot1_image_id: int
+    weight: float
+
+    def __eq__(self, other):
+        """ Overload the equal operator in order to ignore the weights
+
+        Args:
+            other (EdgeInterRobot): Other edge to compare
+        """
+        return ((self.robot0_id == other.robot0_id)
+                and (self.robot0_image_id == other.robot0_image_id)
+                and (self.robot1_id == other.robot1_id)
+                and (self.robot1_image_id == other.robot1_image_id))
 
 
 class AlgebraicConnectivityMaximization(object):
 
-    def __init__(self, robot_id=0, nb_robots=1, max_iters=20, fixed_weight=1.0):
+    def __init__(self,
+                 robot_id=0,
+                 nb_robots=1,
+                 max_iters=20,
+                 fixed_weight=1.0):
         """Initialization
 
         Args:
@@ -105,17 +126,17 @@ class AlgebraicConnectivityMaximization(object):
             edges (list(EdgeInterRobot)): inter-robot edges
         """
         for i in range(len(edges)):
-            edges[i]._replace(weight = self.fixed_weight)
+            edges[i] = edges[i]._replace(weight=self.fixed_weight)
         self.fixed_edges.extend(edges)
         self.remove_candidate_edges(edges)
 
-    def greedy_intialization(self, weights, nb_candidates_to_choose):
+    def greedy_initialization(self, nb_candidates_to_choose):
         """Greedy weight initialization
 
         Args:
-            weights (list(float)): weight for each candidate
             nb_candidates_to_choose (int): number of edges to choose
         """
+        weights = [e.weight for e in self.candidate_edges]
         self.w_init = np.zeros(len(weights))
         indices = np.argpartition(
             weights, -nb_candidates_to_choose)[-nb_candidates_to_choose:]
@@ -128,7 +149,10 @@ class AlgebraicConnectivityMaximization(object):
             nb_candidates_to_choose (int): number of edges to choose
         """
         weights = np.random.rand(len(self.candidate_edges))
-        self.greedy_intialization(weights, nb_candidates_to_choose)
+        for i in range(len(self.candidate_edges)):
+            self.candidate_edges[i] = self.candidate_edges[i]._replace(
+                weight=weights[i])
+        self.greedy_initialization(nb_candidates_to_choose)
 
     def rekey_edges(self, edges):
         """Modify keys (nodes ID) from robot_id+image_id to node_id
@@ -167,7 +191,7 @@ class AlgebraicConnectivityMaximization(object):
             for k in range(self.nb_poses[i] - 1):
                 odom_edges.append(
                     Edge(self.offsets[i] + k, self.offsets[i] + k + 1,
-                            self.fixed_weight))
+                         self.fixed_weight))
         return odom_edges
 
     def recover_inter_robot_edges(self, edges):
@@ -196,7 +220,9 @@ class AlgebraicConnectivityMaximization(object):
                                robot1_image_id, edges[c].weight))
         return recovered_inter_robot_edges
 
-    def select_candidates(self, nb_candidates_to_choose, weights=None):
+    def select_candidates(self,
+                          nb_candidates_to_choose,
+                          greedy_initialization=True):
         """Solve algebraic connectivity maximization
 
         Args:
@@ -218,12 +244,13 @@ class AlgebraicConnectivityMaximization(object):
             self.total_nb_poses = self.total_nb_poses + self.nb_poses[n]
 
         # Initial guess
-        if weights is None:
+        if greedy_initialization is False:
             self.random_initialization(nb_candidates_to_choose)
         else:
-            self.greedy_intialization(weights, nb_candidates_to_choose)
+            self.greedy_initialization(nb_candidates_to_choose)
         # Solver
-        mac = MAC(rekeyed_fixed_edges, rekeyed_candidate_edges, self.total_nb_poses)
+        mac = MAC(rekeyed_fixed_edges, rekeyed_candidate_edges,
+                  self.total_nb_poses)
         result, _, _ = mac.fw_subset(self.w_init,
                                      nb_candidates_to_choose,
                                      max_iters=self.max_iters)

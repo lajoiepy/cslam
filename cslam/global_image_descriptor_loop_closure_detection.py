@@ -226,3 +226,4 @@ class GlobalImageDescriptorLoopClosureDetection(object):
         #         self.send_local_descriptors_srv.call_async(req)
         # TODO: if geo verif fails, remove candidate, put similarity to -1
         # TODO: if geo verif succeeds, move from candidate to fixed edge in the graph
+        # TODO: Only one robot per pair should initiate computation
