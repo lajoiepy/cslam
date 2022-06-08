@@ -10,11 +10,11 @@ EdgeInterRobot = namedtuple(
 
 class AlgebraicConnectivityMaximization(object):
 
-    def __init__(self, robot_id, nb_robots=1, max_iters=20, fixed_weight=1.0):
+    def __init__(self, robot_id=0, nb_robots=1, max_iters=20, fixed_weight=1.0):
         """Initialization
 
         Args:
-            robot_id (int): ID of the robot
+            robot_id (int, optional): ID of the robot
             nb_robots (int, optional): number of robots. Defaults to 1.
             max_iters (int, optional): maximum number of iterations. Defaults to 20.
             fixed_weight (float, optional): weight of fixed measurements. Defaults to 1.0.
@@ -28,6 +28,7 @@ class AlgebraicConnectivityMaximization(object):
 
         self.nb_robots = nb_robots
         self.robot_id = robot_id
+        self.total_nb_poses = 0
 
         # Offsets required to put rekey nodes such
         # that they are all in a single graph
@@ -212,9 +213,9 @@ class AlgebraicConnectivityMaximization(object):
         rekeyed_candidate_edges = self.rekey_edges(self.candidate_edges)
 
         # Compute number of poses
-        nb_poses = 0
+        self.total_nb_poses = 0
         for n in self.nb_poses:
-            nb_poses = nb_poses + n
+            self.total_nb_poses = self.total_nb_poses + n
 
         # Initial guess
         if weights is None:
@@ -222,7 +223,7 @@ class AlgebraicConnectivityMaximization(object):
         else:
             self.greedy_intialization(weights, nb_candidates_to_choose)
         # Solver
-        mac = MAC(rekeyed_fixed_edges, rekeyed_candidate_edges, nb_poses)
+        mac = MAC(rekeyed_fixed_edges, rekeyed_candidate_edges, self.total_nb_poses)
         result, _, _ = mac.fw_subset(self.w_init,
                                      nb_candidates_to_choose,
                                      max_iters=self.max_iters)

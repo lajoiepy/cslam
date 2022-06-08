@@ -154,10 +154,10 @@ class GlobalImageDescriptorLoopClosureDetection(object):
             list(int): matched keyframes from other robots
         """
         # TODO: Find matches that maximize the algebraic connectivity
-        ac = AlgebraicConnectivityMaximization()
-        ac.set_graph(fixed_edges_list, candidate_edges_list, nb_poses)
-        selection = ac.select_candidates_random_initialization(
-            nb_candidates_to_choose)
+        # ac = AlgebraicConnectivityMaximization()
+        # ac.set_graph(fixed_edges_list, candidate_edges_list, nb_poses)
+        # selection = ac.select_candidates_random_initialization(
+        #     nb_candidates_to_choose)
 
     def detect_loop_closure_service(self, req, res):
         """Service callback to detect loop closures associate to the keyframe 
