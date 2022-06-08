@@ -15,6 +15,7 @@ class LoopClosureMatching(object):
         self.other_robots_keyframes = {}
         self.other_robots_keyframe_similarities = {}
         self.nb_robots = self.params['nb_robots']
+        self.threshold = self.params['threshold']
         for i in range(self.nb_robots):
             if i != self.robot_id:
                 self.other_robots_nnsm[i] = NearestNeighborsMatching()
@@ -56,8 +57,8 @@ class LoopClosureMatching(object):
 
         kf, d = self.local_nnsm.search_best(np.asarray(msg.descriptor))
         similarity = self.distance_to_similarity(d)
-        if d <= self.params['threshold'] and similarity > self.best_matches[
-                'robot_' + str(msg.robot_id) + '_similarity'][kf]:
+        if d <= self.threshold and similarity > self.other_robots_keyframe_similarities[
+                msg.robot_id][kf]:
             self.other_robots_keyframes[msg.robot_id][kf] = msg.image_id
             self.other_robots_keyframe_similarities[
                 msg.robot_id][kf] = similarity
