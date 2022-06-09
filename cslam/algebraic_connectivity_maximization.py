@@ -115,7 +115,7 @@ class AlgebraicConnectivityMaximization(object):
         Args:
             edges (list(EdgeInterRobot)): inter-robot edges
         """
-        keys = self.candidate_edges.keys()
+        keys = list(self.candidate_edges.keys())
         for k in keys:
             if self.candidate_edges[k] in edges:
                 del self.candidate_edges[k]
@@ -138,7 +138,7 @@ class AlgebraicConnectivityMaximization(object):
         Args:
             nb_candidates_to_choose (int): number of edges to choose
         """
-        weights = [e.weight for e in self.candidate_edges.values]
+        weights = [e.weight for e in self.candidate_edges.values()]
         self.w_init = np.zeros(len(weights))
         indices = np.argpartition(
             weights, -nb_candidates_to_choose)[-nb_candidates_to_choose:]
@@ -210,9 +210,9 @@ class AlgebraicConnectivityMaximization(object):
             robot1_id = 0
             for o in range(len(self.offsets)):
                 if o != 0:
-                    if edges[c].i > self.offsets[o]:
+                    if edges[c].i >= self.offsets[o]:
                         robot0_id = robot0_id + 1
-                    if edges[c].j > self.offsets[o]:
+                    if edges[c].j >= self.offsets[o]:
                         robot1_id = robot1_id + 1
             robot0_image_id = edges[c].i - self.offsets[robot0_id]
             robot1_image_id = edges[c].j - self.offsets[robot1_id]
@@ -237,7 +237,7 @@ class AlgebraicConnectivityMaximization(object):
         # Rekey multi-robot edges to single robot
         rekeyed_fixed_edges = self.rekey_edges(self.fixed_edges)
         rekeyed_fixed_edges.extend(self.fill_odometry())
-        rekeyed_candidate_edges = self.rekey_edges(self.candidate_edges.values)
+        rekeyed_candidate_edges = self.rekey_edges(self.candidate_edges.values())
 
         # Compute number of poses
         self.total_nb_poses = 0
@@ -266,7 +266,6 @@ class AlgebraicConnectivityMaximization(object):
         """Add match if the weight is 
             higher than the current best candidate associated 
             to a local keyframe
-        TODO: unit test
 
         Args:
             match (EdgeInterRobot): potential match
