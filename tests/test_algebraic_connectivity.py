@@ -1,4 +1,3 @@
-from distutils.command.build import build
 import unittest
 import sys  # TODO: remove
 
@@ -239,7 +238,7 @@ class TestAlgebraicConnectivity(unittest.TestCase):
             r = rekeyed_candidate_edges[i]
             self.assertEqual(r.i, e.robot0_image_id + e.robot0_id * 10)
             self.assertEqual(r.j, e.robot1_image_id + e.robot1_id * 10)
-        
+
         recovered_edges = ac.recover_inter_robot_edges(rekeyed_candidate_edges)
         for i in range(len(values)):
             e = values[i]

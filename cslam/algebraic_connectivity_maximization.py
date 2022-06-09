@@ -237,7 +237,8 @@ class AlgebraicConnectivityMaximization(object):
         # Rekey multi-robot edges to single robot
         rekeyed_fixed_edges = self.rekey_edges(self.fixed_edges)
         rekeyed_fixed_edges.extend(self.fill_odometry())
-        rekeyed_candidate_edges = self.rekey_edges(self.candidate_edges.values())
+        rekeyed_candidate_edges = self.rekey_edges(
+            self.candidate_edges.values())
 
         # Compute number of poses
         self.total_nb_poses = 0
@@ -273,8 +274,6 @@ class AlgebraicConnectivityMaximization(object):
         key = (match.robot0_image_id, match.robot1_id)
         if key in self.candidate_edges:
             if match.weight > self.candidate_edges[key].weight:
-                self.candidate_edges[key] = match
+                self.add_candidate_edge(match)
         else:
-            self.candidate_edges[key] = match
-
-
+            self.add_candidate_edge(match)

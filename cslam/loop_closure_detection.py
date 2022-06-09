@@ -22,17 +22,16 @@ class LoopClosureDetection(Node):
 
         self.declare_parameters(namespace='',
                                 parameters=[('threshold', None),
-                                            ('min_inbetween_keyframes', None),
-                                            ('nb_best_matches', None),
-                                            ('technique', None), ('pca', None),
-                                            ('resume', None),
+                                            ('technique', None), 
+                                            ('pca', None),
                                             ('checkpoint', None),
-                                            ('crop_size', None),
                                             ('robot_id', None),
                                             ('nb_robots', None),
                                             ('similarity_loc', 1.0),
                                             ('similarity_scale', 0.25),
                                             ('loop_closure_budget', 5),
+                                            ('nb_best_matches', 10),
+                                            ('min_inbetween_keyframes', 10),
                                             ('global_descriptor_topic', None)])
         params = {}
         params['threshold'] = self.get_parameter('threshold').value
@@ -40,9 +39,7 @@ class LoopClosureDetection(Node):
             'min_inbetween_keyframes').value
         params['nb_best_matches'] = self.get_parameter('nb_best_matches').value
         params['technique'] = self.get_parameter('technique').value
-        params['resume'] = self.get_parameter('resume').value
         params['checkpoint'] = self.get_parameter('checkpoint').value
-        params['crop_size'] = self.get_parameter('crop_size').value
         params['robot_id'] = self.get_parameter('robot_id').value
         params['nb_robots'] = self.get_parameter('nb_robots').value
         params['similarity_loc'] = self.get_parameter('similarity_loc').value

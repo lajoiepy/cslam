@@ -65,8 +65,8 @@ class NearestNeighborsMatching(object):
             int, np.array: best match
         """
         if len(self.data) == 0:
-            return -1, -1
+            return None, None
 
-        d = np.linalg.norm(query[np.newaxis, :] - self.data[:self.n], axis=1)
+        ds = np.linalg.norm(query[np.newaxis, :] - self.data[:self.n], axis=1)
         n = np.argsort(ds)[0]
-        return n, d[n]
+        return self.items[n], ds[n]

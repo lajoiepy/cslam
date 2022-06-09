@@ -109,8 +109,8 @@ class GlobalImageDescriptorLoopClosureDetection(object):
             list(int): selected keyframes from other robots to match
         """
         # TODO: Find matches that maximize the algebraic connectivity
+        # TODO: specify the robots to consider for candidate selection
         selection = self.lcm.select_candidates(self.loop_closure_budget)
-        
 
     def detect_loop_closure_service(self, req, res):
         """Service callback to detect loop closures associate to the keyframe 
@@ -130,7 +130,7 @@ class GlobalImageDescriptorLoopClosureDetection(object):
 
         # Global descriptors matching
         match = None
-        if self.counter > 0: # TODO: Add param for intra-robot loop closures
+        if self.counter > 0:  # TODO: Add param for intra-robot loop closures
             match, best_matches = self.detect_intra(
                 embedding, req.image.id)  # Systematic evaluation
         self.add_keyframe(embedding, req.image.id)

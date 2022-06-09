@@ -1,4 +1,3 @@
-from scipy.stats import logistic
 import numpy as np
 from cslam.nearest_neighbors_matching import NearestNeighborsMatching
 from cslam.algebraic_connectivity_maximization import AlgebraicConnectivityMaximization, EdgeInterRobot
@@ -11,10 +10,10 @@ class LoopClosureSparseMatching(object):
     """
 
     def __init__(self, params):
-        """TODO
+        """ Initialization of loop closure matching
 
         Args:
-            params (_type_): _description_
+            params (dict): ROS 2 parameters
         """
         # Extract params
         self.params = params
@@ -30,7 +29,8 @@ class LoopClosureSparseMatching(object):
             if i != self.robot_id:
                 self.other_robots_nnsm[i] = NearestNeighborsMatching()
         # Initialize candidate selection algorithm
-        self.candidate_selector = AlgebraicConnectivityMaximization(self.robot_id, self.nb_robots)
+        self.candidate_selector = AlgebraicConnectivityMaximization(
+            self.robot_id, self.nb_robots)
 
     def distance_to_similarity(self, distance):
         """Converts a distance metric into a similarity score
@@ -41,43 +41,48 @@ class LoopClosureSparseMatching(object):
         Returns:
             float: similarity score
         """
-        return logistic.cdf(-distance,
-                            loc=self.similarity_loc,
-                            scale=self.similarity_scale)
+        return 1 / (1 + np.exp(
+            (distance - self.similarity_loc) / self.similarity_scale))
 
     def add_local_keyframe(self, embedding, id):
-        """TODO
+        """ Add a local keyframe for matching
 
         Args:
-            embedding (_type_): _description_
-            id (_type_): _description_
+            embedding (np.array): global descriptor
+            id (int): keyframe id
         """
         self.local_nnsm.add_item(embedding, id)
         for i in range(self.nb_robots):
             if i != self.robot_id:
-                kf, d = self.other_robots_nnsm[i].search_best(embedding, k=1)
-                similarity = self.distance_to_similarity(d)
-                if similarity >= self.threshold:
-                    self.candidate_selector.add_match(EdgeInterRobot(self.robot_id, id, i, kf))
+                kf, d = self.other_robots_nnsm[i].search_best(embedding)
+                if kf is not None:
+                    similarity = self.distance_to_similarity(d)
+                    if similarity >= self.threshold:
+                        self.candidate_selector.add_match(
+                            EdgeInterRobot(self.robot_id, id, i, kf,
+                                           similarity))
 
     def add_other_robot_keyframe(self, msg):
-        """TODO
+        """ Add keyframe global descriptor info from other robot
 
         Args:
-            msg (_type_): _description_
+            msg (cslam_loop_detection.msg.GlobalImageDescriptor): global descriptor info
         """
         self.other_robots_nnsm[msg.robot_id].add_item(
             np.asarray(msg.descriptor), msg.image_id)
 
         kf, d = self.local_nnsm.search_best(np.asarray(msg.descriptor))
-        similarity = self.distance_to_similarity(d)
-        if similarity >= self.threshold:
-            self.candidate_selector.add_match(EdgeInterRobot(self.robot_id, kf, msg.robot_id, msg.image_id))
+        if kf is not None:
+            similarity = self.distance_to_similarity(d)
+            if similarity >= self.threshold:
+                self.candidate_selector.add_match(
+                    EdgeInterRobot(self.robot_id, kf, msg.robot_id,
+                                   msg.image_id, similarity))
 
     def select_candidates(self, number_of_candidates):
-        """TODO
+        """Select loop closure candidates according to budget
 
         Args:
-            number_of_candidates (_type_): _description_
+            number_of_candidates (int): inter-robot loop closure budget
         """
         return self.candidate_selector.select_candidates(number_of_candidates)
