@@ -43,7 +43,7 @@ class AlgebraicConnectivityMaximization(object):
         self.fixed_weight = fixed_weight
 
         self.fixed_edges = []
-        self.candidate_edges = []
+        self.candidate_edges = {}
 
         self.max_iters = max_iters
 
@@ -67,7 +67,6 @@ class AlgebraicConnectivityMaximization(object):
             candidate_edges (list(EdgeInterRobot)): candidate edges to compute
         """
         self.fixed_edges = fixed_edges
-        self.candidate_edges = candidate_edges
 
         # Extract nb of poses for ids graphs
         for e in self.fixed_edges:
@@ -75,11 +74,14 @@ class AlgebraicConnectivityMaximization(object):
                                              e.robot0_image_id + 1)
             self.nb_poses[e.robot1_id] = max(self.nb_poses[e.robot1_id],
                                              e.robot1_image_id + 1)
-        for e in self.candidate_edges:
+        for e in candidate_edges:
             self.nb_poses[e.robot0_id] = max(self.nb_poses[e.robot0_id],
                                              e.robot0_image_id + 1)
             self.nb_poses[e.robot1_id] = max(self.nb_poses[e.robot1_id],
                                              e.robot1_image_id + 1)
+
+        for e in candidate_edges:
+            self.candidate_edges[(e.robot0_image_id, e.robot1_id)] = e
 
     def add_fixed_edge(self, edge):
         """Add an already computed edge to the graph
@@ -100,7 +102,7 @@ class AlgebraicConnectivityMaximization(object):
         Args:
             edge (EdgeInterRobot): inter-robot edge
         """
-        self.candidate_edges.append(edge)
+        self.candidate_edges[(edge.robot0_image_id, edge.robot1_id)] = edge
         # Update nb of poses
         self.nb_poses[edge.robot0_id] = max(self.nb_poses[edge.robot0_id],
                                             edge.robot0_image_id + 1)
@@ -111,12 +113,12 @@ class AlgebraicConnectivityMaximization(object):
         """Remove candidate edge from the graph
 
         Args:
-            edge (EdgeInterRobot): inter-robot edge
+            edges (list(EdgeInterRobot)): inter-robot edges
         """
-        self.candidate_edges = [
-            self.candidate_edges[i] for i in range(len(self.candidate_edges))
-            if (self.candidate_edges[i] not in edges)
-        ]
+        keys = self.candidate_edges.keys()
+        for k in keys:
+            if self.candidate_edges[k] in edges:
+                del self.candidate_edges[k]
 
     def candidate_edges_to_fixed(self, edges):
         """Move candidate edges to fixed. 
@@ -136,7 +138,7 @@ class AlgebraicConnectivityMaximization(object):
         Args:
             nb_candidates_to_choose (int): number of edges to choose
         """
-        weights = [e.weight for e in self.candidate_edges]
+        weights = [e.weight for e in self.candidate_edges.values]
         self.w_init = np.zeros(len(weights))
         indices = np.argpartition(
             weights, -nb_candidates_to_choose)[-nb_candidates_to_choose:]
@@ -148,10 +150,9 @@ class AlgebraicConnectivityMaximization(object):
         Args:
             nb_candidates_to_choose (int): number of edges to choose
         """
-        weights = np.random.rand(len(self.candidate_edges))
-        for i in range(len(self.candidate_edges)):
-            self.candidate_edges[i] = self.candidate_edges[i]._replace(
-                weight=weights[i])
+        for e in self.candidate_edges:
+            self.candidate_edges[e] = self.candidate_edges[e]._replace(
+                weight=np.random.rand())
         self.greedy_initialization(nb_candidates_to_choose)
 
     def rekey_edges(self, edges):
@@ -162,7 +163,7 @@ class AlgebraicConnectivityMaximization(object):
         robot 2 nodes id = 20 to 29
 
         Args:
-            edges (list(EdgeInterRobot)): inter-robot edges
+            edges (dict(EdgeInterRobot)): inter-robot edges
 
         Returns:
             list(Edge): edges with keys for MAC problem
@@ -236,7 +237,7 @@ class AlgebraicConnectivityMaximization(object):
         # Rekey multi-robot edges to single robot
         rekeyed_fixed_edges = self.rekey_edges(self.fixed_edges)
         rekeyed_fixed_edges.extend(self.fill_odometry())
-        rekeyed_candidate_edges = self.rekey_edges(self.candidate_edges)
+        rekeyed_candidate_edges = self.rekey_edges(self.candidate_edges.values)
 
         # Compute number of poses
         self.total_nb_poses = 0
@@ -260,3 +261,21 @@ class AlgebraicConnectivityMaximization(object):
         ]
         # Return selected multi-robot edges
         return self.recover_inter_robot_edges(selected_edges)
+
+    def add_match(self, match):
+        """Add match if the weight is 
+            higher than the current best candidate associated 
+            to a local keyframe
+        TODO: unit test
+
+        Args:
+            match (EdgeInterRobot): potential match
+        """
+        key = (match.robot0_image_id, match.robot1_id)
+        if key in self.candidate_edges:
+            if match.weight > self.candidate_edges[key].weight:
+                self.candidate_edges[key] = match
+        else:
+            self.candidate_edges[key] = match
+
+

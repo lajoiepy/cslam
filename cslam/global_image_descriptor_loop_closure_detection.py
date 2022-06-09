@@ -109,6 +109,7 @@ class GlobalImageDescriptorLoopClosureDetection(object):
             list(int): selected keyframes from other robots to match
         """
         # TODO: Find matches that maximize the algebraic connectivity
+        selection = self.lcm.select_candidates(self.loop_closure_budget)
         
 
     def detect_loop_closure_service(self, req, res):

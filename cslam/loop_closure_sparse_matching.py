@@ -1,11 +1,13 @@
 from scipy.stats import logistic
 import numpy as np
 from cslam.nearest_neighbors_matching import NearestNeighborsMatching
-from cslam.algebraic_connectivity_maximization import AlgebraicConnectivityMaximization
+from cslam.algebraic_connectivity_maximization import AlgebraicConnectivityMaximization, EdgeInterRobot
 
 
 class LoopClosureSparseMatching(object):
-    """TODO
+    """Sparse matching for loop closure detection
+        Matches global descriptors to generate loop closure candidates
+        Then candidates are selected such that we respect the communication budget
     """
 
     def __init__(self, params):
@@ -14,23 +16,21 @@ class LoopClosureSparseMatching(object):
         Args:
             params (_type_): _description_
         """
+        # Extract params
         self.params = params
-
         self.robot_id = self.params['robot_id']
-        self.local_nnsm = NearestNeighborsMatching()
-        self.other_robots_nnsm = {}
-        self.local_keyframe_id = []
-        self.other_robots_keyframes = {}
-        self.other_robots_keyframe_similarities = {}
         self.nb_robots = self.params['nb_robots']
         self.threshold = self.params['threshold']
+        self.similarity_loc = self.params['similarity_loc']
+        self.similarity_scale = self.params['similarity_scale']
+        # Initialize matching structs
+        self.local_nnsm = NearestNeighborsMatching()
+        self.other_robots_nnsm = {}
         for i in range(self.nb_robots):
             if i != self.robot_id:
                 self.other_robots_nnsm[i] = NearestNeighborsMatching()
-                self.other_robots_keyframes[i] = []
-                self.other_robots_keyframe_similarities[i] = []
-        self.similarity_loc = self.params['similarity_loc']
-        self.similarity_scale = self.params['similarity_scale']
+        # Initialize candidate selection algorithm
+        self.candidate_selector = AlgebraicConnectivityMaximization(self.robot_id, self.nb_robots)
 
     def distance_to_similarity(self, distance):
         """Converts a distance metric into a similarity score
@@ -53,17 +53,12 @@ class LoopClosureSparseMatching(object):
             id (_type_): _description_
         """
         self.local_nnsm.add_item(embedding, id)
-        self.local_keyframe_id.append(id)
         for i in range(self.nb_robots):
             if i != self.robot_id:
                 kf, d = self.other_robots_nnsm[i].search_best(embedding, k=1)
-                if d <= self.params['threshold']:
-                    self.other_robots_keyframes[i].append(kf)
-                    self.other_robots_keyframe_similarities[i].append(
-                        self.distance_to_similarity(d))
-                else:
-                    self.other_robots_keyframes[i].append(-1)
-                    self.other_robots_keyframe_similarities[i].append(-1)
+                similarity = self.distance_to_similarity(d)
+                if similarity >= self.threshold:
+                    self.candidate_selector.add_match(EdgeInterRobot(self.robot_id, id, i, kf))
 
     def add_other_robot_keyframe(self, msg):
         """TODO
@@ -76,11 +71,8 @@ class LoopClosureSparseMatching(object):
 
         kf, d = self.local_nnsm.search_best(np.asarray(msg.descriptor))
         similarity = self.distance_to_similarity(d)
-        if d <= self.threshold and similarity > self.other_robots_keyframe_similarities[
-                msg.robot_id][kf]:
-            self.other_robots_keyframes[msg.robot_id][kf] = msg.image_id
-            self.other_robots_keyframe_similarities[
-                msg.robot_id][kf] = similarity
+        if similarity >= self.threshold:
+            self.candidate_selector.add_match(EdgeInterRobot(self.robot_id, kf, msg.robot_id, msg.image_id))
 
     def select_candidates(self, number_of_candidates):
         """TODO
@@ -88,6 +80,4 @@ class LoopClosureSparseMatching(object):
         Args:
             number_of_candidates (_type_): _description_
         """
-        ac = AlgebraicConnectivityMaximization(self.robot_id, self.nb_robots) # TODO build once, reset candidates keep fixed
-        ac.set_graph(fixed_edges, candidate_edges)
-        selection = ac.select_candidates(self.loop_closure_budget)
+        return self.candidate_selector.select_candidates(number_of_candidates)
