@@ -28,6 +28,7 @@ class LoopClosureDetection(Node):
                                     ('similarity_loc', 1.0),
                                     ('similarity_scale', 0.25),
                                     ('loop_closure_budget', 5),
+                                    ('detection_period', 5),
                                     ('nb_best_matches', 10),
                                     ('min_inbetween_keyframes', 10),
                                     ('intra_robot_loop_closure_detection',
@@ -49,8 +50,12 @@ class LoopClosureDetection(Node):
             'loop_closure_budget').value
         params['intra_robot_loop_closure_detection'] = self.get_parameter(
             'intra_robot_loop_closure_detection').value
+        params['detection_period'] = self.get_parameter(
+            'detection_period').value
 
         self.glcd = GlobalImageDescriptorLoopClosureDetection(params, self)
+        self.loop_detection_timers = self.create_timer(
+            params['detection_period'], self.glcd.detect_inter)
 
 if __name__ == '__main__':
 

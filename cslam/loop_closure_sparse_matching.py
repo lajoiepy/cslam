@@ -103,5 +103,13 @@ class LoopClosureSparseMatching(object):
 
         Args:
             number_of_candidates (int): inter-robot loop closure budget
+
+        Returns:
+            list(EdgeInterRobot): selected edges
         """
-        return self.candidate_selector.select_candidates(number_of_candidates)
+        if len(self.candidate_selector.candidate_edges
+               ) >= number_of_candidates:
+            return self.candidate_selector.select_candidates(
+                number_of_candidates)
+        else:
+            return []

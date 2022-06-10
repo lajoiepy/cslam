@@ -34,7 +34,10 @@ void LoopClosureDetection::init(std::shared_ptr<rclcpp::Node> &node) {
   // Publisher for global descriptors
   keyframe_data_publisher_ =
       node_->create_publisher<cslam_utils::msg::KeyframeRGB>("keyframe_data",
-                                                             10);
+                                                             100);
+  inter_robot_loop_closure_publisher_ =
+      node_->create_publisher<cslam_utils::msg::InterRobotLoopClosure>(
+          "inter_robot_loop_closure", 100);
 
   // Publishers to other robots local descriptors subscribers
   for (int id = 0; id < nb_robots_; id++) {
@@ -43,14 +46,14 @@ void LoopClosureDetection::init(std::shared_ptr<rclcpp::Node> &node) {
       local_descriptors_publishers_.insert(
           {id,
            node_->create_publisher<
-               cslam_loop_detection::msg::LocalImageDescriptors>(topic, 10)});
+               cslam_loop_detection::msg::LocalImageDescriptors>(topic, 100)});
     }
   }
 
   // Subscriber for local descriptors
   local_descriptors_subscriber_ = node->create_subscription<
       cslam_loop_detection::msg::LocalImageDescriptors>(
-      "local_descriptors", 10,
+      "local_descriptors", 100,
       std::bind(&LoopClosureDetection::receiveLocalImageDescriptors, this,
                 std::placeholders::_1));
 
@@ -110,7 +113,7 @@ void LoopClosureDetection::processNewKeyFrames() {
 }
 
 void LoopClosureDetection::geometricVerification() {
-  // TODO: check queue for received verif info
+  // TODO: Use for intra-robot loop closures
   int from_id = res.from_id;
   int to_id = res.to_id;
   RCLCPP_INFO(node_->get_logger(), "Detected loop closure between %d and %d",
@@ -131,8 +134,8 @@ void LoopClosureDetection::geometricVerification() {
                          reg_info.covariance.inv());
       auto request = std::make_shared<rtabmap_ros::srv::AddLink::Request>();
       rtabmap_ros::linkToROS(link, request->link);
-      auto result = add_link_srv_->async_send_request(request); «
-      RCLCPP_INFO(node_->get_logger(), "Add link service called");
+      auto result = add_link_srv_->async_send_request(request);
+      « RCLCPP_INFO(node_->get_logger(), "Add link service called");
     } else {
       RCLCPP_WARN(node_->get_logger(),
                   "Could not compute transformation between %d and %d: %s",
@@ -144,7 +147,6 @@ void LoopClosureDetection::geometricVerification() {
                 "because node data %d is not in cache.",
                 from_id, to_id, to_id);
   }
-  // TODO: send transform to python for TF processing
 }
 
 void LoopClosureDetection::mapDataCallback(
@@ -277,13 +279,23 @@ void LoopClosureDetection::receiveLocalImageDescriptors(
       tmp_from, tmp_to, rtabmap::Transform(), &reg_info);
 
   // Store using pairs (robot_id, image_id)
+  cslam_utils::msg::InterRobotLoopClosure lc;
+  lc.robot0_id = robot_id_;
+  lc.robot0_image_id = msg->receptor_image_id;
+  lc.robot1_id = msg->robot_id;
+  lc.robot1_image_id = msg->image_id;
   if (!t.isNull()) {
-    RCLCPP_ERROR(node_->get_logger(), "Inter-Robot Link computed");
+    RCLCPP_INFO(node_->get_logger(), "Inter-Robot Link computed");
+    lc.success = true;
+    rtabmap_ros::transformToGeometryMsg(t, lc.transform);    
+    inter_robot_loop_closure_publisher_.publish(lc);
   } else {
     RCLCPP_ERROR(
         node_->get_logger(),
         "Could not compute transformation between (%d,%d) and (%d,%d): %s",
         robot_id_, msg->receptor_image_id, msg->robot_id, msg->image_id,
         reg_info.rejectedMsg.c_str());
+    lc.success = false;
+    inter_robot_loop_closure_publisher_.publish(lc);
   }
 }

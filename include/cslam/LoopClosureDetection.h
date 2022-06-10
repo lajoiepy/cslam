@@ -27,6 +27,7 @@
 #include <chrono>
 #include <cslam_loop_detection/msg/local_image_descriptors.hpp>
 #include <cslam_loop_detection/msg/keyframe_r_g_b.hpp>
+#include <cslam_loop_detection/msg/inter_robot_loop_closure.hpp>
 #include <cslam_loop_detection/srv/send_local_image_descriptors.hpp>
 #include <cslam_utils/msg/image_id.hpp>
 #include <deque>
@@ -120,6 +121,10 @@ private:
   rclcpp::Publisher<
       cslam_utils::msg::KeyframeRGB>::SharedPtr >
       keyframe_data_publisher_;
+
+  rclcpp::Publisher<
+      cslam_utils::msg::InterRobotLoopClosure>::SharedPtr >
+      inter_robot_loop_closure_publisher_;
 
   rclcpp::Subscription<cslam_loop_detection::msg::LocalImageDescriptors>::
       SharedPtr local_descriptors_subscriber_;

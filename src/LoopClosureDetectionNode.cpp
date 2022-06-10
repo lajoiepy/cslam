@@ -17,7 +17,7 @@ int main(int argc, char **argv) {
 
   rclcpp::init(argc, argv);
 
-  auto node = std::make_shared<rclcpp::Node>("external_loop_closure_detection");
+  auto node = std::make_shared<rclcpp::Node>("loop_closure_detection");
 
   node->declare_parameter<std::string>("add_link_srv", "/rtabmap/add_link");
   node->declare_parameter<std::string>("rtabmap_info_topic", "/rtabmap/info");
@@ -55,7 +55,7 @@ int main(int argc, char **argv) {
 
   while (rclcpp::ok()) {
     lcd.processNewKeyFrames();
-    lcd.geometricVerification();
+    //lcd.geometricVerification();
     rclcpp::spin_some(node);
     rate.sleep();
   }
