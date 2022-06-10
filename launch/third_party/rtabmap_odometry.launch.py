@@ -107,353 +107,11 @@ def launch_setup(context, *args, **kwargs):
                      value=LaunchConfiguration('use_sim_time')),
         # 'use_sim_time' will be set on all nodes following the line above
 
-        # Relays RGB-Depth
-        Node(package='image_transport',
-             executable='republish',
-             name='republish_rgb',
-             condition=IfCondition(
-                 PythonExpression([
-                     "'",
-                     LaunchConfiguration('stereo'), "' != 'true' and ('",
-                     LaunchConfiguration('subscribe_rgbd'), "' != 'true' or '",
-                     LaunchConfiguration('rgbd_sync'), "'=='true') and '",
-                     LaunchConfiguration('compressed'), "' == 'true'"
-                 ])),
-             remappings=[
-                 (['in/', LaunchConfiguration('rgb_image_transport')], [
-                     LaunchConfiguration('rgb_topic'), '/',
-                     LaunchConfiguration('rgb_image_transport')
-                 ]),
-                 ('out',
-                  ConditionalText(
-                      ''.join([
-                          LaunchConfiguration('namespace').perform(context),
-                          LaunchConfiguration('stereo_namespace').perform(
-                              context),
-                          LaunchConfiguration('rgb_topic').perform(context),
-                          "_relay"
-                      ]), ''.join([
-                          LaunchConfiguration('namespace').perform(context),
-                          LaunchConfiguration('stereo_namespace').perform(
-                              context),
-                          LaunchConfiguration('rgb_topic').perform(context)
-                      ]),
-                      LaunchConfiguration('compressed').perform(context)))
-             ],
-             arguments=[LaunchConfiguration('rgb_image_transport'), 'raw'],
-             namespace=LaunchConfiguration('namespace')),
-        Node(package='image_transport',
-             executable='republish',
-             name='republish_depth',
-             condition=IfCondition(
-                 PythonExpression([
-                     "'",
-                     LaunchConfiguration('stereo'), "' != 'true' and ('",
-                     LaunchConfiguration('subscribe_rgbd'), "' != 'true' or '",
-                     LaunchConfiguration('rgbd_sync'), "'=='true') and '",
-                     LaunchConfiguration('compressed'), "' == 'true'"
-                 ])),
-             remappings=[
-                 (['in/', LaunchConfiguration('depth_image_transport')], [
-                     LaunchConfiguration('depth_topic'), '/',
-                     LaunchConfiguration('depth_image_transport')
-                 ]),
-                 ('out',
-                  ConditionalText(
-                      ''.join([
-                          LaunchConfiguration('namespace').perform(context),
-                          LaunchConfiguration('stereo_namespace').perform(
-                              context),
-                          LaunchConfiguration('depth_topic').perform(context),
-                          "_relay"
-                      ]), ''.join([
-                          LaunchConfiguration('namespace').perform(context),
-                          LaunchConfiguration('stereo_namespace').perform(
-                              context),
-                          LaunchConfiguration('depth_topic').perform(context)
-                      ]),
-                      LaunchConfiguration('compressed').perform(context)))
-             ],
-             arguments=[LaunchConfiguration('depth_image_transport'), 'raw'],
-             namespace=LaunchConfiguration('namespace')),
-        Node(package='rtabmap_ros',
-             executable='rgbd_sync',
-             output="screen",
-             condition=IfCondition(
-                 PythonExpression([
-                     "'",
-                     LaunchConfiguration('stereo'), "' != 'true' and '",
-                     LaunchConfiguration('rgbd_sync'), "' == 'true'"
-                 ])),
-             parameters=[{
-                 "approx_sync":
-                 LaunchConfiguration('approx_rgbd_sync'),
-                 "queue_size":
-                 LaunchConfiguration('queue_size'),
-                 "qos":
-                 LaunchConfiguration('qos_image'),
-                 "qos_camera_info":
-                 LaunchConfiguration('qos_camera_info'),
-                 "depth_scale":
-                 LaunchConfiguration('depth_scale')
-             }],
-             remappings=[
-                 ("rgb/image",
-                  ConditionalText(
-                      ''.join([
-                          LaunchConfiguration('namespace').perform(context),
-                          LaunchConfiguration('stereo_namespace').perform(
-                              context),
-                          LaunchConfiguration('rgb_topic').perform(context),
-                          "_relay"
-                      ]), ''.join([
-                          LaunchConfiguration('namespace').perform(context),
-                          LaunchConfiguration('stereo_namespace').perform(
-                              context),
-                          LaunchConfiguration('rgb_topic').perform(context)
-                      ]),
-                      LaunchConfiguration('compressed').perform(context))),
-                 ("depth/image",
-                  ConditionalText(
-                      ''.join([
-                          LaunchConfiguration('namespace').perform(context),
-                          LaunchConfiguration('stereo_namespace').perform(
-                              context),
-                          LaunchConfiguration('depth_topic').perform(context),
-                          "_relay"
-                      ]), ''.join([
-                          LaunchConfiguration('namespace').perform(context),
-                          LaunchConfiguration('stereo_namespace').perform(
-                              context),
-                          LaunchConfiguration('depth_topic').perform(context)
-                      ]),
-                      LaunchConfiguration('compressed').perform(context))),
-                 ("rgb/camera_info", LaunchConfiguration('camera_info_topic')),
-                 ("rgbd_image",
-                  ConditionalText(
-                      ''.join([
-                          LaunchConfiguration('namespace').perform(context),
-                          LaunchConfiguration('stereo_namespace').perform(
-                              context),
-                          LaunchConfiguration('rgbd_topic').perform(context)
-                      ]), ''.join([
-                          LaunchConfiguration('namespace').perform(context),
-                          LaunchConfiguration('stereo_namespace').perform(
-                              context),
-                          LaunchConfiguration('rgbd_topic').perform(context),
-                          "_relay"
-                      ]),
-                      LaunchConfiguration('rgbd_sync').perform(context)))
-             ],
-             namespace=LaunchConfiguration('namespace')),
-
-        # Relays Stereo
-        Node(package='image_transport',
-             executable='republish',
-             name='republish_left',
-             condition=IfCondition(
-                 PythonExpression([
-                     "'",
-                     LaunchConfiguration('stereo'), "' == 'true' and ('",
-                     LaunchConfiguration('subscribe_rgbd'), "' != 'true' or '",
-                     LaunchConfiguration('rgbd_sync'), "'=='true') and '",
-                     LaunchConfiguration('compressed'), "' == 'true'"
-                 ])),
-             remappings=[
-                 (['in/', LaunchConfiguration('rgb_image_transport')], [
-                     LaunchConfiguration('left_image_topic'), '/',
-                     LaunchConfiguration('rgb_image_transport')
-                 ]),
-                 ('out',
-                  ConditionalText(
-                      ''.join([
-                          LaunchConfiguration('namespace').perform(context),
-                          LaunchConfiguration('stereo_namespace').perform(
-                              context),
-                          LaunchConfiguration('left_image_topic').perform(
-                              context), "_relay"
-                      ]), ''.join([
-                          LaunchConfiguration('namespace').perform(context),
-                          LaunchConfiguration('stereo_namespace').perform(
-                              context),
-                          LaunchConfiguration('left_image_topic').perform(
-                              context)
-                      ]),
-                      LaunchConfiguration('compressed').perform(context)))
-             ],
-             arguments=[LaunchConfiguration('rgb_image_transport'), 'raw'],
-             namespace=LaunchConfiguration('namespace')),
-        Node(package='image_transport',
-             executable='republish',
-             name='republish_right',
-             condition=IfCondition(
-                 PythonExpression([
-                     "'",
-                     LaunchConfiguration('stereo'), "' == 'true' and ('",
-                     LaunchConfiguration('subscribe_rgbd'), "' != 'true' or '",
-                     LaunchConfiguration('rgbd_sync'), "'=='true') and '",
-                     LaunchConfiguration('compressed'), "' == 'true'"
-                 ])),
-             remappings=[
-                 (['in/', LaunchConfiguration('rgb_image_transport')], [
-                     LaunchConfiguration('right_image_topic'), '/',
-                     LaunchConfiguration('rgb_image_transport')
-                 ]),
-                 ('out',
-                  ConditionalText(
-                      ''.join([
-                          LaunchConfiguration('namespace').perform(context),
-                          LaunchConfiguration('stereo_namespace').perform(
-                              context),
-                          LaunchConfiguration('right_image_topic').perform(
-                              context), "_relay"
-                      ]), ''.join([
-                          LaunchConfiguration('namespace').perform(context),
-                          LaunchConfiguration('stereo_namespace').perform(
-                              context),
-                          LaunchConfiguration('right_image_topic').perform(
-                              context)
-                      ]),
-                      LaunchConfiguration('compressed').perform(context)))
-             ],
-             arguments=[LaunchConfiguration('rgb_image_transport'), 'raw'],
-             namespace=LaunchConfiguration('namespace')),
-        Node(package='rtabmap_ros',
-             executable='stereo_sync',
-             output="screen",
-             condition=IfCondition(
-                 PythonExpression([
-                     "'",
-                     LaunchConfiguration('stereo'), "' == 'true' and '",
-                     LaunchConfiguration('rgbd_sync'), "' == 'true'"
-                 ])),
-             parameters=[{
-                 "approx_sync":
-                 LaunchConfiguration('approx_rgbd_sync'),
-                 "queue_size":
-                 LaunchConfiguration('queue_size'),
-                 "qos":
-                 LaunchConfiguration('qos_image'),
-                 "qos_camera_info":
-                 LaunchConfiguration('qos_camera_info')
-             }],
-             remappings=[
-                 ("left/image_rect",
-                  ConditionalText(
-                      ''.join([
-                          LaunchConfiguration('namespace').perform(context),
-                          LaunchConfiguration('stereo_namespace').perform(
-                              context),
-                          LaunchConfiguration('left_image_topic').perform(
-                              context), "_relay"
-                      ]), ''.join([
-                          LaunchConfiguration('namespace').perform(context),
-                          LaunchConfiguration('stereo_namespace').perform(
-                              context),
-                          LaunchConfiguration('left_image_topic').perform(
-                              context)
-                      ]),
-                      LaunchConfiguration('compressed').perform(context))),
-                 ("right/image_rect",
-                  ConditionalText(
-                      ''.join([
-                          LaunchConfiguration('namespace').perform(context),
-                          LaunchConfiguration('stereo_namespace').perform(
-                              context),
-                          LaunchConfiguration('right_image_topic').perform(
-                              context), "_relay"
-                      ]), ''.join([
-                          LaunchConfiguration('namespace').perform(context),
-                          LaunchConfiguration('stereo_namespace').perform(
-                              context),
-                          LaunchConfiguration('right_image_topic').perform(
-                              context)
-                      ]),
-                      LaunchConfiguration('compressed').perform(context))),
-                 ("left/camera_info", [
-                     LaunchConfiguration('namespace').perform(context),
-                     LaunchConfiguration('stereo_namespace').perform(context),
-                     LaunchConfiguration('left_camera_info_topic').perform(
-                         context)
-                 ]),
-                 ("right/camera_info", [
-                     LaunchConfiguration('namespace').perform(context),
-                     LaunchConfiguration('stereo_namespace').perform(context),
-                     LaunchConfiguration('right_camera_info_topic').perform(
-                         context)
-                 ]),
-                 ("rgbd_image",
-                  ConditionalText(
-                      ''.join([
-                          LaunchConfiguration('namespace').perform(context),
-                          LaunchConfiguration('stereo_namespace').perform(
-                              context),
-                          LaunchConfiguration('rgbd_topic').perform(context)
-                      ]), ''.join([
-                          LaunchConfiguration('namespace').perform(context),
-                          LaunchConfiguration('stereo_namespace').perform(
-                              context),
-                          LaunchConfiguration('rgbd_topic').perform(context),
-                          "_relay"
-                      ]),
-                      LaunchConfiguration('rgbd_sync').perform(context)))
-             ],
-             namespace=LaunchConfiguration('namespace')),
-
-        # Relay rgbd_image
-        Node(package='rtabmap_ros',
-             executable='rgbd_relay',
-             output="screen",
-             condition=IfCondition(
-                 PythonExpression([
-                     "'",
-                     LaunchConfiguration('rgbd_sync'), "' != 'true' and '",
-                     LaunchConfiguration('subscribe_rgbd'),
-                     "' == 'true' and '",
-                     LaunchConfiguration('compressed'), "' != 'true'"
-                 ])),
-             remappings=[("rgbd_image", LaunchConfiguration('rgbd_topic'))],
-             namespace=LaunchConfiguration('namespace')),
-        Node(package='rtabmap_ros',
-             executable='rgbd_relay',
-             output="screen",
-             condition=IfCondition(
-                 PythonExpression([
-                     "'",
-                     LaunchConfiguration('rgbd_sync'), "' != 'true' and '",
-                     LaunchConfiguration('subscribe_rgbd'),
-                     "' == 'true' and '",
-                     LaunchConfiguration('compressed'), "' == 'true'"
-                 ])),
-             parameters=[{
-                 "uncompress": True,
-                 "qos": LaunchConfiguration('qos_image')
-             }],
-             remappings=[
-                 ("rgbd_image",
-                  [LaunchConfiguration('rgbd_topic'), "/compressed"]),
-                 ([LaunchConfiguration('rgbd_topic'), "/compressed_relay"],
-                  ConditionalText(
-                      ''.join([
-                          LaunchConfiguration('namespace').perform(context),
-                          LaunchConfiguration('stereo_namespace').perform(
-                              context),
-                          LaunchConfiguration('rgbd_topic').perform(context)
-                      ]), ''.join([
-                          LaunchConfiguration('namespace').perform(context),
-                          LaunchConfiguration('stereo_namespace').perform(
-                              context),
-                          LaunchConfiguration('rgbd_topic').perform(context),
-                          "_relay"
-                      ]),
-                      LaunchConfiguration('rgbd_sync').perform(context)))
-             ],
-             namespace=LaunchConfiguration('namespace')),
-
+        
         # RGB-D odometry
         Node(package='rtabmap_ros',
              executable='rgbd_odometry',
-             output="screen",
+             output="log",
              condition=IfCondition(
                  PythonExpression([
                      "'",
@@ -551,7 +209,8 @@ def launch_setup(context, *args, **kwargs):
              ],
              arguments=[
                  LaunchConfiguration("args"),
-                 LaunchConfiguration("odom_args")
+                 LaunchConfiguration("odom_args"),
+                 '--ros-args', '--log-level', 'error'
              ],
              prefix=LaunchConfiguration('launch_prefix'),
              namespace=LaunchConfiguration('namespace')),
@@ -560,7 +219,7 @@ def launch_setup(context, *args, **kwargs):
         Node(
             package='rtabmap_ros',
             executable='stereo_odometry',
-            output="screen",
+            output="log",
             condition=IfCondition(
                 PythonExpression([
                     "'",
@@ -674,7 +333,8 @@ def launch_setup(context, *args, **kwargs):
             ],
             arguments=[
                 LaunchConfiguration("args"),
-                LaunchConfiguration("odom_args")
+                LaunchConfiguration("odom_args"),
+                 '--ros-args', '--log-level', LaunchConfiguration("log_level")
             ],
             prefix=LaunchConfiguration('launch_prefix'),
             namespace=LaunchConfiguration('namespace')),
@@ -682,7 +342,7 @@ def launch_setup(context, *args, **kwargs):
         # ICP odometry
         Node(package='rtabmap_ros',
              executable='icp_odometry',
-             output="screen",
+             output="log",
              condition=IfCondition(LaunchConfiguration('icp_odometry')),
              parameters=[{
                  "frame_id":
@@ -789,6 +449,8 @@ def generate_launch_description():
             default_value='true',
             description='Publish TF between map and odomerty.'),
         DeclareLaunchArgument('namespace', default_value='/r0',
+                              description=''),
+        DeclareLaunchArgument('log_level', default_value='info',
                               description=''),
         DeclareLaunchArgument('queue_size', default_value='10',
                               description=''),

@@ -56,7 +56,7 @@ def generate_launch_description():
                 'third_party',
                 'rtabmap_mapping.launch.py'
                 )),
-            launch_arguments={}.items(),
+            launch_arguments={'log_level':'error'}.items(),
         ),
 
         IncludeLaunchDescription(
@@ -66,7 +66,7 @@ def generate_launch_description():
                 'third_party',
                 'rtabmap_odometry.launch.py'
                 )),
-            launch_arguments={}.items(),
+            launch_arguments={'log_level':'error'}.items(),
          ),
 
     ])

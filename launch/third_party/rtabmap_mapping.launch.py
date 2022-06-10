@@ -56,12 +56,6 @@ def launch_setup(context, *args, **kwargs):
                               default_value=LaunchConfiguration('depth'),
                               description=''),
         DeclareLaunchArgument(
-            'args',
-            default_value=LaunchConfiguration('rtabmap_args'),
-            description=
-            'Can be used to pass RTAB-Map\'s parameters or other flags like --udebug and --delete_db_on_start/-d'
-        ),
-        DeclareLaunchArgument(
             'qos_image',
             default_value=LaunchConfiguration('qos'),
             description=
@@ -178,7 +172,7 @@ def launch_setup(context, *args, **kwargs):
              namespace=LaunchConfiguration('namespace')),
         Node(package='rtabmap_ros',
              executable='rgbd_sync',
-             output="screen",
+             output="log",
              condition=IfCondition(
                  PythonExpression([
                      "'",
@@ -320,7 +314,7 @@ def launch_setup(context, *args, **kwargs):
              namespace=LaunchConfiguration('namespace')),
         Node(package='rtabmap_ros',
              executable='stereo_sync',
-             output="screen",
+             output="log",
              condition=IfCondition(
                  PythonExpression([
                      "'",
@@ -403,7 +397,7 @@ def launch_setup(context, *args, **kwargs):
         # Relay rgbd_image
         Node(package='rtabmap_ros',
              executable='rgbd_relay',
-             output="screen",
+             output="log",
              condition=IfCondition(
                  PythonExpression([
                      "'",
@@ -416,7 +410,7 @@ def launch_setup(context, *args, **kwargs):
              namespace=LaunchConfiguration('namespace')),
         Node(package='rtabmap_ros',
              executable='rgbd_relay',
-             output="screen",
+             output="log",
              condition=IfCondition(
                  PythonExpression([
                      "'",
@@ -453,7 +447,7 @@ def launch_setup(context, *args, **kwargs):
         Node(
             package='rtabmap_ros',
             executable='rtabmap',
-            output="screen",
+            output="log",
             parameters=[{
                 "subscribe_depth":
                 LaunchConfiguration('depth'),
@@ -503,7 +497,7 @@ def launch_setup(context, *args, **kwargs):
                 LaunchConfiguration('wait_for_transform'),
                 "database_path": [
                     LaunchConfiguration('database_path'), 'rtabmap_robot',
-                    LaunchConfiguration('lcd_robot_id'), '.db'
+                    LaunchConfiguration('robot_id'), '.db'
                 ],
                 "approx_sync":
                 LaunchConfiguration('approx_sync'),
@@ -660,7 +654,7 @@ def launch_setup(context, *args, **kwargs):
                 ("odom", LaunchConfiguration('odom_topic')),
                 ("imu", LaunchConfiguration('imu_topic'))
             ],
-            arguments=[LaunchConfiguration("args")],
+            arguments=[LaunchConfiguration("args"),'--delete_db_on_start', '--ros-args', '--log-level', LaunchConfiguration("log_level")],
             prefix=LaunchConfiguration('launch_prefix'),
             namespace=LaunchConfiguration('namespace')),
     ]
@@ -718,6 +712,8 @@ def generate_launch_description():
             default_value='true',
             description='Publish TF between map and odomerty.'),
         DeclareLaunchArgument('namespace', default_value='/r0',
+                              description=''),
+        DeclareLaunchArgument('log_level', default_value='info',
                               description=''),
         DeclareLaunchArgument('queue_size', default_value='10',
                               description=''),
@@ -961,5 +957,13 @@ def generate_launch_description():
         DeclareLaunchArgument('database_path',
                               default_value='~/.ros/',
                               description='Where is the map saved/loaded.'),
+
+        DeclareLaunchArgument(
+            'args',
+            default_value='',
+            description=
+            'Can be used to pass RTAB-Map\'s parameters or other flags like --udebug and --delete_db_on_start/-d'
+        ),
+
         OpaqueFunction(function=launch_setup)
     ])
