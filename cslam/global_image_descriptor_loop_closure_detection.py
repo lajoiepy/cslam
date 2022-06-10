@@ -10,10 +10,10 @@ import numpy as np
 from cslam.netvlad import NetVLAD
 from cslam.loop_closure_sparse_matching import LoopClosureSparseMatching
 
-from cslam_utils.msg import KeyframeRGB
-from cslam_loop_detection.msg import GlobalImageDescriptor
-from cslam_loop_detection.msg import InterRobotLoopClosure
-from cslam_loop_detection.srv import SendLocalImageDescriptors
+from cslam_common_interfaces.msg import KeyframeRGB
+from cslam_loop_detection_interfaces.msg import GlobalImageDescriptor
+from cslam_loop_detection_interfaces.msg import InterRobotLoopClosure
+from cslam_loop_detection_interfaces.srv import SendLocalImageDescriptors
 
 import rclpy
 from rclpy.node import Node
@@ -121,7 +121,7 @@ class GlobalImageDescriptorLoopClosureDetection(object):
         """Callback to add a keyframe 
 
         Args:
-            msg (cslam_utils::msg::KeyframeRGB): Keyframe data
+            msg (cslam_common_interfaces::msg::KeyframeRGB): Keyframe data
         """
         # Netvlad processing
         bridge = CvBridge()
@@ -135,7 +135,7 @@ class GlobalImageDescriptorLoopClosureDetection(object):
         """Callback for descriptors received from other robots.
 
         Args:
-            msg (cslam_loop_detection::msg::GlobalImageDescriptor): descriptor
+            msg (cslam_loop_detection_interfaces::msg::GlobalImageDescriptor): descriptor
         """
         if msg.robot_id != self.robot_id:
             self.lcm.add_other_robot_keyframe(msg)
@@ -144,7 +144,7 @@ class GlobalImageDescriptorLoopClosureDetection(object):
         """Convert a inter-robot loop closure to an edge
 
         Args:
-            msg (cslam_utils::msg::InterRobotLoopClosure): Inter-robot loop closure
+            msg (cslam_loop_detection_interfaces::msg::InterRobotLoopClosure): Inter-robot loop closure
 
         Returns:
             EdgeInterRobot: inter-robot edge
@@ -156,7 +156,7 @@ class GlobalImageDescriptorLoopClosureDetection(object):
         """Receive computed inter-robot loop closure
 
         Args:
-            msg (cslam_utils::msg::InterRobotLoopClosure): Inter-robot loop closure
+            msg (cslam_loop_detection_interfaces::msg::InterRobotLoopClosure): Inter-robot loop closure
         """
         # TODO: Only one robot per pair should initiate computation
         if msg.success:

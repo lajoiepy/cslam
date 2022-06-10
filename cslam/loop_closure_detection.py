@@ -7,7 +7,7 @@ import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import Image
 
-from cslam_loop_detection.srv import AddKeyframe
+from cslam_loop_detection_interfaces.srv import AddKeyframe
 from cslam.global_image_descriptor_loop_closure_detection import GlobalImageDescriptorLoopClosureDetection
 
 from example_interfaces.srv import AddTwoInts

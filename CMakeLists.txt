@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.5)
-project(loop_closure_detection)
+project(cslam)
 
 # Default to C99
 if(NOT CMAKE_C_STANDARD)
@@ -132,21 +132,21 @@ SET(Libraries
 ## Declare a cpp library
 ############################
 
-find_package(cslam_utils REQUIRED)
-find_package(cslam_loop_detection REQUIRED)
+find_package(cslam_common_interfaces REQUIRED)
+find_package(cslam_loop_detection_interfaces REQUIRED)
 
-add_executable(loop_closure_detection 
-  src/LoopClosureDetection.cpp 
-  src/LoopClosureDetectionNode.cpp 
+add_executable(map_data_handler 
+  src/MapDataHandler.cpp 
+  src/MapDataHandlerNode.cpp 
   src/MsgConversion.cpp)
-add_dependencies(loop_closure_detection 
-  loop_closure_detection 
+add_dependencies(map_data_handler  
+  map_data_handler
   ${${PROJECT_NAME}_EXPORTED_TARGETS})
-ament_target_dependencies(loop_closure_detection 
+ament_target_dependencies(map_data_handler 
   ${Libraries} 
-  cslam_utils cslam_loop_detection)
-set_target_properties(loop_closure_detection 
-  PROPERTIES OUTPUT_NAME "loop_closure_detection")
+  cslam_common_interfaces cslam_loop_detection_interfaces)
+set_target_properties(map_data_handler 
+  PROPERTIES OUTPUT_NAME "map_data_handler")
 
 # Only required when using messages built from the same package
 # https://index.ros.org/doc/ros2/Tutorials/Rosidl-Tutorial/
@@ -168,7 +168,7 @@ install(DIRECTORY
 
 # Install nodes
 install(
-  TARGETS loop_closure_detection
+  TARGETS map_data_handler
   DESTINATION lib/${PROJECT_NAME}
 )
 
@@ -176,7 +176,7 @@ install(
 ament_python_install_package(${PROJECT_NAME})
 
 install(PROGRAMS 
-loop_closure_detection/loop_closure_detection.py 
+cslam/loop_closure_detection.py 
 DESTINATION lib/${PROJECT_NAME})
 
 ament_package()

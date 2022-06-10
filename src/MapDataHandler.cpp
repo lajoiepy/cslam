@@ -1,8 +1,7 @@
-#include "loop_closure_detection/LoopClosureDetection.h"
+#include "cslam/MapDataHandler.h"
 
-void LoopClosureDetection::init(std::shared_ptr<rclcpp::Node> &node) {
+void MapDataHandler::init(std::shared_ptr<rclcpp::Node> &node) {
   node_ = node;
-  loop_closure_detector_.init(node_);
 
   // Service to add a link in the local pose graph
   std::string add_link_srv;
@@ -20,9 +19,9 @@ void LoopClosureDetection::init(std::shared_ptr<rclcpp::Node> &node) {
 
   // Service to extract and publish local image descriptors to another robot
   send_local_descriptors_srv_ = node_->create_service<
-      cslam_loop_detection::srv::SendLocalImageDescriptors>(
+      cslam_loop_detection_interfaces::srv::SendLocalImageDescriptors>(
       "sendLocalImageDescriptors",
-      std::bind(&LoopClosureDetection::sendLocalImageDescriptors, this,
+      std::bind(&MapDataHandler::sendLocalImageDescriptors, this,
                 std::placeholders::_1, std::placeholders::_2));
 
   // Parameters
@@ -33,10 +32,10 @@ void LoopClosureDetection::init(std::shared_ptr<rclcpp::Node> &node) {
 
   // Publisher for global descriptors
   keyframe_data_publisher_ =
-      node_->create_publisher<cslam_utils::msg::KeyframeRGB>("keyframe_data",
+      node_->create_publisher<cslam_common_interfaces::msg::KeyframeRGB>("keyframe_data",
                                                              100);
   inter_robot_loop_closure_publisher_ =
-      node_->create_publisher<cslam_utils::msg::InterRobotLoopClosure>(
+      node_->create_publisher<cslam_loop_detection_interfaces::msg::InterRobotLoopClosure>(
           "inter_robot_loop_closure", 100);
 
   // Publishers to other robots local descriptors subscribers
@@ -46,15 +45,15 @@ void LoopClosureDetection::init(std::shared_ptr<rclcpp::Node> &node) {
       local_descriptors_publishers_.insert(
           {id,
            node_->create_publisher<
-               cslam_loop_detection::msg::LocalImageDescriptors>(topic, 100)});
+               cslam_loop_detection_interfaces::msg::LocalImageDescriptors>(topic, 100)});
     }
   }
 
   // Subscriber for local descriptors
   local_descriptors_subscriber_ = node->create_subscription<
-      cslam_loop_detection::msg::LocalImageDescriptors>(
+      cslam_loop_detection_interfaces::msg::LocalImageDescriptors>(
       "local_descriptors", 100,
-      std::bind(&LoopClosureDetection::receiveLocalImageDescriptors, this,
+      std::bind(&MapDataHandler::receiveLocalImageDescriptors, this,
                 std::placeholders::_1));
 
   // Registration settings
@@ -66,7 +65,7 @@ void LoopClosureDetection::init(std::shared_ptr<rclcpp::Node> &node) {
   RCLCPP_INFO(node_->get_logger(), "Initialization done.");
 }
 
-void LoopClosureDetection::sendKeyframe(const rtabmap::SensorData &data,
+void MapDataHandler::sendKeyframe(const rtabmap::SensorData &data,
                                         const int id) {
   RCLCPP_INFO(node_->get_logger(),
               "Process Image %d for Loop Closure Detection", id);
@@ -75,14 +74,14 @@ void LoopClosureDetection::sendKeyframe(const rtabmap::SensorData &data,
   header.stamp = node_->now();
   cv_bridge::CvImage image_bridge = cv_bridge::CvImage(
       header, sensor_msgs::image_encodings::RGB8, data.imageRaw());
-  cslam_utils::msg::KeyframeRGB keyframe_msg;
+  cslam_common_interfaces::msg::KeyframeRGB keyframe_msg;
   image_bridge.toImageMsg(keyframe_msg.image);
   keyframe_msg.id = id;
 
-  keyframe_data_publisher_.publish(keyframe_msg)
+  keyframe_data_publisher_->publish(keyframe_msg);
 }
 
-void LoopClosureDetection::processNewKeyFrames() {
+void MapDataHandler::processNewKeyFrames() {
   if (!received_data_queue_.empty()) {
     auto map_data = received_data_queue_.front();
     received_data_queue_.pop_front();
@@ -112,9 +111,9 @@ void LoopClosureDetection::processNewKeyFrames() {
   }
 }
 
-void LoopClosureDetection::geometricVerification() {
+void MapDataHandler::geometricVerification() {
   // TODO: Use for intra-robot loop closures
-  int from_id = res.from_id;
+  /*int from_id = res.from_id;
   int to_id = res.to_id;
   RCLCPP_INFO(node_->get_logger(), "Detected loop closure between %d and %d",
               from_id, to_id);
@@ -146,10 +145,10 @@ void LoopClosureDetection::geometricVerification() {
                 "Could not compute transformation between %d and %d "
                 "because node data %d is not in cache.",
                 from_id, to_id, to_id);
-  }
+  }*/
 }
 
-void LoopClosureDetection::mapDataCallback(
+void MapDataHandler::mapDataCallback(
     const std::shared_ptr<rtabmap_ros::msg::MapData> &map_data_msg,
     const std::shared_ptr<rtabmap_ros::msg::Info> &info_msg) {
   RCLCPP_INFO(node_->get_logger(), "Received map data!");
@@ -181,12 +180,12 @@ void LoopClosureDetection::mapDataCallback(
   }
 }
 
-void LoopClosureDetection::sendLocalImageDescriptors(
+void MapDataHandler::sendLocalImageDescriptors(
     const std::shared_ptr<
-        cslam_loop_detection::srv::SendLocalImageDescriptors::Request>
+        cslam_loop_detection_interfaces::srv::SendLocalImageDescriptors::Request>
         request,
     std::shared_ptr<
-        cslam_loop_detection::srv::SendLocalImageDescriptors::Response>
+        cslam_loop_detection_interfaces::srv::SendLocalImageDescriptors::Response>
         response) {
   // Extract local descriptors
   rtabmap::SensorData frame_data = local_data_.at(request->image_id);
@@ -239,7 +238,7 @@ void LoopClosureDetection::sendLocalImageDescriptors(
   data.global_descriptor = rtabmap_ros::msg::GlobalDescriptor();
 
   // Fill msg
-  cslam_loop_detection::msg::LocalImageDescriptors msg;
+  cslam_loop_detection_interfaces::msg::LocalImageDescriptors msg;
   msg.data = data;
   msg.image_id = request->image_id;
   msg.robot_id = robot_id_;
@@ -251,8 +250,8 @@ void LoopClosureDetection::sendLocalImageDescriptors(
   response->success = true;
 }
 
-void LoopClosureDetection::receiveLocalImageDescriptors(
-    const std::shared_ptr<cslam_loop_detection::msg::LocalImageDescriptors>
+void MapDataHandler::receiveLocalImageDescriptors(
+    const std::shared_ptr<cslam_loop_detection_interfaces::msg::LocalImageDescriptors>
         msg) {
   // Fill keypoints
   rtabmap::StereoCameraModel stereo_model =
@@ -279,7 +278,7 @@ void LoopClosureDetection::receiveLocalImageDescriptors(
       tmp_from, tmp_to, rtabmap::Transform(), &reg_info);
 
   // Store using pairs (robot_id, image_id)
-  cslam_utils::msg::InterRobotLoopClosure lc;
+  cslam_loop_detection_interfaces::msg::InterRobotLoopClosure lc;
   lc.robot0_id = robot_id_;
   lc.robot0_image_id = msg->receptor_image_id;
   lc.robot1_id = msg->robot_id;
@@ -288,7 +287,7 @@ void LoopClosureDetection::receiveLocalImageDescriptors(
     RCLCPP_INFO(node_->get_logger(), "Inter-Robot Link computed");
     lc.success = true;
     rtabmap_ros::transformToGeometryMsg(t, lc.transform);    
-    inter_robot_loop_closure_publisher_.publish(lc);
+    inter_robot_loop_closure_publisher_->publish(lc);
   } else {
     RCLCPP_ERROR(
         node_->get_logger(),
@@ -296,6 +295,6 @@ void LoopClosureDetection::receiveLocalImageDescriptors(
         robot_id_, msg->receptor_image_id, msg->robot_id, msg->image_id,
         reg_info.rejectedMsg.c_str());
     lc.success = false;
-    inter_robot_loop_closure_publisher_.publish(lc);
+    inter_robot_loop_closure_publisher_->publish(lc);
   }
 }

@@ -1,4 +1,4 @@
-#include "loop_closure_detection/LoopClosureDetection.h"
+#include "cslam/MapDataHandler.h"
 
 // Message filters to sync callbacks
 typedef message_filters::sync_policies::ExactTime<rtabmap_ros::msg::MapData,
@@ -17,7 +17,7 @@ int main(int argc, char **argv) {
 
   rclcpp::init(argc, argv);
 
-  auto node = std::make_shared<rclcpp::Node>("loop_closure_detection");
+  auto node = std::make_shared<rclcpp::Node>("map_data_handler");
 
   node->declare_parameter<std::string>("add_link_srv", "/rtabmap/add_link");
   node->declare_parameter<std::string>("rtabmap_info_topic", "/rtabmap/info");
@@ -45,10 +45,10 @@ int main(int argc, char **argv) {
   info_map_sync_ = new message_filters::Synchronizer<InfoMapSyncPolicy>(
       InfoMapSyncPolicy(10), map_data_topic_, info_topic_);
 
-  auto lcd = LoopClosureDetection();
+  auto lcd = MapDataHandler();
   lcd.init(node);
 
-  info_map_sync_->registerCallback(&LoopClosureDetection::mapDataCallback,
+  info_map_sync_->registerCallback(&MapDataHandler::mapDataCallback,
                                    &lcd);
 
   rclcpp::Rate rate(10);

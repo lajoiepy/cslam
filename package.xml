@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <package format="3">
-  <name>loop_closure_detection</name>
+  <name>cslam</name>
   <version>0.0.1</version>
   <description>Loop Closure Detection for C-SLAM</description>
   <maintainer email="lajoie.py@gmail.com">Pierre-Yves Lajoie</maintainer>
@@ -90,8 +90,8 @@
   <depend>pcl_ros</depend>
   <depend>pcl_msgs</depend>
   <depend>perception_pcl</depend>
-  <depend>cslam_utils</depend>
-  <depend>cslam_loop_detection</depend>
+  <depend>cslam_common_interfaces</depend>
+  <depend>cslam_loop_detection_interfaces</depend>
   
   <export>
 	<build_type>ament_cmake</build_type>

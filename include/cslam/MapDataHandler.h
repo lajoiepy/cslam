@@ -25,11 +25,10 @@
 #include <cv_bridge/cv_bridge.h>
 
 #include <chrono>
-#include <cslam_loop_detection/msg/local_image_descriptors.hpp>
-#include <cslam_loop_detection/msg/keyframe_r_g_b.hpp>
-#include <cslam_loop_detection/msg/inter_robot_loop_closure.hpp>
-#include <cslam_loop_detection/srv/send_local_image_descriptors.hpp>
-#include <cslam_utils/msg/image_id.hpp>
+#include <cslam_loop_detection_interfaces/msg/local_image_descriptors.hpp>
+#include <cslam_common_interfaces/msg/keyframe_rgb.hpp>
+#include <cslam_loop_detection_interfaces/msg/inter_robot_loop_closure.hpp>
+#include <cslam_loop_detection_interfaces/srv/send_local_image_descriptors.hpp>
 #include <deque>
 #include <functional>
 #include <thread>
@@ -41,10 +40,10 @@
  * - Sends/Receives keypoints from other robot frames
  * - Computes geometric verification 
  */
-class LoopClosureDetection {
+class MapDataHandler {
 public:
-  LoopClosureDetection(){};
-  ~LoopClosureDetection(){};
+  MapDataHandler(){};
+  ~MapDataHandler(){};
 
   /**
    * @brief Initialization of parameters and ROS 2 objects
@@ -83,10 +82,10 @@ public:
    */
   void sendLocalImageDescriptors(
       const std::shared_ptr<
-          cslam_loop_detection::srv::SendLocalImageDescriptors::Request>
+          cslam_loop_detection_interfaces::srv::SendLocalImageDescriptors::Request>
           request,
       std::shared_ptr<
-          cslam_loop_detection::srv::SendLocalImageDescriptors::Response>
+          cslam_loop_detection_interfaces::srv::SendLocalImageDescriptors::Response>
           response);
 
   /**
@@ -95,14 +94,23 @@ public:
    * @param msg local descriptors
    */
   void receiveLocalImageDescriptors(
-      const std::shared_ptr<cslam_loop_detection::msg::LocalImageDescriptors>
+      const std::shared_ptr<cslam_loop_detection_interfaces::msg::LocalImageDescriptors>
           msg);
+
+  /**
+   * @brief Function to send the image to the python node
+   * 
+   * @param data keyframe data
+   * @param id keyframe id
+   */
+  void sendKeyframe(const rtabmap::SensorData &data,
+                                        const int id);
 
 private:
 
   rclcpp::Client<rtabmap_ros::srv::AddLink>::SharedPtr add_link_srv_;
 
-  rclcpp::Service<cslam_loop_detection::srv::SendLocalImageDescriptors>::
+  rclcpp::Service<cslam_loop_detection_interfaces::srv::SendLocalImageDescriptors>::
       SharedPtr send_local_descriptors_srv_;
 
   std::map<int, rtabmap::SensorData> local_data_;
@@ -115,18 +123,18 @@ private:
 
   std::map<int,
            rclcpp::Publisher<
-               cslam_loop_detection::msg::LocalImageDescriptors>::SharedPtr>
+               cslam_loop_detection_interfaces::msg::LocalImageDescriptors>::SharedPtr>
       local_descriptors_publishers_;
 
   rclcpp::Publisher<
-      cslam_utils::msg::KeyframeRGB>::SharedPtr >
+      cslam_common_interfaces::msg::KeyframeRGB>::SharedPtr
       keyframe_data_publisher_;
 
   rclcpp::Publisher<
-      cslam_utils::msg::InterRobotLoopClosure>::SharedPtr >
+      cslam_loop_detection_interfaces::msg::InterRobotLoopClosure>::SharedPtr
       inter_robot_loop_closure_publisher_;
 
-  rclcpp::Subscription<cslam_loop_detection::msg::LocalImageDescriptors>::
+  rclcpp::Subscription<cslam_loop_detection_interfaces::msg::LocalImageDescriptors>::
       SharedPtr local_descriptors_subscriber_;
 
   rtabmap::RegistrationVis registration_;

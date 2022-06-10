@@ -113,9 +113,9 @@ def launch_setup(context, *args, **kwargs):
         # 'use_sim_time' will be set on all nodes following the line above
 
         # Loop closure detection
-        Node(package='loop_closure_detection',
+        Node(package='cslam',
              executable='loop_closure_detection.py',
-             name='loop_closure_detection',
+             name='cslam_loop_closure_detection',
              parameters=[{
                  "threshold":
                  LaunchConfiguration('lcd_threshold'),
@@ -139,9 +139,9 @@ def launch_setup(context, *args, **kwargs):
                  LaunchConfiguration('lcd_resume')
              }],
              namespace=LaunchConfiguration('namespace')),
-        Node(package='loop_closure_detection',
-             executable='loop_closure_detection',
-             name='loop_closure_detection',
+        Node(package='cslam',
+             executable='map_data_handler',
+             name='cslam_map_data_handler',
              parameters=[{
                  "min_inliers":
                  LaunchConfiguration('lcd_min_inliers'),
