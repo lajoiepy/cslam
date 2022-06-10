@@ -306,13 +306,13 @@ class TestAlgebraicConnectivity(unittest.TestCase):
         ac = AlgebraicConnectivityMaximization(robot_id=robot_id,
                                                nb_robots=nb_robots)
 
-        e0 = EdgeInterRobot(0, 1, 2, 3, 0.1)
+        e0 = EdgeInterRobot(0, 1, 1, 3, 0.1)
         ac.add_match(e0)
         self.assertEqual(len(ac.candidate_edges.values()), 1)
-        e1 = EdgeInterRobot(0, 2, 3, 4, 0.1)
+        e1 = EdgeInterRobot(0, 2, 2, 4, 0.1)
         ac.add_match(e1)
         self.assertEqual(len(ac.candidate_edges.values()), 2)
-        e2 = EdgeInterRobot(0, 1, 2, 3, 0.2)
+        e2 = EdgeInterRobot(0, 1, 1, 3, 0.2)
         ac.add_match(e2)
         self.assertEqual(len(ac.candidate_edges.values()), 2)
         self.assertAlmostEqual(
