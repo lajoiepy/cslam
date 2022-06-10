@@ -5,7 +5,7 @@ void MapDataHandler::init(std::shared_ptr<rclcpp::Node> &node) {
 
   // Service to add a link in the local pose graph
   std::string add_link_srv;
-  node_->get_parameter("AddLinkSrv", add_link_srv);
+  node_->get_parameter("add_link_srv", add_link_srv);
   add_link_srv_ = node_->create_client<rtabmap_ros::srv::AddLink>(add_link_srv);
   while (!add_link_srv_->wait_for_service(std::chrono::seconds(1))) {
     if (!rclcpp::ok()) {
@@ -20,14 +20,14 @@ void MapDataHandler::init(std::shared_ptr<rclcpp::Node> &node) {
   // Service to extract and publish local image descriptors to another robot
   send_local_descriptors_srv_ = node_->create_service<
       cslam_loop_detection_interfaces::srv::SendLocalImageDescriptors>(
-      "sendLocalImageDescriptors",
+      "send_local_image_descriptors",
       std::bind(&MapDataHandler::sendLocalImageDescriptors, this,
                 std::placeholders::_1, std::placeholders::_2));
 
   // Parameters
-  node_->get_parameter("max_queue_size", max_queue_size_);
-  node_->get_parameter("min_inliers", min_inliers_);
-  node_->get_parameter("number_of_robots", nb_robots_);
+  node_->get_parameter("max_keyframe_queue_size", max_queue_size_);
+  node_->get_parameter("pnp_min_inliers", min_inliers_);
+  node_->get_parameter("nb_robots", nb_robots_);
   node_->get_parameter("robot_id", robot_id_);
 
   // Publisher for global descriptors

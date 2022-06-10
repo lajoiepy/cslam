@@ -173,7 +173,7 @@ class NetVLAD(object):
             self.model.pool = nn.DataParallel(self.model.pool)
             self.isParallel = True
 
-        resume_ckpt = self.params['checkpoint']
+        resume_ckpt = self.params['nn_checkpoint']
         if isfile(resume_ckpt):
             print("=> loading checkpoint '{}'".format(resume_ckpt))
             checkpoint = torch.load(resume_ckpt,
@@ -194,14 +194,14 @@ class NetVLAD(object):
             pool_size *= 64
 
             self.transform = transforms.Compose([
-                transforms.CenterCrop(self.params["crop_size"]),
+                transforms.CenterCrop(self.params["image_crop_size"]),
                 transforms.Resize(224, interpolation=3),
                 transforms.ToTensor(),
                 transforms.Normalize(IMAGENET_DEFAULT_MEAN,
                                      IMAGENET_DEFAULT_STD),
             ])
 
-        self.pca = pickle.load(open(self.params["pca"], 'rb'))
+        self.pca = pickle.load(open(self.params['pca_checkpoint'], 'rb'))
 
     def compute_embedding(self, keyframe):
         """Load image to device and extract the global image descriptor

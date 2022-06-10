@@ -19,7 +19,7 @@ class LoopClosureSparseMatching(object):
         self.params = params
         self.robot_id = self.params['robot_id']
         self.nb_robots = self.params['nb_robots']
-        self.threshold = self.params['threshold']
+        self.threshold = self.params['similarity_threshold']
         self.similarity_loc = self.params['similarity_loc']
         self.similarity_scale = self.params['similarity_scale']
         # Initialize matching structs
@@ -89,10 +89,10 @@ class LoopClosureSparseMatching(object):
             return None
 
         for kf, d in zip(kfs, ds):
-            if abs(kf - id) < self.params['min_inbetween_keyframes']:
+            if abs(kf - id) < self.params['intra_loop_min_inbetween_keyframes']:
                 continue
 
-            if d > self.params['threshold']:
+            if d > self.params['similarity_threshold']:
                 continue
 
             return kf, kfs

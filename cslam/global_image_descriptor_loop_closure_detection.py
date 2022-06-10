@@ -37,13 +37,13 @@ class GlobalImageDescriptorLoopClosureDetection(object):
         self.loop_closure_budget = self.params["loop_closure_budget"]
 
         # Place Recognition network setup
-        if self.params['technique'].lower() == 'netvlad':
-            self.params['pca'] = self.node.get_parameter('pca').value
+        if self.params['global_descriptor_technique'].lower() == 'netvlad':
+            self.params['pca_checkpoint'] = self.node.get_parameter('pca_checkpoint').value
             self.global_descriptor = NetVLAD(self.params, self.node)
         else:
             self.node.get_logger().err(
                 'ERROR: Unknown technique. Using NetVLAD as default.')
-            self.params['pca'] = self.node.get_parameter('pca').value
+            self.params['pca_checkpoint'] = self.node.get_parameter('pca_checkpoint').value
             self.global_descriptor = NetVLAD(self.params, self.node)
 
         # ROS 2 objects setup
