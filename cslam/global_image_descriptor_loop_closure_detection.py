@@ -150,7 +150,8 @@ class GlobalImageDescriptorLoopClosureDetection(object):
             EdgeInterRobot: inter-robot edge
         """
         return EdgeInterRobot(msg.robot0_id, msg.robot0_image_id,
-                              msg.robot1_id, msg.robot1_image_id)
+                              msg.robot1_id, msg.robot1_image_id, 
+                              self.lcm.candidate_selector.fixed_weight)
 
     def receive_inter_robot_loop_closure(self, msg):
         """Receive computed inter-robot loop closure
