@@ -79,8 +79,27 @@ class LoopClosureSparseMatching(object):
                     EdgeInterRobot(self.robot_id, kf, msg.robot_id,
                                    msg.image_id, similarity))
 
+    def match_local_loop_closures(self, descriptor):
+        kfs, ds = self.local_nnsm.search(descriptor,
+                                         k=self.params['nb_best_matches'])
+
+        if len(kfs) > 0 and kfs[0] == id:
+            kfs, ds = kfs[1:], ds[1:]
+        if len(kfs) == 0:
+            return None
+
+        for kf, d in zip(kfs, ds):
+            if abs(kf - id) < self.params['min_inbetween_keyframes']:
+                continue
+
+            if d > self.params['threshold']:
+                continue
+
+            return kf, kfs
+        return None, None
+
     def select_candidates(self, number_of_candidates):
-        """Select loop closure candidates according to budget
+        """Select inter-robot loop closure candidates according to budget
 
         Args:
             number_of_candidates (int): inter-robot loop closure budget

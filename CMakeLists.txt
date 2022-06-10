@@ -136,7 +136,6 @@ find_package(cslam_utils REQUIRED)
 find_package(cslam_loop_detection REQUIRED)
 
 add_executable(loop_closure_detection 
-  src/LoopClosureServiceHandler.cpp 
   src/LoopClosureDetection.cpp 
   src/LoopClosureDetectionNode.cpp 
   src/MsgConversion.cpp)

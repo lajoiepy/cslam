@@ -1,11 +1,44 @@
-#include "loop_closure_detection/LoopClosureServiceHandler.h"
+#include <rclcpp/rclcpp.hpp>
+
+#include <rtabmap_ros/msg/info.hpp>
+#include <rtabmap_ros/msg/map_data.hpp>
+#include <rtabmap_ros/srv/add_link.hpp>
+#include <rtabmap_ros/srv/get_map.hpp>
+
+#include <rtabmap_ros/MsgConversion.h>
+
+#include <rtabmap/core/Compression.h>
+#include <rtabmap/core/Memory.h>
+#include <rtabmap/core/RegistrationVis.h>
+#include <rtabmap/core/Rtabmap.h>
+#include <rtabmap/core/SensorData.h>
+#include <rtabmap/core/VWDictionary.h>
+#include <rtabmap/core/util2d.h>
+#include <rtabmap/core/util3d.h>
+#include <rtabmap/utilite/UStl.h>
+
+#include <message_filters/subscriber.h>
+#include <message_filters/sync_policies/exact_time.h>
+#include <message_filters/synchronizer.h>
+#include <message_filters/time_synchronizer.h>
+
+#include <cv_bridge/cv_bridge.h>
+
+#include <chrono>
+#include <cslam_loop_detection/msg/local_image_descriptors.hpp>
+#include <cslam_loop_detection/msg/keyframe_r_g_b.hpp>
+#include <cslam_loop_detection/srv/send_local_image_descriptors.hpp>
+#include <cslam_utils/msg/image_id.hpp>
+#include <deque>
+#include <functional>
+#include <thread>
 
 /**
  * @brief Loop Closure Detection Management
  * - Receives keyframes from RTAB-map
  * - Generate keypoints from frames
  * - Sends/Receives keypoints from other robot frames
- * - Computes geometric verification *
+ * - Computes geometric verification 
  */
 class LoopClosureDetection {
 public:
@@ -65,7 +98,6 @@ public:
           msg);
 
 private:
-  LoopClosureServiceHandler loop_closure_detector_;
 
   rclcpp::Client<rtabmap_ros::srv::AddLink>::SharedPtr add_link_srv_;
 
@@ -84,6 +116,10 @@ private:
            rclcpp::Publisher<
                cslam_loop_detection::msg::LocalImageDescriptors>::SharedPtr>
       local_descriptors_publishers_;
+
+  rclcpp::Publisher<
+      cslam_utils::msg::KeyframeRGB>::SharedPtr >
+      keyframe_data_publisher_;
 
   rclcpp::Subscription<cslam_loop_detection::msg::LocalImageDescriptors>::
       SharedPtr local_descriptors_subscriber_;

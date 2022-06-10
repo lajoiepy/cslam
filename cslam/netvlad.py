@@ -75,7 +75,7 @@ class NetVLADLayer(nn.Module):
                                  clstsAssign).unsqueeze(2).unsqueeze(3))
             self.conv.bias = None
         else:
-            knn = NearestNeighbors(n_jobs=-1)  #TODO faiss?
+            knn = NearestNeighbors(n_jobs=-1)
             knn.fit(traindescs)
             del traindescs
             dsSq = np.square(knn.kneighbors(clsts, 2)[1])

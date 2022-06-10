@@ -27,6 +27,7 @@ int main(int argc, char **argv) {
   node->declare_parameter<int>("max_queue_size", 10);
   node->declare_parameter<int>("number_of_robots", 1);
   node->declare_parameter<int>("robot_id", 0);
+  
 
   message_filters::Subscriber<rtabmap_ros::msg::Info> info_topic_;
 

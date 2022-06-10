@@ -7,7 +7,7 @@ import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import Image
 
-from cslam_loop_detection.srv import DetectLoopClosure
+from cslam_loop_detection.srv import AddKeyframe
 from cslam.global_image_descriptor_loop_closure_detection import GlobalImageDescriptorLoopClosureDetection
 
 from example_interfaces.srv import AddTwoInts
@@ -21,18 +21,18 @@ class LoopClosureDetection(Node):
         super().__init__('loop_closure_detection')
 
         self.declare_parameters(namespace='',
-                                parameters=[('threshold', None),
-                                            ('technique', None), 
-                                            ('pca', None),
-                                            ('checkpoint', None),
-                                            ('robot_id', None),
-                                            ('nb_robots', None),
-                                            ('similarity_loc', 1.0),
-                                            ('similarity_scale', 0.25),
-                                            ('loop_closure_budget', 5),
-                                            ('nb_best_matches', 10),
-                                            ('min_inbetween_keyframes', 10),
-                                            ('global_descriptor_topic', None)])
+                                parameters=[
+                                    ('threshold', None), ('technique', None),
+                                    ('pca', None), ('checkpoint', None),
+                                    ('robot_id', None), ('nb_robots', None),
+                                    ('similarity_loc', 1.0),
+                                    ('similarity_scale', 0.25),
+                                    ('loop_closure_budget', 5),
+                                    ('nb_best_matches', 10),
+                                    ('min_inbetween_keyframes', 10),
+                                    ('intra_robot_loop_closure_detection',
+                                     False), ('global_descriptor_topic', None)
+                                ])
         params = {}
         params['threshold'] = self.get_parameter('threshold').value
         params['min_inbetween_keyframes'] = self.get_parameter(
@@ -43,27 +43,14 @@ class LoopClosureDetection(Node):
         params['robot_id'] = self.get_parameter('robot_id').value
         params['nb_robots'] = self.get_parameter('nb_robots').value
         params['similarity_loc'] = self.get_parameter('similarity_loc').value
-        params['similarity_scale'] = self.get_parameter('similarity_scale').value
-        params['loop_closure_budget'] = self.get_parameter('loop_closure_budget').value
+        params['similarity_scale'] = self.get_parameter(
+            'similarity_scale').value
+        params['loop_closure_budget'] = self.get_parameter(
+            'loop_closure_budget').value
+        params['intra_robot_loop_closure_detection'] = self.get_parameter(
+            'intra_robot_loop_closure_detection').value
 
         self.glcd = GlobalImageDescriptorLoopClosureDetection(params, self)
-        self.srv = self.create_service(DetectLoopClosure,
-                                       'detect_loop_closure', self.service)
-
-    def service(self, req, res):
-        """Service callback to detect loop closures associate to the keyframe 
-
-        Args:
-            req (cslam_loop_detection::srv::DetectLoopClosure::req): Keyframe data
-            res (cslam_loop_detection::srv::DetectLoopClosure::res): Place recognition match data
-
-        Returns:
-            cslam_loop_detection::srv::DetectLoopClosure::res: Place recognition match data
-        """
-        res = self.glcd.detect_loop_closure_service(req, res)
-        res.from_id = req.image.id
-        return res
-
 
 if __name__ == '__main__':
 

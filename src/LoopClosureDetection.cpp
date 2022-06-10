@@ -31,6 +31,11 @@ void LoopClosureDetection::init(std::shared_ptr<rclcpp::Node> &node) {
   node_->get_parameter("number_of_robots", nb_robots_);
   node_->get_parameter("robot_id", robot_id_);
 
+  // Publisher for global descriptors
+  keyframe_data_publisher_ =
+      node_->create_publisher<cslam_utils::msg::KeyframeRGB>("keyframe_data",
+                                                             10);
+
   // Publishers to other robots local descriptors subscribers
   for (int id = 0; id < nb_robots_; id++) {
     if (id != robot_id_) {
@@ -58,6 +63,22 @@ void LoopClosureDetection::init(std::shared_ptr<rclcpp::Node> &node) {
   RCLCPP_INFO(node_->get_logger(), "Initialization done.");
 }
 
+void LoopClosureDetection::sendKeyframe(const rtabmap::SensorData &data,
+                                        const int id) {
+  RCLCPP_INFO(node_->get_logger(),
+              "Process Image %d for Loop Closure Detection", id);
+  // Image message
+  std_msgs::msg::Header header;
+  header.stamp = node_->now();
+  cv_bridge::CvImage image_bridge = cv_bridge::CvImage(
+      header, sensor_msgs::image_encodings::RGB8, data.imageRaw());
+  cslam_utils::msg::KeyframeRGB keyframe_msg;
+  image_bridge.toImageMsg(keyframe_msg.image);
+  keyframe_msg.id = id;
+
+  keyframe_data_publisher_.publish(keyframe_msg)
+}
+
 void LoopClosureDetection::processNewKeyFrames() {
   if (!received_data_queue_.empty()) {
     auto map_data = received_data_queue_.front();
@@ -80,8 +101,8 @@ void LoopClosureDetection::processNewKeyFrames() {
       s.uncompressDataConst(&rgb, 0);
       // pcl::PointCloud<pcl::PointXYZ>::Ptr cloud =
       // rtabmap::util3d::laserScanToPointCloud(scan, scan.localTransform());
-      // Send request for loop detection
-      loop_closure_detector_.detectLoopClosures(rgb, id);
+      // Send keyframe for loop detection
+      sendKeyframe(rgb, id);
 
       local_data_.insert(std::make_pair(id, s));
     }
@@ -89,44 +110,41 @@ void LoopClosureDetection::processNewKeyFrames() {
 }
 
 void LoopClosureDetection::geometricVerification() {
-  LoopClosureResponse res = loop_closure_detector_.checkForResponse();
-  if (res.is_valid) {
-    if (res.is_detected) {
-      int from_id = res.from_id;
-      int to_id = res.to_id;
-      RCLCPP_INFO(node_->get_logger(),
-                  "Detected loop closure between %d and %d", from_id, to_id);
-      if (local_data_.find(to_id) != local_data_.end()) {
-        // Compute transformation
-        // Registration params
-        rtabmap::RegistrationInfo reg_info;
-        rtabmap::SensorData tmp_from = local_data_.at(from_id);
-        rtabmap::SensorData tmp_to = local_data_.at(to_id);
-        tmp_from.uncompressData();
-        tmp_to.uncompressData();
-        rtabmap::Transform t = registration_.computeTransformation(
-            tmp_from, tmp_to, rtabmap::Transform(), &reg_info);
+  // TODO: check queue for received verif info
+  int from_id = res.from_id;
+  int to_id = res.to_id;
+  RCLCPP_INFO(node_->get_logger(), "Detected loop closure between %d and %d",
+              from_id, to_id);
+  if (local_data_.find(to_id) != local_data_.end()) {
+    // Compute transformation
+    // Registration params
+    rtabmap::RegistrationInfo reg_info;
+    rtabmap::SensorData tmp_from = local_data_.at(from_id);
+    rtabmap::SensorData tmp_to = local_data_.at(to_id);
+    tmp_from.uncompressData();
+    tmp_to.uncompressData();
+    rtabmap::Transform t = registration_.computeTransformation(
+        tmp_from, tmp_to, rtabmap::Transform(), &reg_info);
 
-        if (!t.isNull()) {
-          rtabmap::Link link(from_id, to_id, rtabmap::Link::kUserClosure, t,
-                             reg_info.covariance.inv());
-          auto request = std::make_shared<rtabmap_ros::srv::AddLink::Request>();
-          rtabmap_ros::linkToROS(link, request->link);
-          auto result = add_link_srv_->async_send_request(request);
-          RCLCPP_INFO(node_->get_logger(), "Add link service called");
-        } else {
-          RCLCPP_WARN(node_->get_logger(),
-                      "Could not compute transformation between %d and %d: %s",
-                      from_id, to_id, reg_info.rejectedMsg.c_str());
-        }
-      } else {
-        RCLCPP_WARN(node_->get_logger(),
-                    "Could not compute transformation between %d and %d "
-                    "because node data %d is not in cache.",
-                    from_id, to_id, to_id);
-      }
+    if (!t.isNull()) { // TODO: Only if intra-robot loop closure
+      rtabmap::Link link(from_id, to_id, rtabmap::Link::kUserClosure, t,
+                         reg_info.covariance.inv());
+      auto request = std::make_shared<rtabmap_ros::srv::AddLink::Request>();
+      rtabmap_ros::linkToROS(link, request->link);
+      auto result = add_link_srv_->async_send_request(request); «
+      RCLCPP_INFO(node_->get_logger(), "Add link service called");
+    } else {
+      RCLCPP_WARN(node_->get_logger(),
+                  "Could not compute transformation between %d and %d: %s",
+                  from_id, to_id, reg_info.rejectedMsg.c_str());
     }
+  } else {
+    RCLCPP_WARN(node_->get_logger(),
+                "Could not compute transformation between %d and %d "
+                "because node data %d is not in cache.",
+                from_id, to_id, to_id);
   }
+  // TODO: send transform to python for TF processing
 }
 
 void LoopClosureDetection::mapDataCallback(
@@ -249,8 +267,6 @@ void LoopClosureDetection::receiveLocalImageDescriptors(
   rtabmap_ros::points3fFromROS(msg->data.points, kpts3D);
   auto descriptors = rtabmap::uncompressData(msg->data.descriptors);
   tmp_to.setFeatures(kpts, kpts3D, descriptors);
-
-  // TODO: Store keypoints from other robots: trade-off memory/communication
 
   // Compute transformation
   //  Registration params

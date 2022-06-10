@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-from asyncio import threads
 import numpy as np
 from cv_bridge import CvBridge
 
@@ -10,6 +9,7 @@ import numpy as np
 from cslam.netvlad import NetVLAD
 from cslam.loop_closure_sparse_matching import LoopClosureSparseMatching
 
+from cslam_utils.msg import KeyframeRGB
 from cslam_loop_detection.msg import GlobalImageDescriptor
 from cslam_loop_detection.srv import SendLocalImageDescriptors
 
@@ -29,7 +29,6 @@ class GlobalImageDescriptorLoopClosureDetection(object):
         """
         self.params = params
         self.node = node
-        self.counter = 0
         self.robot_id = self.params['robot_id']
 
         self.lcm = LoopClosureSparseMatching(params)
@@ -53,6 +52,9 @@ class GlobalImageDescriptorLoopClosureDetection(object):
         self.global_descriptor_subscriber = self.node.create_subscription(
             GlobalImageDescriptor, self.params['global_descriptor_topic'],
             self.global_descriptor_callback, 10)
+        self.receive_keyframe_subscriber = self.node.create_subscription(
+            KeyframeRGB, 'keyframe_data',
+            self.receive_keyframe, 10)
 
         self.send_local_descriptors_srv = self.node.create_client(
             SendLocalImageDescriptors, 'send_local_image_descriptors')
@@ -64,6 +66,10 @@ class GlobalImageDescriptorLoopClosureDetection(object):
             embedding (np.array): descriptor
             id (int): keyframe ID
         """
+        # Add for matching
+        self.lcm.add_local_keyframe(embedding, id)
+
+        # TODO: Maintain list to send
         msg = GlobalImageDescriptor()
         msg.image_id = id
         msg.robot_id = self.robot_id
@@ -71,8 +77,6 @@ class GlobalImageDescriptorLoopClosureDetection(object):
         # TODO: publish missing descriptors when in range
         # TODO: publish in batches of non-already transmitted
         self.global_descriptor_publisher.publish(msg)
-        # Add to matches
-        self.lcm.add_local_keyframe(embedding, id)
 
     def detect_intra(self, embedding, id):
         """ Detect intra-robot loop closures
@@ -84,23 +88,7 @@ class GlobalImageDescriptorLoopClosureDetection(object):
         Returns:
             list(int): matched keyframes
         """
-        kfs, ds = self.local_nnsm.search(embedding,
-                                         k=self.params['nb_best_matches'])
-
-        if len(kfs) > 0 and kfs[0] == id:
-            kfs, ds = kfs[1:], ds[1:]
-        if len(kfs) == 0:
-            return None
-
-        for kf, d in zip(kfs, ds):
-            if abs(kf - id) < self.params['min_inbetween_keyframes']:
-                continue
-
-            if d > self.params['threshold']:
-                continue
-
-            return kf, kfs
-        return None, None
+        kfs, ds = self.lcm.match_local_loop_closures(embedding)
 
     def detect_inter(self):
         """ Detect inter-robot loop closures
@@ -112,41 +100,34 @@ class GlobalImageDescriptorLoopClosureDetection(object):
         # TODO: specify the robots to consider for candidate selection
         selection = self.lcm.select_candidates(self.loop_closure_budget)
 
-    def detect_loop_closure_service(self, req, res):
-        """Service callback to detect loop closures associate to the keyframe 
+    def receive_keyframe(self, msg):
+        """Callback to add a keyframe 
 
         Args:
-            req (cslam_loop_detection::srv::DetectLoopClosure::req): Keyframe data
-            res (cslam_loop_detection::srv::DetectLoopClosure::res): Place recognition match data
-
-        Returns:
-            cslam_loop_detection::srv::DetectLoopClosure::res: Place recognition match data
+            msg (cslam_utils::msg::KeyframeRGB): Keyframe data
         """
         # Netvlad processing
         bridge = CvBridge()
-        cv_image = bridge.imgmsg_to_cv2(req.image.image,
+        cv_image = bridge.imgmsg_to_cv2(msg.image,
                                         desired_encoding='passthrough')
         embedding = self.global_descriptor.compute_embedding(cv_image)
 
-        # Global descriptors matching
-        match = None
-        if self.counter > 0:  # TODO: Add param for intra-robot loop closures
-            match, best_matches = self.detect_intra(
-                embedding, req.image.id)  # Systematic evaluation
-        self.add_keyframe(embedding, req.image.id)
-        self.counter = self.counter + 1
+        self.add_keyframe(embedding, msg.id)
+        # Local matching
+        # match = None
+        # TODO: Add param for intra-robot loop closures
+            # match, best_matches = self.detect_intra(
+            #     embedding, req.image.id)  # Systematic evaluation
 
         # Service result
-        if match is not None:
-            res.is_detected = True
-            res.detected_loop_closure_id = match
-            res.best_matches = best_matches
-        else:
-            res.is_detected = False
-            res.detected_loop_closure_id = -1
-            res.best_matches = []
-
-        return res
+        # if match is not None:
+        #     res.is_detected = True
+        #     res.detected_loop_closure_id = match
+        #     res.best_matches = best_matches
+        # else:
+        #     res.is_detected = False
+        #     res.detected_loop_closure_id = -1
+        #     res.best_matches = []
 
     def global_descriptor_callback(self, msg):
         """Callback for descriptors received from other robots.
@@ -170,6 +151,6 @@ class GlobalImageDescriptorLoopClosureDetection(object):
         #         req.receptor_image_id = msg.image_id
 
         #         self.send_local_descriptors_srv.call_async(req)
-        # TODO: if geo verif fails, remove candidate, put similarity to -1
+        # TODO: if geo verif fails, remove candidate
         # TODO: if geo verif succeeds, move from candidate to fixed edge in the graph
         # TODO: Only one robot per pair should initiate computation
