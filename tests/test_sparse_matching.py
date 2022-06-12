@@ -84,7 +84,7 @@ class TestLoopClosureSparseMatching(unittest.TestCase):
         for i in range(len(descriptor1)):
             self.assertAlmostEqual(descriptor1[i], best_match_descriptor[i])
 
-    def test_select_candidates(self):
+    def test_select_candidates0(self):
         """Select candidates
         """
         params = set_params()
@@ -109,6 +109,58 @@ class TestLoopClosureSparseMatching(unittest.TestCase):
         selection = lcsm.select_candidates(nb_candidates)
         self.assertEqual(len(selection), nb_candidates)
 
+    def test_select_candidates1(self):
+        """Select candidates
+            No robot 1 in range
+        """
+        params = set_params()
+        params['nb_robots'] = 4
+        lcsm = LoopClosureSparseMatching(params)
+
+        nb_local_kfs = 100
+        for i in range(nb_local_kfs):
+            descriptor = np.random.rand(10)
+            lcsm.add_local_keyframe(descriptor, i)
+        nb_other_kfs = 100
+        for i in range(nb_other_kfs):
+            descriptor = np.random.rand(10)
+            msg = GlobalDescriptor(i, 2, descriptor.tolist())
+            lcsm.add_other_robot_keyframe(msg)
+        for i in range(nb_other_kfs):
+            descriptor = np.random.rand(10)
+            msg = GlobalDescriptor(i, 3, descriptor.tolist())
+            lcsm.add_other_robot_keyframe(msg)
+
+        nb_candidates = 20
+        selection = lcsm.select_candidates(nb_candidates)
+        self.assertEqual(len(selection), nb_candidates)
+
+    def test_select_candidates2(self):
+        """Select candidates
+            No robot 0 in range
+        """
+        params = set_params()
+        params['nb_robots'] = 4
+        params['robot_id'] = 1
+        lcsm = LoopClosureSparseMatching(params)
+
+        nb_local_kfs = 100
+        for i in range(nb_local_kfs):
+            descriptor = np.random.rand(10)
+            lcsm.add_local_keyframe(descriptor, i)
+        nb_other_kfs = 100
+        for i in range(nb_other_kfs):
+            descriptor = np.random.rand(10)
+            msg = GlobalDescriptor(i, 2, descriptor.tolist())
+            lcsm.add_other_robot_keyframe(msg)
+        for i in range(nb_other_kfs):
+            descriptor = np.random.rand(10)
+            msg = GlobalDescriptor(i, 3, descriptor.tolist())
+            lcsm.add_other_robot_keyframe(msg)
+
+        nb_candidates = 20
+        selection = lcsm.select_candidates(nb_candidates)
+        self.assertEqual(len(selection), nb_candidates)
 
 if __name__ == "__main__":
     unittest.main()

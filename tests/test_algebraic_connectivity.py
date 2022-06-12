@@ -213,6 +213,141 @@ class TestAlgebraicConnectivity(unittest.TestCase):
                 self.assertFalse(e0.robot0_image_id == e1.robot0_image_id
                                  and e0.robot1_image_id == e1.robot1_image_id)
 
+    def test_check_graph_connectivity(self):
+        """Test connectivity check
+        """
+        # All robots connected
+        robot_id = 0
+        nb_poses = 10
+        nb_candidate_edges = 10
+        nb_robots = 3
+        fixed_edges_list, candidate_edges_list = build_multi_robot_graph(
+            nb_poses, nb_candidate_edges, robot_id, nb_robots)
+
+        ac = AlgebraicConnectivityMaximization(robot_id=robot_id,
+                                               nb_robots=nb_robots)
+        ac.set_graph(fixed_edges_list, candidate_edges_list)
+
+        is_robot_included = ac.check_graph_connectivity()
+
+        for r in is_robot_included:
+            self.assertTrue(is_robot_included[r])
+
+        # Robot 0 not connected
+        robot_id = 1
+        nb_poses = 10
+        nb_candidate_edges = 10
+        nb_robots = 3
+        fixed_edges_list, candidate_edges_list = build_multi_robot_graph(
+            nb_poses, nb_candidate_edges, robot_id, nb_robots)
+        
+        to_delete = []
+        for i in range(len(fixed_edges_list)):
+            if fixed_edges_list[i].robot0_id == 0 or fixed_edges_list[i].robot1_id == 0:
+                to_delete.append(fixed_edges_list[i])
+        for e in to_delete:
+            fixed_edges_list.remove(e)
+            
+        to_delete = []
+        for i in range(len(candidate_edges_list)):
+            if candidate_edges_list[i].robot0_id == 0 or candidate_edges_list[i].robot1_id == 0:
+                to_delete.append(candidate_edges_list[i])
+        for e in to_delete:
+            candidate_edges_list.remove(e)
+
+        ac = AlgebraicConnectivityMaximization(robot_id=robot_id,
+                                               nb_robots=nb_robots)
+        ac.set_graph(fixed_edges_list, candidate_edges_list)
+
+        is_robot_included = ac.check_graph_connectivity()
+
+        for r in is_robot_included:
+            if r == 0:
+                self.assertFalse(is_robot_included[r])
+            else:
+                self.assertTrue(is_robot_included[r])
+
+    def test_compute_offsets(self):
+        """Test connectivity check
+        """
+        # All robots connected
+        robot_id = 1
+        nb_poses = 10
+        nb_candidate_edges = 10
+        nb_robots = 5
+        fixed_edges_list, candidate_edges_list = build_multi_robot_graph(
+            nb_poses, nb_candidate_edges, robot_id, nb_robots)
+
+        ac = AlgebraicConnectivityMaximization(robot_id=robot_id,
+                                               nb_robots=nb_robots)
+        ac.set_graph(fixed_edges_list, candidate_edges_list)
+
+        is_robot_included = ac.check_graph_connectivity()
+        ac.compute_offsets(is_robot_included)
+
+        nb_poses = ac.nb_poses
+        self.assertEqual(ac.offsets[0], 0)
+        self.assertEqual(ac.offsets[1], ac.offsets[0] + nb_poses[0])
+        self.assertEqual(ac.offsets[2], ac.offsets[1] + nb_poses[1])
+        self.assertEqual(ac.offsets[3], ac.offsets[2] + nb_poses[2])
+        self.assertEqual(ac.offsets[4], ac.offsets[3] + nb_poses[3])
+
+        # Robot 0 not connected        
+        to_delete = []
+        for i in range(len(fixed_edges_list)):
+            if fixed_edges_list[i].robot0_id == 0 or fixed_edges_list[i].robot1_id == 0:
+                to_delete.append(fixed_edges_list[i])
+        for e in to_delete:
+            fixed_edges_list.remove(e)
+            
+        to_delete = []
+        for i in range(len(candidate_edges_list)):
+            if candidate_edges_list[i].robot0_id == 0 or candidate_edges_list[i].robot1_id == 0:
+                to_delete.append(candidate_edges_list[i])
+        for e in to_delete:
+            candidate_edges_list.remove(e)
+
+        ac = AlgebraicConnectivityMaximization(robot_id=robot_id,
+                                               nb_robots=nb_robots)
+        ac.set_graph(fixed_edges_list, candidate_edges_list)
+
+        is_robot_included = ac.check_graph_connectivity()
+        ac.compute_offsets(is_robot_included)
+        
+        self.assertEqual(ac.offsets[0], 0)
+        self.assertEqual(ac.offsets[1], 0)
+        self.assertEqual(ac.offsets[2], ac.offsets[1] + nb_poses[1])
+        self.assertEqual(ac.offsets[3], ac.offsets[2] + nb_poses[2])
+        self.assertEqual(ac.offsets[4], ac.offsets[3] + nb_poses[3])
+        
+        # Robot 0 and 3 not connected        
+        to_delete = []
+        for i in range(len(fixed_edges_list)):
+            if fixed_edges_list[i].robot0_id == 3 or fixed_edges_list[i].robot1_id == 3:
+                to_delete.append(fixed_edges_list[i])
+        for e in to_delete:
+            fixed_edges_list.remove(e)
+            
+        to_delete = []
+        for i in range(len(candidate_edges_list)):
+            if candidate_edges_list[i].robot0_id == 3 or candidate_edges_list[i].robot1_id == 3:
+                to_delete.append(candidate_edges_list[i])
+        for e in to_delete:
+            candidate_edges_list.remove(e)
+
+        ac = AlgebraicConnectivityMaximization(robot_id=robot_id,
+                                               nb_robots=nb_robots)
+        ac.set_graph(fixed_edges_list, candidate_edges_list)
+
+        is_robot_included = ac.check_graph_connectivity()
+        ac.compute_offsets(is_robot_included)
+
+        self.assertEqual(ac.offsets[0], 0)
+        self.assertEqual(ac.offsets[1], 0)
+        self.assertEqual(ac.offsets[2], ac.offsets[1] + nb_poses[1])
+        self.assertEqual(ac.offsets[3], 0)
+        self.assertEqual(ac.offsets[4], ac.offsets[2] + nb_poses[2])
+
     def test_keys(self):
         """Test key changes between C-SLAM system and solver
         """
