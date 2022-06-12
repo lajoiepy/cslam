@@ -128,10 +128,6 @@ SET(Libraries
    rtabmap_ros
 )
 
-############################
-## Declare a cpp library
-############################
-
 find_package(cslam_common_interfaces REQUIRED)
 find_package(cslam_loop_detection_interfaces REQUIRED)
 
@@ -179,5 +175,20 @@ ament_python_install_package(${PROJECT_NAME})
 install(PROGRAMS 
 cslam/loop_closure_detection.py 
 DESTINATION lib/${PROJECT_NAME})
+
+# Add tests
+find_package(ament_cmake_pytest REQUIRED)
+set(_cslam_python_tests
+      tests/test_algebraic_connectivity.py
+      tests/test_sparse_matching.py
+  )
+foreach(_test_path ${_cslam_python_tests})
+  get_filename_component(_test_name ${_test_path} NAME_WE)
+  ament_add_pytest_test(${_test_name} ${_test_path}
+    APPEND_ENV PYTHONPATH=${CMAKE_CURRENT_BINARY_DIR}
+    TIMEOUT 60
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+  )
+endforeach()
 
 ament_package()

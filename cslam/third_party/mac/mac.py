@@ -54,10 +54,10 @@ class MAC:
         find_fiedler_func = la.algebraicconnectivity._get_fiedler_func(method)
         x = None
         output = find_fiedler_func(L,
-                                   x=x,
-                                   normalized=False,
-                                   tol=tol,
-                                   seed=np.random.RandomState(7))
+                                x=x,
+                                normalized=False,
+                                tol=tol,
+                                seed=np.random.RandomState(7))
         return output
 
     def combined_laplacian(self, w, tol=1e-10):

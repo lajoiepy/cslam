@@ -51,12 +51,8 @@ class AlgebraicConnectivityMaximization(object):
         self.robot_id = robot_id
         self.total_nb_poses = 0
 
-        # Offsets required to put rekey nodes such
-        # that they are all in a single graph
-        self.offsets = {}
         self.nb_poses = {}
         for i in range(self.nb_robots):
-            self.offsets[i] = 0
             self.nb_poses[i] = 0
 
     def set_graph(self, fixed_edges, candidate_edges):
@@ -132,30 +128,75 @@ class AlgebraicConnectivityMaximization(object):
         self.fixed_edges.extend(edges)
         self.remove_candidate_edges(edges)
 
-    def greedy_initialization(self, nb_candidates_to_choose):
+    def greedy_initialization(self, nb_candidates_to_choose, edges):
         """Greedy weight initialization
 
         Args:
             nb_candidates_to_choose (int): number of edges to choose
+            edges (list(Edge)): candidate_edges
         """
-        weights = [e.weight for e in self.candidate_edges.values()]
-        self.w_init = np.zeros(len(weights))
+        weights = [e.weight for e in edges]
+        w_init = np.zeros(len(weights))
         indices = np.argpartition(
             weights, -nb_candidates_to_choose)[-nb_candidates_to_choose:]
-        self.w_init[indices] = 1.0
+        w_init[indices] = 1.0
+        return w_init
 
-    def random_initialization(self, nb_candidates_to_choose):
+    def pseudo_greedy_initialization(self, nb_candidates_to_choose, 
+                                            nb_random,
+                                            edges):
+        """Greedy weight initialization
+            Greedy initialization with for the first nb_candidates_to_choose-nb_random
+            then random choice
+
+        Args:
+            nb_candidates_to_choose (int): number of edges to choose
+            nb_random (int): number of edges to choose randomly
+            edges (list(Edge)): candidate_edges
+        """
+        nb_greedy = nb_candidates_to_choose - nb_random
+        w_init = self.greedy_initialization(nb_greedy, edges)
+        nb_edges = len(edges)
+        i = 0
+        while i < nb_random:
+            j = int(np.random.rand() * nb_edges)
+            if w_init[j] < 0.5:
+                w_init[j] = 1.0
+                i = i + 1
+        return w_init
+
+    def random_initialization(self, nb_candidates_to_choose, edges):
         """Random weight initialization
 
         Args:
             nb_candidates_to_choose (int): number of edges to choose
         """
-        for e in self.candidate_edges:
-            self.candidate_edges[e] = self.candidate_edges[e]._replace(
-                weight=np.random.rand())
-        self.greedy_initialization(nb_candidates_to_choose)
+        for e in range(len(edges)):
+            edges[e] = edges[e]._replace(weight=np.random.rand())
+        return self.greedy_initialization(nb_candidates_to_choose, edges)
 
-    def rekey_edges(self, edges):
+    def compute_offsets(self, is_robot_included):
+        """Compute rekey offsets
+
+        Args:
+            is_robot_included dict(int, bool): Indicates if the robot 
+                                is connected and in communication range
+        """
+        # Offsets required to put rekey nodes such
+        # that they are all in a single graph
+        self.offsets = {}
+        for i in range(self.nb_robots):
+            self.offsets[i] = 0
+        # Compute offsets
+        previous_offset = 0
+        previous_nb_poses = 0
+        for id in range(self.nb_robots):
+            if is_robot_included[id]:
+                self.offsets[id] = previous_offset + previous_nb_poses
+                previous_offset = self.offsets[id]
+                previous_nb_poses = self.nb_poses[id]
+
+    def rekey_edges(self, edges, is_robot_included):
         """Modify keys (nodes ID) from robot_id+image_id to node_id
         Result example: 3 robots with 10 nodes eachs
         robot 0 nodes id = 1 to 9
@@ -164,19 +205,20 @@ class AlgebraicConnectivityMaximization(object):
 
         Args:
             edges (dict(EdgeInterRobot)): inter-robot edges
+            is_robot_included dict(int, bool): Indicates if the robot 
+                                is connected and in communication range
 
         Returns:
             list(Edge): edges with keys for MAC problem
         """
-        # Compute offsets
-        for id in range(self.nb_robots)[1:]:
-            self.offsets[id] = self.nb_poses[id - 1] + self.offsets[id - 1]
         # Rekey edges
         rekeyed_edges = []
         for e in edges:
-            i = self.offsets[e.robot0_id] + e.robot0_image_id
-            j = self.offsets[e.robot1_id] + e.robot1_image_id
-            rekeyed_edges.append(Edge(i, j, e.weight))
+            if is_robot_included[e.robot0_id] and is_robot_included[
+                    e.robot1_id]:
+                i = self.offsets[e.robot0_id] + e.robot0_image_id
+                j = self.offsets[e.robot1_id] + e.robot1_image_id
+                rekeyed_edges.append(Edge(i, j, e.weight))
         return rekeyed_edges
 
     def fill_odometry(self):
@@ -221,6 +263,24 @@ class AlgebraicConnectivityMaximization(object):
                                robot1_image_id, edges[c].weight))
         return recovered_inter_robot_edges
 
+    def check_graph_connectivity(self):
+        """Check if the current graph of potential matches is connected
+        
+        Returns:
+            dict(int, bool): dict indicating if each robot is connected
+            bool: true if at least one robot is connected
+        """
+        is_robot_connected = {}
+        for i in range(self.nb_robots):
+            if i == self.robot_id:
+                is_robot_connected[i] = True
+            else:
+                is_robot_connected[i] = False
+        for edge in self.candidate_edges.values():
+            is_robot_connected[edge.robot0_id] = True
+            is_robot_connected[edge.robot1_id] = True
+        return is_robot_connected
+
     def select_candidates(self,
                           nb_candidates_to_choose,
                           greedy_initialization=True):
@@ -229,39 +289,69 @@ class AlgebraicConnectivityMaximization(object):
         Args:
             nb_candidates_to_choose (int): number of candidates to choose,
                             related to a computation/communication budget
-            weights (list(float), optional): weight of each candidate. Defaults to None.
+            greedy_initialization: perform greedy initialization based on similarity
 
         Returns:
             list(EdgeInterRobot): selected edges
         """
+        # Check connectivity
+        is_robot_included = self.check_graph_connectivity()
+        # TODO: check if robots are in range
+
         # Rekey multi-robot edges to single robot
-        rekeyed_fixed_edges = self.rekey_edges(self.fixed_edges)
+        self.compute_offsets(is_robot_included)
+        rekeyed_fixed_edges = self.rekey_edges(self.fixed_edges,
+                                               is_robot_included)
         rekeyed_fixed_edges.extend(self.fill_odometry())
         rekeyed_candidate_edges = self.rekey_edges(
-            self.candidate_edges.values())
+            self.candidate_edges.values(), is_robot_included)
 
-        # Compute number of poses
-        self.total_nb_poses = 0
-        for n in range(len(self.nb_poses)):
-            self.total_nb_poses = self.total_nb_poses + self.nb_poses[n]
+        if len(rekeyed_candidate_edges) > 0:
+            # Compute number of poses
+            self.total_nb_poses = 0
+            for n in range(len(self.nb_poses)):
+                self.total_nb_poses = self.total_nb_poses + self.nb_poses[n]
 
-        # Initial guess
-        if greedy_initialization is False:
-            self.random_initialization(nb_candidates_to_choose)
+            # Initial guess
+            if greedy_initialization is False:
+                w_init = self.random_initialization(nb_candidates_to_choose,
+                                                    rekeyed_candidate_edges)
+            else:
+                w_init = self.greedy_initialization(nb_candidates_to_choose,
+                                                    rekeyed_candidate_edges)
+
+            # Solver
+            mac = MAC(rekeyed_fixed_edges, rekeyed_candidate_edges,
+                      self.total_nb_poses)
+            trial = 0
+            while trial < nb_candidates_to_choose:
+                try:
+                    result, _, _ = mac.fw_subset(w_init,
+                                                 nb_candidates_to_choose,
+                                                 max_iters=self.max_iters)
+                    break
+                except:
+                    # This should happend very rarely.
+                    # find_fieldler_pair triggers a singular matrix exception
+                    # when the mac select measurements leading to graph disconnection.
+                    # Once at least one measurement is fixed connecting each robot it won't happen.
+                    # We vary with increasing randomness the initial guess until we reach a viable solution.
+                    trial = trial + 1
+                    w_init = self.pseudo_greedy_initialization(
+                        nb_candidates_to_choose, trial, rekeyed_candidate_edges)
+                    continue
+
+            if trial >= nb_candidates_to_choose:
+                return []
+
+            selected_edges = [
+                rekeyed_candidate_edges[i]
+                for i in np.nonzero(result.astype(int))[0]
+            ]
+            # Return selected multi-robot edges
+            return self.recover_inter_robot_edges(selected_edges)
         else:
-            self.greedy_initialization(nb_candidates_to_choose)
-        # Solver
-        mac = MAC(rekeyed_fixed_edges, rekeyed_candidate_edges,
-                  self.total_nb_poses)
-        result, _, _ = mac.fw_subset(self.w_init,
-                                     nb_candidates_to_choose,
-                                     max_iters=self.max_iters)
-        selected_edges = [
-            rekeyed_candidate_edges[i]
-            for i in np.nonzero(result.astype(int))[0]
-        ]
-        # Return selected multi-robot edges
-        return self.recover_inter_robot_edges(selected_edges)
+            return []
 
     def add_match(self, match):
         """Add match if the weight is 

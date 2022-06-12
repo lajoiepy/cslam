@@ -89,9 +89,12 @@ class TestAlgebraicConnectivity(unittest.TestCase):
             i = i + 1
         ac = AlgebraicConnectivityMaximization()
         ac.set_graph(fixed_edges_list, candidate_edges_list)
-        ac.greedy_initialization(nb_candidates_to_choose)
+        is_robot_included = ac.check_graph_connectivity()
+        ac.compute_offsets(is_robot_included)
+        edges = ac.rekey_edges(ac.candidate_edges.values(), is_robot_included)
+        w_init = ac.greedy_initialization(nb_candidates_to_choose, edges)
         self.assertAlmostEqual(
-            np.sum(weights[ac.w_init.astype(bool)]),
+            np.sum(weights[w_init.astype(bool)]),
             np.sum(np.sort(weights)[-nb_candidates_to_choose:]))
 
     def test_add_measurements(self):
@@ -214,11 +217,9 @@ class TestAlgebraicConnectivity(unittest.TestCase):
         """Test key changes between C-SLAM system and solver
         """
         robot_id = 0
-
         nb_poses = 10
         nb_candidate_edges = 10
         nb_robots = 3
-        nb_candidates_to_choose = 5
         fixed_edges_list, candidate_edges_list = build_multi_robot_graph(
             nb_poses, nb_candidate_edges, robot_id, nb_robots)
 
@@ -226,12 +227,15 @@ class TestAlgebraicConnectivity(unittest.TestCase):
                                                nb_robots=nb_robots)
         ac.set_graph(fixed_edges_list, candidate_edges_list)
 
-        rekeyed_fixed_edges = ac.rekey_edges(ac.fixed_edges)
+        is_robot_included = ac.check_graph_connectivity()
+
+        ac.compute_offsets(is_robot_included)
+        rekeyed_fixed_edges = ac.rekey_edges(ac.fixed_edges, is_robot_included)
         self.assertEqual(len(ac.fixed_edges), 2)
         rekeyed_fixed_edges.extend(ac.fill_odometry())
         self.assertEqual(len(rekeyed_fixed_edges),
                          nb_robots * (nb_poses - 1) + 2)
-        rekeyed_candidate_edges = ac.rekey_edges(ac.candidate_edges.values())
+        rekeyed_candidate_edges = ac.rekey_edges(ac.candidate_edges.values(), is_robot_included)
         values = list(ac.candidate_edges.values())
         for i in range(len(values)):
             e = values[i]

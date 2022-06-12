@@ -10,9 +10,6 @@
   <buildtool_depend>ament_cmake</buildtool_depend>
   <buildtool_depend>ament_cmake_python</buildtool_depend>
 
-  <test_depend>ament_lint_auto</test_depend>
-  <test_depend>ament_lint_common</test_depend>
-
   <build_depend>builtin_interfaces</build_depend>
   <build_depend>rosidl_default_generators</build_depend>
   <exec_depend>builtin_interfaces</exec_depend>
@@ -49,6 +46,13 @@
   <build_depend>rviz_rendering</build_depend>
   <build_depend>rviz_default_plugins</build_depend>
   <build_depend>nav2_msgs</build_depend>
+  <build_depend>libpcl-all-dev</build_depend>
+  <build_depend>tf2_geometry_msgs</build_depend>
+  <build_depend>pcl_ros</build_depend>
+  <build_depend>pcl_msgs</build_depend>
+  <build_depend>perception_pcl</build_depend>
+  <build_depend>cslam_common_interfaces</build_depend>
+  <build_depend>cslam_loop_detection_interfaces</build_depend>
 
   <exec_depend>cv_bridge</exec_depend>
   <exec_depend>rclcpp</exec_depend>
@@ -83,15 +87,19 @@
   <exec_depend>rviz_rendering</exec_depend>
   <exec_depend>rviz_default_plugins</exec_depend>
   <exec_depend>nav2_msgs</exec_depend>
+  <exec_depend>tf2_geometry_msgs</exec_depend>
+  <exec_depend>pcl_ros</exec_depend>
+  <exec_depend>pcl_msgs</exec_depend>
+  <exec_depend>perception_pcl</exec_depend>
+  <exec_depend>cslam_common_interfaces</exec_depend>
+  <exec_depend>cslam_loop_detection_interfaces</exec_depend>
+  
 
-  <build_depend>libpcl-all-dev</build_depend>
-
-  <depend>tf2_geometry_msgs</depend>
-  <depend>pcl_ros</depend>
-  <depend>pcl_msgs</depend>
-  <depend>perception_pcl</depend>
-  <depend>cslam_common_interfaces</depend>
-  <depend>cslam_loop_detection_interfaces</depend>
+  <test_depend>ament_cmake_gtest</test_depend>
+  <test_depend>ament_cmake_pytest</test_depend>
+  <test_depend>ament_lint_auto</test_depend>
+  <test_depend>ament_lint_common</test_depend>
+  <test_depend>python3-pytest</test_depend>
   
   <export>
 	<build_type>ament_cmake</build_type>
