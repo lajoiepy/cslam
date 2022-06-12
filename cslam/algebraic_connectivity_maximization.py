@@ -263,7 +263,7 @@ class AlgebraicConnectivityMaximization(object):
                                robot1_image_id, edges[c].weight))
         return recovered_inter_robot_edges
 
-    def check_graph_connectivity(self):
+    def check_graph_disconnections(self):
         """Check if the current graph of potential matches is connected
         
         Returns:
@@ -295,7 +295,7 @@ class AlgebraicConnectivityMaximization(object):
             list(EdgeInterRobot): selected edges
         """
         # Check connectivity
-        is_robot_included = self.check_graph_connectivity()
+        is_robot_included = self.check_graph_disconnections()
         # TODO: check if robots are in range
 
         # Rekey multi-robot edges to single robot

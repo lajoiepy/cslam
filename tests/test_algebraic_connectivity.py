@@ -89,7 +89,7 @@ class TestAlgebraicConnectivity(unittest.TestCase):
             i = i + 1
         ac = AlgebraicConnectivityMaximization()
         ac.set_graph(fixed_edges_list, candidate_edges_list)
-        is_robot_included = ac.check_graph_connectivity()
+        is_robot_included = ac.check_graph_disconnections()
         ac.compute_offsets(is_robot_included)
         edges = ac.rekey_edges(ac.candidate_edges.values(), is_robot_included)
         w_init = ac.greedy_initialization(nb_candidates_to_choose, edges)
@@ -213,7 +213,7 @@ class TestAlgebraicConnectivity(unittest.TestCase):
                 self.assertFalse(e0.robot0_image_id == e1.robot0_image_id
                                  and e0.robot1_image_id == e1.robot1_image_id)
 
-    def test_check_graph_connectivity(self):
+    def test_check_graph_disconnections(self):
         """Test connectivity check
         """
         # All robots connected
@@ -228,7 +228,7 @@ class TestAlgebraicConnectivity(unittest.TestCase):
                                                nb_robots=nb_robots)
         ac.set_graph(fixed_edges_list, candidate_edges_list)
 
-        is_robot_included = ac.check_graph_connectivity()
+        is_robot_included = ac.check_graph_disconnections()
 
         for r in is_robot_included:
             self.assertTrue(is_robot_included[r])
@@ -259,7 +259,7 @@ class TestAlgebraicConnectivity(unittest.TestCase):
                                                nb_robots=nb_robots)
         ac.set_graph(fixed_edges_list, candidate_edges_list)
 
-        is_robot_included = ac.check_graph_connectivity()
+        is_robot_included = ac.check_graph_disconnections()
 
         for r in is_robot_included:
             if r == 0:
@@ -282,7 +282,7 @@ class TestAlgebraicConnectivity(unittest.TestCase):
                                                nb_robots=nb_robots)
         ac.set_graph(fixed_edges_list, candidate_edges_list)
 
-        is_robot_included = ac.check_graph_connectivity()
+        is_robot_included = ac.check_graph_disconnections()
         ac.compute_offsets(is_robot_included)
 
         nb_poses = ac.nb_poses
@@ -311,7 +311,7 @@ class TestAlgebraicConnectivity(unittest.TestCase):
                                                nb_robots=nb_robots)
         ac.set_graph(fixed_edges_list, candidate_edges_list)
 
-        is_robot_included = ac.check_graph_connectivity()
+        is_robot_included = ac.check_graph_disconnections()
         ac.compute_offsets(is_robot_included)
         
         self.assertEqual(ac.offsets[0], 0)
@@ -339,7 +339,7 @@ class TestAlgebraicConnectivity(unittest.TestCase):
                                                nb_robots=nb_robots)
         ac.set_graph(fixed_edges_list, candidate_edges_list)
 
-        is_robot_included = ac.check_graph_connectivity()
+        is_robot_included = ac.check_graph_disconnections()
         ac.compute_offsets(is_robot_included)
 
         self.assertEqual(ac.offsets[0], 0)
@@ -362,7 +362,7 @@ class TestAlgebraicConnectivity(unittest.TestCase):
                                                nb_robots=nb_robots)
         ac.set_graph(fixed_edges_list, candidate_edges_list)
 
-        is_robot_included = ac.check_graph_connectivity()
+        is_robot_included = ac.check_graph_disconnections()
 
         ac.compute_offsets(is_robot_included)
         rekeyed_fixed_edges = ac.rekey_edges(ac.fixed_edges, is_robot_included)
