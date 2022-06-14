@@ -111,7 +111,7 @@ def launch_setup(context, *args, **kwargs):
         # RGB-D odometry
         Node(package='rtabmap_ros',
              executable='rgbd_odometry',
-             output="log",
+             output="screen",
              condition=IfCondition(
                  PythonExpression([
                      "'",
@@ -219,7 +219,7 @@ def launch_setup(context, *args, **kwargs):
         Node(
             package='rtabmap_ros',
             executable='stereo_odometry',
-            output="log",
+            output="screen",
             condition=IfCondition(
                 PythonExpression([
                     "'",
@@ -342,7 +342,7 @@ def launch_setup(context, *args, **kwargs):
         # ICP odometry
         Node(package='rtabmap_ros',
              executable='icp_odometry',
-             output="log",
+             output="screen",
              condition=IfCondition(LaunchConfiguration('icp_odometry')),
              parameters=[{
                  "frame_id":

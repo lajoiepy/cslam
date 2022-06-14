@@ -335,6 +335,12 @@ class TestAlgebraicConnectivity(unittest.TestCase):
         for e in to_delete:
             candidate_edges_list.remove(e)
 
+        # Ensure connectivity
+        edge = EdgeInterRobot(1, 1, 2, 1, 1.0)
+        fixed_edges_list.append(edge)
+        edge = EdgeInterRobot(1, 1, 4, 1, 1.0)
+        fixed_edges_list.append(edge)
+
         ac = AlgebraicConnectivityMaximization(robot_id=robot_id,
                                                nb_robots=nb_robots)
         ac.set_graph(fixed_edges_list, candidate_edges_list)

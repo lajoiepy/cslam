@@ -23,7 +23,7 @@ def set_params():
     return params
 
 
-class TestLoopClosureSparseMatching(unittest.TestCase):
+class TestSparseMatching(unittest.TestCase):
     """Unit tests for sparse matching
     """
 

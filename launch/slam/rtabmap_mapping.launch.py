@@ -172,7 +172,7 @@ def launch_setup(context, *args, **kwargs):
              namespace=LaunchConfiguration('namespace')),
         Node(package='rtabmap_ros',
              executable='rgbd_sync',
-             output="log",
+             output="screen",
              condition=IfCondition(
                  PythonExpression([
                      "'",
@@ -314,7 +314,7 @@ def launch_setup(context, *args, **kwargs):
              namespace=LaunchConfiguration('namespace')),
         Node(package='rtabmap_ros',
              executable='stereo_sync',
-             output="log",
+             output="screen",
              condition=IfCondition(
                  PythonExpression([
                      "'",
@@ -397,7 +397,7 @@ def launch_setup(context, *args, **kwargs):
         # Relay rgbd_image
         Node(package='rtabmap_ros',
              executable='rgbd_relay',
-             output="log",
+             output="screen",
              condition=IfCondition(
                  PythonExpression([
                      "'",
@@ -410,7 +410,7 @@ def launch_setup(context, *args, **kwargs):
              namespace=LaunchConfiguration('namespace')),
         Node(package='rtabmap_ros',
              executable='rgbd_relay',
-             output="log",
+             output="screen",
              condition=IfCondition(
                  PythonExpression([
                      "'",
@@ -447,7 +447,7 @@ def launch_setup(context, *args, **kwargs):
         Node(
             package='rtabmap_ros',
             executable='rtabmap',
-            output="log",
+            output="screen",
             parameters=[{
                 "subscribe_depth":
                 LaunchConfiguration('depth'),

@@ -1,9 +1,5 @@
 /**:
     ros__parameters:
-      # Experimental setup param
-      robot_id: 0
-      nb_robots: 2
-      intra_robot_loop_closure_detection: false
       # Communication/computation budget
       loop_closure_budget: 5
       detection_period: 5
@@ -23,3 +19,5 @@
       pnp_min_inliers: 6
       # Mapping params
       add_link_srv: '/rtabmap/add_link'
+      # Other params
+      intra_robot_loop_closure_detection: false
