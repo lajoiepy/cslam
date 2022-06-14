@@ -4,9 +4,7 @@ void MapDataHandler::init(std::shared_ptr<rclcpp::Node> &node) {
   node_ = node;
 
   // Service to add a link in the local pose graph
-  std::string add_link_srv;
-  node_->get_parameter("add_link_srv", add_link_srv);
-  add_link_srv_ = node_->create_client<rtabmap_ros::srv::AddLink>(add_link_srv);
+  add_link_srv_ = node_->create_client<rtabmap_ros::srv::AddLink>("/rtabmap/add_link");
   while (!add_link_srv_->wait_for_service(std::chrono::seconds(1))) {
     if (!rclcpp::ok()) {
       RCLCPP_ERROR(rclcpp::get_logger("rclcpp"),
@@ -39,7 +37,7 @@ void MapDataHandler::init(std::shared_ptr<rclcpp::Node> &node) {
           "inter_robot_loop_closure", 100);
 
   // Publishers to other robots local descriptors subscribers
-  for (int id = 0; id < nb_robots_; id++) {
+  for (unsigned int id = 0; id < nb_robots_; id++) {
     if (id != robot_id_) {
       std::string topic = "/r" + std::to_string(id) + "/local_descriptors";
       local_descriptors_publishers_.insert(

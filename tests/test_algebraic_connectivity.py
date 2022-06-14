@@ -26,7 +26,7 @@ def build_simple_graph(nb_poses, nb_candidate_edges):
     return fixed_edges_list, list(candidate_edges.values())
 
 
-def build_multi_robot_graph(nb_poses, nb_candidate_edges, robot_id, nb_robots):
+def build_multi_robot_graph(nb_poses, nb_candidate_edges, nb_robots):
     # Build simple graph for local robot
     fixed_weight = 1
     fixed_edges_list = []
@@ -222,7 +222,7 @@ class TestAlgebraicConnectivity(unittest.TestCase):
         nb_candidate_edges = 10
         nb_robots = 3
         fixed_edges_list, candidate_edges_list = build_multi_robot_graph(
-            nb_poses, nb_candidate_edges, robot_id, nb_robots)
+            nb_poses, nb_candidate_edges, nb_robots)
 
         ac = AlgebraicConnectivityMaximization(robot_id=robot_id,
                                                nb_robots=nb_robots)
@@ -239,7 +239,7 @@ class TestAlgebraicConnectivity(unittest.TestCase):
         nb_candidate_edges = 10
         nb_robots = 3
         fixed_edges_list, candidate_edges_list = build_multi_robot_graph(
-            nb_poses, nb_candidate_edges, robot_id, nb_robots)
+            nb_poses, nb_candidate_edges, nb_robots)
         
         to_delete = []
         for i in range(len(fixed_edges_list)):
@@ -276,7 +276,7 @@ class TestAlgebraicConnectivity(unittest.TestCase):
         nb_candidate_edges = 10
         nb_robots = 5
         fixed_edges_list, candidate_edges_list = build_multi_robot_graph(
-            nb_poses, nb_candidate_edges, robot_id, nb_robots)
+            nb_poses, nb_candidate_edges, nb_robots)
 
         ac = AlgebraicConnectivityMaximization(robot_id=robot_id,
                                                nb_robots=nb_robots)
@@ -336,8 +336,6 @@ class TestAlgebraicConnectivity(unittest.TestCase):
             candidate_edges_list.remove(e)
 
         # Ensure connectivity
-        edge = EdgeInterRobot(1, 1, 2, 1, 1.0)
-        fixed_edges_list.append(edge)
         edge = EdgeInterRobot(1, 1, 4, 1, 1.0)
         fixed_edges_list.append(edge)
 
@@ -362,7 +360,7 @@ class TestAlgebraicConnectivity(unittest.TestCase):
         nb_candidate_edges = 10
         nb_robots = 3
         fixed_edges_list, candidate_edges_list = build_multi_robot_graph(
-            nb_poses, nb_candidate_edges, robot_id, nb_robots)
+            nb_poses, nb_candidate_edges, nb_robots)
 
         ac = AlgebraicConnectivityMaximization(robot_id=robot_id,
                                                nb_robots=nb_robots)
@@ -401,7 +399,7 @@ class TestAlgebraicConnectivity(unittest.TestCase):
         nb_robots = 3
         nb_candidates_to_choose = 10
         fixed_edges_list, candidate_edges_list = build_multi_robot_graph(
-            nb_poses, nb_candidate_edges, robot_id, nb_robots)
+            nb_poses, nb_candidate_edges, nb_robots)
 
         ac = AlgebraicConnectivityMaximization(robot_id=robot_id,
                                                nb_robots=nb_robots)
@@ -431,7 +429,7 @@ class TestAlgebraicConnectivity(unittest.TestCase):
         nb_robots = 3
         nb_candidates_to_choose = 10
         fixed_edges_list, candidate_edges_list = build_multi_robot_graph(
-            nb_poses, nb_candidate_edges, robot_id, nb_robots)
+            nb_poses, nb_candidate_edges, nb_robots)
 
         ac = AlgebraicConnectivityMaximization(robot_id=robot_id,
                                                nb_robots=nb_robots)

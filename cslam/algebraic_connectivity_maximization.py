@@ -276,6 +276,9 @@ class AlgebraicConnectivityMaximization(object):
                 is_robot_connected[i] = True
             else:
                 is_robot_connected[i] = False
+        for edge in self.fixed_edges:
+            is_robot_connected[edge.robot0_id] = True
+            is_robot_connected[edge.robot1_id] = True
         for edge in self.candidate_edges.values():
             is_robot_connected[edge.robot0_id] = True
             is_robot_connected[edge.robot1_id] = True

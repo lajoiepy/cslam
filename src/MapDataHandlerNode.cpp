@@ -19,7 +19,6 @@ int main(int argc, char **argv) {
 
   auto node = std::make_shared<rclcpp::Node>("map_data_handler");
 
-  node->declare_parameter<std::string>("add_link_srv", "/rtabmap/add_link");
   node->declare_parameter<std::string>("rtabmap_info_topic", "/rtabmap/info");
   node->declare_parameter<std::string>("rtabmap_map_topic",
                                        "/rtabmap/map_data");

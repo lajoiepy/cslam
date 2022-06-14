@@ -17,7 +17,5 @@
       intra_loop_min_inbetween_keyframes: 20
       # Geometric verification params
       pnp_min_inliers: 6
-      # Mapping params
-      add_link_srv: '/rtabmap/add_link'
       # Other params
       intra_robot_loop_closure_detection: false

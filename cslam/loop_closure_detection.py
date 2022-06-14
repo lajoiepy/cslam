@@ -9,9 +9,6 @@ from sensor_msgs.msg import Image
 
 from cslam.global_image_descriptor_loop_closure_detection import GlobalImageDescriptorLoopClosureDetection
 
-from example_interfaces.srv import AddTwoInts
-
-
 class LoopClosureDetection(Node):
     """ Global image descriptor matching for loop closure detection """
 

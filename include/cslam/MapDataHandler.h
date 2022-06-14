@@ -119,7 +119,7 @@ private:
 
   std::deque<std::shared_ptr<rtabmap_ros::msg::MapData>> received_data_queue_;
 
-  int max_queue_size_, min_inliers_, nb_robots_, robot_id_;
+  unsigned int max_queue_size_, min_inliers_, nb_robots_, robot_id_;
 
   std::map<int,
            rclcpp::Publisher<
