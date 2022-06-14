@@ -19,9 +19,9 @@ int main(int argc, char **argv) {
 
   auto node = std::make_shared<rclcpp::Node>("map_data_handler");
 
-  node->declare_parameter<std::string>("rtabmap_info_topic", "/rtabmap/info");
+  node->declare_parameter<std::string>("rtabmap_info_topic", "info");
   node->declare_parameter<std::string>("rtabmap_map_topic",
-                                       "/rtabmap/map_data");
+                                       "mapData");
   node->declare_parameter<int>("pnp_min_inliers", 20);
   node->declare_parameter<int>("max_keyframe_queue_size", 10);
   node->declare_parameter<int>("nb_robots", 1);
