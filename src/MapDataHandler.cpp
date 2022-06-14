@@ -4,7 +4,7 @@ void MapDataHandler::init(std::shared_ptr<rclcpp::Node> &node) {
   node_ = node;
 
   // Service to add a link in the local pose graph
-  add_link_srv_ = node_->create_client<rtabmap_ros::srv::AddLink>("/rtabmap/add_link");
+  add_link_srv_ = node_->create_client<rtabmap_ros::srv::AddLink>("add_link");
   while (!add_link_srv_->wait_for_service(std::chrono::seconds(1))) {
     if (!rclcpp::ok()) {
       RCLCPP_ERROR(rclcpp::get_logger("rclcpp"),

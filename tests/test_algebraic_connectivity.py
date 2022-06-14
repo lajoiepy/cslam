@@ -12,7 +12,15 @@ from timeit import default_timer as timer
 
 
 def build_simple_graph(nb_poses, nb_candidate_edges):
-    # Build simple graph
+    """Build simple graph
+
+    Args:
+        nb_poses (int): nb of poses in graph
+        nb_candidate_edges (int): nb of loop edges to generate
+
+    Returns:
+        list(EdgeInterRobot), dict(EdgeInterRobot): edges in the graph
+    """
     fixed_weight = 1
     fixed_edges_list = []
 
@@ -27,7 +35,16 @@ def build_simple_graph(nb_poses, nb_candidate_edges):
 
 
 def build_multi_robot_graph(nb_poses, nb_candidate_edges, nb_robots):
-    # Build simple graph for local robot
+    """Build graph with multiple robots
+
+    Args:
+        nb_poses (int): nb of poses in graph
+        nb_candidate_edges (int): nb of loop edges to generate
+        nb_robots (int): nb of robots
+
+    Returns:
+        list(EdgeInterRobot), dict(EdgeInterRobot): edges in the graph
+    """
     fixed_weight = 1
     fixed_edges_list = []
 
