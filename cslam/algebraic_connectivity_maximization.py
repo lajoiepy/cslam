@@ -51,9 +51,32 @@ class AlgebraicConnectivityMaximization(object):
         self.robot_id = robot_id
         self.total_nb_poses = 0
 
+        self.initial_fixed_edge_exists = {}
         self.nb_poses = {}
         for i in range(self.nb_robots):
             self.nb_poses[i] = 0
+            self.initial_fixed_edge_exists[i] = False
+
+    def update_nb_poses(self, edge):
+        """The number of poses should be the maximal edge id known
+
+        Args:
+            edge (EdgeInterRobot): loop closure edge
+        """
+        self.nb_poses[edge.robot0_id] = max(self.nb_poses[edge.robot0_id],
+                                            edge.robot0_image_id + 1)
+        self.nb_poses[edge.robot1_id] = max(self.nb_poses[edge.robot1_id],
+                                            edge.robot1_image_id + 1)
+
+    def update_initial_fixed_edge_exists(self, fixed_edge):
+        """Maintains a bool for each neighbors to know if we have at least a known link.
+        In cases where no initial fixed edge exists, we perform the greedy selection
+
+        Args:
+            fixed_edge (EdgeInterRobot): fixed edge in the graph
+        """
+        self.initial_fixed_edge_exists[fixed_edge.robot0_id] = True
+        self.initial_fixed_edge_exists[fixed_edge.robot1_id] = True
 
     def set_graph(self, fixed_edges, candidate_edges):
         """Fill graph struct
@@ -66,15 +89,11 @@ class AlgebraicConnectivityMaximization(object):
 
         # Extract nb of poses for ids graphs
         for e in self.fixed_edges:
-            self.nb_poses[e.robot0_id] = max(self.nb_poses[e.robot0_id],
-                                             e.robot0_image_id + 1)
-            self.nb_poses[e.robot1_id] = max(self.nb_poses[e.robot1_id],
-                                             e.robot1_image_id + 1)
+            self.update_nb_poses(e)
+            self.update_initial_fixed_edge_exists(e)
+
         for e in candidate_edges:
-            self.nb_poses[e.robot0_id] = max(self.nb_poses[e.robot0_id],
-                                             e.robot0_image_id + 1)
-            self.nb_poses[e.robot1_id] = max(self.nb_poses[e.robot1_id],
-                                             e.robot1_image_id + 1)
+            self.update_nb_poses(e)
 
         for e in candidate_edges:
             self.candidate_edges[(e.robot0_image_id, e.robot1_id)] = e
@@ -86,11 +105,9 @@ class AlgebraicConnectivityMaximization(object):
             edge (EdgeInterRobot): inter-robot edge
         """
         self.fixed_edges.append(edge)
-        # Update nb of poses
-        self.nb_poses[edge.robot0_id] = max(self.nb_poses[edge.robot0_id],
-                                            edge.robot0_image_id + 1)
-        self.nb_poses[edge.robot1_id] = max(self.nb_poses[edge.robot1_id],
-                                            edge.robot1_image_id + 1)
+        # Update nb of poses and initial edge check
+        self.update_nb_poses(edge)
+        self.update_initial_fixed_edge_exists(edge)
 
     def add_candidate_edge(self, edge):
         """Add a candidate edge to the graph
@@ -100,10 +117,7 @@ class AlgebraicConnectivityMaximization(object):
         """
         self.candidate_edges[(edge.robot0_image_id, edge.robot1_id)] = edge
         # Update nb of poses
-        self.nb_poses[edge.robot0_id] = max(self.nb_poses[edge.robot0_id],
-                                            edge.robot0_image_id + 1)
-        self.nb_poses[edge.robot1_id] = max(self.nb_poses[edge.robot1_id],
-                                            edge.robot1_image_id + 1)
+        self.update_nb_poses(edge)
 
     def remove_candidate_edges(self, edges):
         """Remove candidate edge from the graph
@@ -125,6 +139,7 @@ class AlgebraicConnectivityMaximization(object):
         """
         for i in range(len(edges)):
             edges[i] = edges[i]._replace(weight=self.fixed_weight)
+            self.update_initial_fixed_edge_exists(edges[i])
         self.fixed_edges.extend(edges)
         self.remove_candidate_edges(edges)
 
@@ -142,9 +157,8 @@ class AlgebraicConnectivityMaximization(object):
         w_init[indices] = 1.0
         return w_init
 
-    def pseudo_greedy_initialization(self, nb_candidates_to_choose, 
-                                            nb_random,
-                                            edges):
+    def pseudo_greedy_initialization(self, nb_candidates_to_choose, nb_random,
+                                     edges):
         """Greedy weight initialization
             Greedy initialization with for the first nb_candidates_to_choose-nb_random
             then random choice
@@ -284,6 +298,55 @@ class AlgebraicConnectivityMaximization(object):
             is_robot_connected[edge.robot1_id] = True
         return is_robot_connected
 
+    def check_initial_fixed_measurements_exists(self, is_robot_included):
+        """Check if we have an initial fixed measurement with each robot included
+        If not, greedy selection should be used
+
+        Args:
+            is_robot_included dict(bool): indicates if each robot is included
+
+        Returns:
+            bool: check result
+        """
+        initial_fixed_measurements_exists = True
+        for id in is_robot_included:
+            if is_robot_included[id] and (
+                    not self.initial_fixed_edge_exists[id]):
+                initial_fixed_measurements_exists = False
+        return initial_fixed_measurements_exists
+
+    def run_mac_solver(self, fixed_edges, candidate_edges, w_init,
+                       nb_candidates_to_choose):
+        """Run the maximalization of algebraic connectivity
+
+        Args:
+            fixed_edges list(EdgeInterRobot): fixed edges
+            candidate_edges list(EdgeInterRobot): candidate edges
+            w_init (np.array): One-hot selection vector
+            nb_candidates_to_choose (int): budger
+        """
+        mac = MAC(fixed_edges, candidate_edges, self.total_nb_poses)
+
+        result = w_init
+        trial = 0
+        while trial < nb_candidates_to_choose:
+            try:
+                result, _, _ = mac.fw_subset(w_init,
+                                             nb_candidates_to_choose,
+                                             max_iters=self.max_iters)
+                break
+            except:
+                # This should happend very rarely.
+                # find_fieldler_pair triggers a singular matrix exception
+                # when the mac select measurements leading to graph disconnection.
+                # Once at least one measurement is fixed connecting each robot it won't happen.
+                # We vary with increasing randomness the initial guess until we reach a viable solution.
+                trial = trial + 1
+                w_init = self.pseudo_greedy_initialization(
+                    nb_candidates_to_choose, trial, candidate_edges)
+                continue
+        return result
+
     def select_candidates(self,
                           nb_candidates_to_choose,
                           greedy_initialization=True):
@@ -301,7 +364,7 @@ class AlgebraicConnectivityMaximization(object):
         is_robot_included = self.check_graph_disconnections()
         # TODO: check if robots are in range
 
-        # Rekey multi-robot edges to single robot
+        # Rekey multi-robot edges to single graph
         self.compute_offsets(is_robot_included)
         rekeyed_fixed_edges = self.rekey_edges(self.fixed_edges,
                                                is_robot_included)
@@ -316,36 +379,19 @@ class AlgebraicConnectivityMaximization(object):
                 self.total_nb_poses = self.total_nb_poses + self.nb_poses[n]
 
             # Initial guess
-            if greedy_initialization is False:
-                w_init = self.random_initialization(nb_candidates_to_choose,
-                                                    rekeyed_candidate_edges)
-            else:
+            if greedy_initialization:
                 w_init = self.greedy_initialization(nb_candidates_to_choose,
                                                     rekeyed_candidate_edges)
+            else:
+                w_init = self.random_initialization(nb_candidates_to_choose,
+                                                    rekeyed_candidate_edges)
 
-            # Solver
-            mac = MAC(rekeyed_fixed_edges, rekeyed_candidate_edges,
-                      self.total_nb_poses)
-            trial = 0
-            while trial < nb_candidates_to_choose:
-                try:
-                    result, _, _ = mac.fw_subset(w_init,
-                                                 nb_candidates_to_choose,
-                                                 max_iters=self.max_iters)
-                    break
-                except:
-                    # This should happend very rarely.
-                    # find_fieldler_pair triggers a singular matrix exception
-                    # when the mac select measurements leading to graph disconnection.
-                    # Once at least one measurement is fixed connecting each robot it won't happen.
-                    # We vary with increasing randomness the initial guess until we reach a viable solution.
-                    trial = trial + 1
-                    w_init = self.pseudo_greedy_initialization(
-                        nb_candidates_to_choose, trial, rekeyed_candidate_edges)
-                    continue
-
-            if trial >= nb_candidates_to_choose:
-                return []
+            if self.check_initial_fixed_measurements_exists(is_robot_included):
+                result = self.run_mac_solver(rekeyed_fixed_edges,
+                                             rekeyed_candidate_edges, w_init,
+                                             nb_candidates_to_choose)
+            else:
+                result = w_init
 
             selected_edges = [
                 rekeyed_candidate_edges[i]

@@ -457,6 +457,60 @@ class TestAlgebraicConnectivity(unittest.TestCase):
                                          greedy_initialization=False)
         self.assertEqual(len(selection), nb_candidates_to_choose)
 
+    def test_result_different_than_initial_guess(self):
+        """Test that the initial guess and results are not the same
+        """
+        robot_id = 0
+
+        nb_poses = 100
+        nb_candidate_edges = 100
+        nb_robots = 3
+        nb_candidates_to_choose = 10
+
+        # Should at least differ half the time
+        nb_tests = 10
+        nb_diff = 0
+        for i in range(nb_tests):
+            fixed_edges_list, candidate_edges_list = build_multi_robot_graph(
+                nb_poses, nb_candidate_edges, nb_robots)
+
+            ac = AlgebraicConnectivityMaximization(robot_id=robot_id,
+                                                nb_robots=nb_robots)
+            ac.set_graph(fixed_edges_list, candidate_edges_list)
+
+            # Check that the solution differs from the greedy initial guess
+            is_robot_included = ac.check_graph_disconnections()
+            ac.compute_offsets(is_robot_included)
+            rekeyed_fixed_edges = ac.rekey_edges(ac.fixed_edges,
+                                                is_robot_included)
+            rekeyed_fixed_edges.extend(ac.fill_odometry())
+            rekeyed_candidate_edges = ac.rekey_edges(
+                ac.candidate_edges.values(), is_robot_included)
+
+            # Compute number of poses
+            ac.total_nb_poses = 0
+            for n in range(len(ac.nb_poses)):
+                ac.total_nb_poses = ac.total_nb_poses + ac.nb_poses[n]
+
+            # Initial guess
+            w_init = ac.greedy_initialization(nb_candidates_to_choose,
+                                                        rekeyed_candidate_edges)
+
+            result = ac.run_mac_solver(rekeyed_fixed_edges,
+                                        rekeyed_candidate_edges, w_init,
+                                        nb_candidates_to_choose)
+
+            is_same = True
+            for i in range(len(w_init)):
+                if abs(w_init[i] - result[i]) > 0.5:
+                    is_same = False
+            
+            if not is_same:
+                nb_diff = nb_diff + 1
+
+        self.assertGreaterEqual(nb_diff, int(nb_tests/2))
+
+
     def test_add_match(self):
         """Test add match
         """
