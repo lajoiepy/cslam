@@ -179,7 +179,7 @@ class TestAlgebraicConnectivity(unittest.TestCase):
                                           greedy_initialization=False)
         self.assertEqual(len(selection1), nb_candidates_to_choose)
 
-    def test_remove_candidate(self):
+    def test_remove_candidate0(self):
         """Test that we can remove candidates from consideration
         """
         # Build simple graph
@@ -202,6 +202,43 @@ class TestAlgebraicConnectivity(unittest.TestCase):
         nb_candidates1 = len(ac.candidate_edges)
         self.assertEqual(nb_candidates0,
                          nb_candidates1 + nb_candidates_to_choose)
+
+    def test_remove_candidate1(self):
+        """Test that we can remove candidates from consideration
+        """
+        # Build graph
+        robot_id = 0
+        nb_poses = 10
+        nb_candidate_edges = 10
+        nb_robots = 3
+        nb_candidates_to_choose = 3
+        fixed_edges_list, candidate_edges_list = build_multi_robot_graph(
+            nb_poses, nb_candidate_edges, nb_robots)
+
+        ac = AlgebraicConnectivityMaximization(robot_id=robot_id,
+                                               nb_robots=nb_robots)
+        ac.set_graph(fixed_edges_list, candidate_edges_list)
+
+        # Solve the initial graph
+        selection0 = ac.select_candidates(nb_candidates_to_choose,
+                                          greedy_initialization=False)
+        self.assertEqual(len(selection0), nb_candidates_to_choose)
+        nb_candidates0 = len(ac.candidate_edges)
+
+        # Remove edges
+        existant_edge = [selection0[0]]
+        inexistant_edge = [EdgeInterRobot(0, 1,
+                              4, 1,
+                              1.0)]
+        ac.remove_candidate_edges(existant_edge)
+        nb_candidates1 = len(ac.candidate_edges)
+        self.assertEqual(nb_candidates0,
+                         nb_candidates1 + 1)
+
+        ac.remove_candidate_edges(inexistant_edge)
+        nb_candidates2 = len(ac.candidate_edges)
+        self.assertEqual(nb_candidates0,
+                         nb_candidates2 + 1)
 
     def test_candidate_to_fixed(self):
         """Test that we can declare candidate fixed if they are successfully 

@@ -32,9 +32,15 @@ void MapDataHandler::init(std::shared_ptr<rclcpp::Node> &node) {
   keyframe_data_publisher_ =
       node_->create_publisher<cslam_common_interfaces::msg::KeyframeRGB>("keyframe_data",
                                                              100);
-  inter_robot_loop_closure_publisher_ =
-      node_->create_publisher<cslam_loop_detection_interfaces::msg::InterRobotLoopClosure>(
-          "inter_robot_loop_closure", 100);
+
+  // Publisher to all robots inter robot loop closure subscribers
+  for (unsigned int id = 0; id < nb_robots_; id++) {
+    std::string topic = "/r" + std::to_string(id) + "/inter_robot_loop_closure";
+    inter_robot_loop_closure_publishers_.insert(
+        {id,
+          node_->create_publisher<
+              cslam_loop_detection_interfaces::msg::InterRobotLoopClosure>(topic, 100)});
+  }
 
   // Publishers to other robots local descriptors subscribers
   for (unsigned int id = 0; id < nb_robots_; id++) {
@@ -285,7 +291,8 @@ void MapDataHandler::receiveLocalImageDescriptors(
     RCLCPP_INFO(node_->get_logger(), "Inter-Robot Link computed");
     lc.success = true;
     rtabmap_ros::transformToGeometryMsg(t, lc.transform);    
-    inter_robot_loop_closure_publisher_->publish(lc);
+    inter_robot_loop_closure_publishers_[lc.robot0_id]->publish(lc);
+    inter_robot_loop_closure_publishers_[lc.robot1_id]->publish(lc);
   } else {
     RCLCPP_ERROR(
         node_->get_logger(),
@@ -293,6 +300,7 @@ void MapDataHandler::receiveLocalImageDescriptors(
         robot_id_, msg->receptor_image_id, msg->robot_id, msg->image_id,
         reg_info.rejectedMsg.c_str());
     lc.success = false;
-    inter_robot_loop_closure_publisher_->publish(lc);
+    inter_robot_loop_closure_publishers_[lc.robot0_id]->publish(lc);
+    inter_robot_loop_closure_publishers_[lc.robot1_id]->publish(lc);
   }
 }

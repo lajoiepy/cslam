@@ -38,12 +38,14 @@ class GlobalImageDescriptorLoopClosureDetection(object):
 
         # Place Recognition network setup
         if self.params['global_descriptor_technique'].lower() == 'netvlad':
-            self.params['pca_checkpoint'] = self.node.get_parameter('pca_checkpoint').value
+            self.params['pca_checkpoint'] = self.node.get_parameter(
+                'pca_checkpoint').value
             self.global_descriptor = NetVLAD(self.params, self.node)
         else:
             self.node.get_logger().err(
                 'ERROR: Unknown technique. Using NetVLAD as default.')
-            self.params['pca_checkpoint'] = self.node.get_parameter('pca_checkpoint').value
+            self.params['pca_checkpoint'] = self.node.get_parameter(
+                'pca_checkpoint').value
             self.global_descriptor = NetVLAD(self.params, self.node)
 
         # ROS 2 objects setup
@@ -139,8 +141,9 @@ class GlobalImageDescriptorLoopClosureDetection(object):
         if msg.robot_id != self.robot_id:
             self.lcm.add_other_robot_keyframe(msg)
 
-    def inter_robot_loop_closure_to_edge(self, msg):
-        """Convert a inter-robot loop closure to an edge
+    def inter_robot_loop_closure_msg_to_edge(self, msg):
+        """ Convert a inter-robot loop closure to an edge 
+            for algebraic connectivity maximization
 
         Args:
             msg (cslam_loop_detection_interfaces::msg::InterRobotLoopClosure): Inter-robot loop closure
@@ -149,7 +152,7 @@ class GlobalImageDescriptorLoopClosureDetection(object):
             EdgeInterRobot: inter-robot edge
         """
         return EdgeInterRobot(msg.robot0_id, msg.robot0_image_id,
-                              msg.robot1_id, msg.robot1_image_id, 
+                              msg.robot1_id, msg.robot1_image_id,
                               self.lcm.candidate_selector.fixed_weight)
 
     def receive_inter_robot_loop_closure(self, msg):
@@ -165,10 +168,10 @@ class GlobalImageDescriptorLoopClosureDetection(object):
             self.loop_closure_list.append(msg)
             # If geo verif succeeds, move from candidate to fixed edge in the graph
             self.lcm.candidate_selector.candidate_edges_to_fixed(
-                list(self.inter_robot_loop_closure_to_edge(msg)))
+                [self.inter_robot_loop_closure_msg_to_edge(msg)])
         else:
             self.node.get_logger().info(
                 'Failed inter-robot Loop closure measurement.')
             # If geo verif fails, remove candidate
             self.lcm.candidate_selector.remove_candidate_edges(
-                list(self.inter_robot_loop_closure_to_edge(msg)))
+                [self.inter_robot_loop_closure_msg_to_edge(msg)])
