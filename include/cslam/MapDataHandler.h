@@ -129,8 +129,8 @@ private:
       keyframe_data_publisher_;
 
   std::map<int, rclcpp::Publisher<cslam_loop_detection_interfaces::msg::
-                                      InterRobotLoopClosure>::SharedPtr
-                    inter_robot_loop_closure_publisher_>;
+                                      InterRobotLoopClosure>::SharedPtr>
+      inter_robot_loop_closure_publishers_;
 
   rclcpp::Subscription<
       cslam_loop_detection_interfaces::msg::LocalImageDescriptors>::SharedPtr
