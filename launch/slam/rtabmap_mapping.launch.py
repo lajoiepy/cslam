@@ -647,12 +647,12 @@ def launch_setup(context, *args, **kwargs):
                 ("scan_cloud", LaunchConfiguration('scan_cloud_topic')),
                 ("user_data", LaunchConfiguration('user_data_topic')),
                 ("user_data_async",
-                 LaunchConfiguration('user_data_async_topic')),
-                ("gps/fix", LaunchConfiguration('gps_topic')),
+                 ''.join([LaunchConfiguration('namespace').perform(context), LaunchConfiguration('user_data_async_topic').perform(context)])),
+                ("gps/fix", ''.join([LaunchConfiguration('namespace').perform(context), LaunchConfiguration('gps_topic').perform(context)])),
                 ("tag_detections", LaunchConfiguration('tag_topic')),
                 ("fiducial_transforms", LaunchConfiguration('fiducial_topic')),
                 ("odom", LaunchConfiguration('odom_topic')),
-                ("imu", LaunchConfiguration('imu_topic'))
+                ("imu", ''.join([LaunchConfiguration('namespace').perform(context), LaunchConfiguration('imu_topic').perform(context)]))
             ],
             arguments=[LaunchConfiguration("args"),'--delete_db_on_start', '--ros-args', '--log-level', LaunchConfiguration("log_level")],
             prefix=LaunchConfiguration('launch_prefix'),

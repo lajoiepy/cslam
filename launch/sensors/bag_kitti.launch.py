@@ -7,6 +7,7 @@ from launch.actions import DeclareLaunchArgument, ExecuteProcess, TimerAction, O
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
+from launch_ros.actions import SetParameter
 
 
 def launch_setup(context, *args, **kwargs):
@@ -25,7 +26,7 @@ def launch_setup(context, *args, **kwargs):
                 ExecuteProcess(
                     cmd=[
                         'ros2', 'bag', 'play',
-                        LaunchConfiguration('bag_file'), '-r',
+                        LaunchConfiguration('bag_file').perform(context), '-r',
                         LaunchConfiguration('rate'), '--remap',
                         '/kitti/camera_color/left/camera_info:=' +
                         LaunchConfiguration('namespace').perform(context) +
@@ -42,12 +43,7 @@ def launch_setup(context, *args, **kwargs):
                     ],
                     name='bag',
                     output='screen',
-                ),
-                Node(
-                    package='tf2_ros',
-                    executable='static_transform_publisher',
-                    arguments='0 0 0 0 0 0 camera_link camera_gray_left'.split(
-                        ' '))
+                )
             ]),
     ]
 

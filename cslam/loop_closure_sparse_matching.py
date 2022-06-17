@@ -31,6 +31,8 @@ class LoopClosureSparseMatching(object):
         # Initialize candidate selection algorithm
         self.candidate_selector = AlgebraicConnectivityMaximization(
             self.robot_id, self.nb_robots)
+        self.similarity = 0.0 # TODO: remove
+        self.d = 0.0 # TODO: remove
 
     def distance_to_similarity(self, distance):
         """Converts a distance metric into a similarity score
@@ -55,8 +57,11 @@ class LoopClosureSparseMatching(object):
         for i in range(self.nb_robots):
             if i != self.robot_id:
                 kf, d = self.other_robots_nnsm[i].search_best(embedding)
+                self.d = d # TODO: remove
+                self.similarity = self.local_nnsm.data # TODO: remove
                 if kf is not None:
                     similarity = self.distance_to_similarity(d)
+                    self.similarity = self.other_robots_nnsm[i].data # TODO: remove
                     if similarity >= self.threshold:
                         self.candidate_selector.add_match(
                             EdgeInterRobot(self.robot_id, id, i, kf,
@@ -72,8 +77,11 @@ class LoopClosureSparseMatching(object):
             np.asarray(msg.descriptor), msg.image_id)
 
         kf, d = self.local_nnsm.search_best(np.asarray(msg.descriptor))
+        self.d = d # TODO: remove
+        self.similarity = self.local_nnsm.data # TODO: remove
         if kf is not None:
             similarity = self.distance_to_similarity(d)
+            self.similarity = self.other_robots_nnsm[msg.robot_id].data # TODO: remove
             if similarity >= self.threshold:
                 self.candidate_selector.add_match(
                     EdgeInterRobot(self.robot_id, kf, msg.robot_id,
