@@ -1,25 +1,32 @@
-#include "cslam/MapDataHandler.h"
+#include "cslam/MapManager.h"
 
-void MapDataHandler::init(std::shared_ptr<rclcpp::Node> &node) {
+void MapManager::init(std::shared_ptr<rclcpp::Node> &node) {
   node_ = node;
 
   // Service to add a link in the local pose graph
-  add_link_srv_ = node_->create_client<rtabmap_ros::srv::AddLink>("add_link");
-  while (!add_link_srv_->wait_for_service(std::chrono::seconds(1))) {
-    if (!rclcpp::ok()) {
-      RCLCPP_ERROR(rclcpp::get_logger("rclcpp"),
-                   "Interrupted while waiting for the service. Exiting.");
-      return;
-    }
-    RCLCPP_INFO(rclcpp::get_logger("rclcpp"),
-                "service not available, waiting again...");
-  }
+  // add_link_srv_ = node_->create_client<rtabmap_ros::srv::AddLink>("add_link");
+  // while (!add_link_srv_->wait_for_service(std::chrono::seconds(1))) {
+  //   if (!rclcpp::ok()) {
+  //     RCLCPP_ERROR(rclcpp::get_logger("rclcpp"),
+  //                  "Interrupted while waiting for the service. Exiting.");
+  //     return;
+  //   }
+  //   RCLCPP_INFO(rclcpp::get_logger("rclcpp"),
+  //               "service not available, waiting again...");
+  // }
+  nb_local_frames_ = 0;
+  // Subscriber for local descriptors
+  rgbd_subscriber_ = node->create_subscription<
+      rtabmap_ros::msg::RGBDImage>(
+      "odom_rgbd_image", 100,
+      std::bind(&MapManager::receiveRGBD, this,
+                std::placeholders::_1));
 
   // Service to extract and publish local image descriptors to another robot
   send_local_descriptors_srv_ = node_->create_service<
       cslam_loop_detection_interfaces::srv::SendLocalImageDescriptors>(
       "send_local_image_descriptors",
-      std::bind(&MapDataHandler::sendLocalImageDescriptors, this,
+      std::bind(&MapManager::sendLocalImageDescriptors, this,
                 std::placeholders::_1, std::placeholders::_2));
 
   // Parameters
@@ -57,7 +64,7 @@ void MapDataHandler::init(std::shared_ptr<rclcpp::Node> &node) {
   local_descriptors_subscriber_ = node->create_subscription<
       cslam_loop_detection_interfaces::msg::LocalImageDescriptors>(
       "local_descriptors", 100,
-      std::bind(&MapDataHandler::receiveLocalImageDescriptors, this,
+      std::bind(&MapManager::receiveLocalImageDescriptors, this,
                 std::placeholders::_1));
 
   // Registration settings
@@ -69,7 +76,7 @@ void MapDataHandler::init(std::shared_ptr<rclcpp::Node> &node) {
   RCLCPP_INFO(node_->get_logger(), "Initialization done.");
 }
 
-void MapDataHandler::sendKeyframe(const rtabmap::SensorData &data,
+void MapManager::sendKeyframe(const rtabmap::SensorData &data,
                                   const int id) {
   RCLCPP_INFO(node_->get_logger(),
               "Process Image %d for Loop Closure Detection", id);
@@ -85,37 +92,30 @@ void MapDataHandler::sendKeyframe(const rtabmap::SensorData &data,
   keyframe_data_publisher_->publish(keyframe_msg);
 }
 
-void MapDataHandler::processNewKeyFrames() {
+void MapManager::processNewKeyFrames() {
   if (!received_data_queue_.empty()) {
-    auto map_data = received_data_queue_.front();
+    auto image_data = received_data_queue_.front();
     received_data_queue_.pop_front();
 
-    rtabmap::Transform map_to_odom;
-    std::map<int, rtabmap::Transform> poses;
-    std::multimap<int, rtabmap::Link> links;
-    std::map<int, rtabmap::Signature> signatures;
-    rtabmap_ros::mapDataFromROS(*map_data, poses, links, signatures,
-                                map_to_odom);
+    rtabmap::SensorData sensor_data = rtabmap_ros::rgbdImageFromROS(image_data);
 
-    if (!signatures.empty() &&
-        signatures.rbegin()->second.sensorData().isValid() &&
-        local_data_.find(signatures.rbegin()->first) == local_data_.end()) {
-      int id = signatures.rbegin()->first;
-      const rtabmap::SensorData &s = signatures.rbegin()->second.sensorData();
+    if (sensor_data.isValid() &&
+        local_data_.find(nb_local_frames_) == local_data_.end()) {
       cv::Mat rgb;
       // rtabmap::LaserScan scan;
-      s.uncompressDataConst(&rgb, 0);
+      sensor_data.uncompressDataConst(&rgb, 0);
       // pcl::PointCloud<pcl::PointXYZ>::Ptr cloud =
       // rtabmap::util3d::laserScanToPointCloud(scan, scan.localTransform());
       // Send keyframe for loop detection
-      sendKeyframe(rgb, id);
+      sendKeyframe(rgb, nb_local_frames_);
 
-      local_data_.insert(std::make_pair(id, s));
+      local_data_.insert(std::make_pair(nb_local_frames_, sensor_data));
+      nb_local_frames_++;
     }
   }
 }
 
-void MapDataHandler::geometricVerification() {
+void MapManager::geometricVerification() {
   // TODO: Use for intra-robot loop closures
   /*int from_id = res.from_id;
   int to_id = res.to_id;
@@ -152,28 +152,13 @@ void MapDataHandler::geometricVerification() {
   }*/
 }
 
-void MapDataHandler::mapDataCallback(
-    const std::shared_ptr<rtabmap_ros::msg::MapData> &map_data_msg,
-    const std::shared_ptr<rtabmap_ros::msg::Info> &info_msg) {
-  RCLCPP_INFO(node_->get_logger(), "Received map data!");
+void MapManager::receiveRGBD(
+    const std::shared_ptr<rtabmap_ros::msg::RGBDImage> image_msg) {
+  RCLCPP_INFO(node_->get_logger(), "Received image!");
 
-  rtabmap::Statistics stats;
-  rtabmap_ros::infoFromROS(*info_msg, stats);
+  // TODO: Add keyframe heuristic
 
-  bool small_movement = (bool)uValue(
-      stats.data(), rtabmap::Statistics::kMemorySmall_movement(), 0.0f);
-  bool fast_movement = (bool)uValue(
-      stats.data(), rtabmap::Statistics::kMemoryFast_movement(), 0.0f);
-
-  if (small_movement || fast_movement) {
-    // The signature has been ignored from rtabmap, don't process it
-    RCLCPP_INFO(node_->get_logger(),
-                "Ignore keyframe. Small movement=%d, Fast movement=%d",
-                (int)small_movement, (int)fast_movement);
-    return;
-  }
-
-  received_data_queue_.push_back(map_data_msg);
+  received_data_queue_.push_back(image_msg);
   if (received_data_queue_.size() > max_queue_size_) {
     // Remove the oldest keyframes if we exceed the maximum size
     received_data_queue_.pop_front();
@@ -184,7 +169,7 @@ void MapDataHandler::mapDataCallback(
   }
 }
 
-void MapDataHandler::sendLocalImageDescriptors(
+void MapManager::sendLocalImageDescriptors(
     const std::shared_ptr<cslam_loop_detection_interfaces::srv::
                               SendLocalImageDescriptors::Request>
         request,
@@ -254,7 +239,7 @@ void MapDataHandler::sendLocalImageDescriptors(
   response->success = true;
 }
 
-void MapDataHandler::receiveLocalImageDescriptors(
+void MapManager::receiveLocalImageDescriptors(
     const std::shared_ptr<
         cslam_loop_detection_interfaces::msg::LocalImageDescriptors>
         msg) {

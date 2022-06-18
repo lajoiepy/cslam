@@ -1,7 +1,6 @@
 #include <rclcpp/rclcpp.hpp>
 
-#include <rtabmap_ros/msg/info.hpp>
-#include <rtabmap_ros/msg/map_data.hpp>
+#include <rtabmap_ros/msg/rgbd_image.hpp>
 #include <rtabmap_ros/srv/add_link.hpp>
 #include <rtabmap_ros/srv/get_map.hpp>
 
@@ -40,10 +39,10 @@
  * - Sends/Receives keypoints from other robot frames
  * - Computes geometric verification
  */
-class MapDataHandler {
+class MapManager {
 public:
-  MapDataHandler(){};
-  ~MapDataHandler(){};
+  MapManager(){};
+  ~MapManager(){};
 
   /**
    * @brief Initialization of parameters and ROS 2 objects
@@ -65,14 +64,12 @@ public:
   void geometricVerification();
 
   /**
-   * @brief Receives the keyframe data from RTAB-map
+   * @brief Receives the image data from odometry
    *
-   * @param map_data_msg keyframe data
-   * @param info_msg keyframe statistics
+   * @param image_msg image data
    */
-  void mapDataCallback(
-      const std::shared_ptr<rtabmap_ros::msg::MapData> &map_data_msg,
-      const std::shared_ptr<rtabmap_ros::msg::Info> &info_msg);
+  void receiveRGBD(
+      const std::shared_ptr<rtabmap_ros::msg::RGBDImage> image_msg);
 
   /**
    * @brief Service callback to compute local descriptors and publishing them.
@@ -107,7 +104,6 @@ public:
   void sendKeyframe(const rtabmap::SensorData &data, const int id);
 
 private:
-  rclcpp::Client<rtabmap_ros::srv::AddLink>::SharedPtr add_link_srv_;
 
   rclcpp::Service<
       cslam_loop_detection_interfaces::srv::SendLocalImageDescriptors>::
@@ -117,9 +113,13 @@ private:
 
   std::shared_ptr<rclcpp::Node> node_;
 
-  std::deque<std::shared_ptr<rtabmap_ros::msg::MapData>> received_data_queue_;
+  rclcpp::Subscription<
+      rtabmap_ros::msg::RGBDImage>::SharedPtr
+      rgbd_subscriber_;
 
-  unsigned int max_queue_size_, min_inliers_, nb_robots_, robot_id_;
+  std::deque<std::shared_ptr<rtabmap_ros::msg::RGBDImage>> received_data_queue_;
+
+  unsigned int max_queue_size_, min_inliers_, nb_robots_, robot_id_, nb_local_frames_;
 
   std::map<int, rclcpp::Publisher<cslam_loop_detection_interfaces::msg::
                                       LocalImageDescriptors>::SharedPtr>

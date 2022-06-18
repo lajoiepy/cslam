@@ -50,8 +50,8 @@ def generate_launch_description():
              ],
              namespace=LaunchConfiguration('namespace')),
         Node(package='cslam',
-             executable='map_data_handler',
-             name='cslam_map_data_handler',
+             executable='map_manager',
+             name='cslam_map_manager',
              parameters=[
                  LaunchConfiguration('config'), {
                      "robot_id": LaunchConfiguration('robot_id'),
@@ -60,16 +60,17 @@ def generate_launch_description():
              ],
              prefix=LaunchConfiguration('launch_prefix'),
              namespace=LaunchConfiguration('namespace')),
-        IncludeLaunchDescription(
-            PythonLaunchDescriptionSource(
-                os.path.join(get_package_share_directory('cslam'), 'launch',
-                             'slam', 'rtabmap_mapping.launch.py')),
-            launch_arguments={
-                'log_level': LaunchConfiguration('log_level'),
-                "robot_id": LaunchConfiguration('robot_id'),
-                "nb_robots": LaunchConfiguration('nb_robots')
-            }.items(),
-        ),
+        # TODO: remove
+        # IncludeLaunchDescription(
+        #     PythonLaunchDescriptionSource(
+        #         os.path.join(get_package_share_directory('cslam'), 'launch',
+        #                      'slam', 'rtabmap_mapping.launch.py')),
+        #     launch_arguments={
+        #         'log_level': LaunchConfiguration('log_level'),
+        #         "robot_id": LaunchConfiguration('robot_id'),
+        #         "nb_robots": LaunchConfiguration('nb_robots')
+        #     }.items(),
+        # ),
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(
                 os.path.join(get_package_share_directory('cslam'), 'launch',

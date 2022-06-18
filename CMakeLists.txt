@@ -131,18 +131,18 @@ SET(Libraries
 find_package(cslam_common_interfaces REQUIRED)
 find_package(cslam_loop_detection_interfaces REQUIRED)
 
-add_executable(map_data_handler 
-  src/MapDataHandler.cpp 
-  src/MapDataHandlerNode.cpp 
+add_executable(map_manager 
+  src/MapManager.cpp 
+  src/MapManagerNode.cpp 
   src/MsgConversion.cpp)
-add_dependencies(map_data_handler  
-  map_data_handler
+add_dependencies(map_manager  
+  map_manager
   ${${PROJECT_NAME}_EXPORTED_TARGETS})
-ament_target_dependencies(map_data_handler 
+ament_target_dependencies(map_manager 
   ${Libraries} 
   cslam_common_interfaces cslam_loop_detection_interfaces)
-set_target_properties(map_data_handler 
-  PROPERTIES OUTPUT_NAME "map_data_handler")
+set_target_properties(map_manager 
+  PROPERTIES OUTPUT_NAME "map_manager")
 
 # Only required when using messages built from the same package
 # https://index.ros.org/doc/ros2/Tutorials/Rosidl-Tutorial/
@@ -165,7 +165,7 @@ install(DIRECTORY
 
 # Install nodes
 install(
-  TARGETS map_data_handler
+  TARGETS map_manager
   DESTINATION lib/${PROJECT_NAME}
 )
 
