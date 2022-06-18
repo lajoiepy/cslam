@@ -19,10 +19,14 @@ class EdgeInterRobot(NamedTuple):
         Args:
             other (EdgeInterRobot): Other edge to compare
         """
-        return ((self.robot0_id == other.robot0_id)
-                and (self.robot0_image_id == other.robot0_image_id)
-                and (self.robot1_id == other.robot1_id)
-                and (self.robot1_image_id == other.robot1_image_id))
+        return ((self.robot0_id == other.robot0_id) and
+                (self.robot0_image_id == other.robot0_image_id) and
+                (self.robot1_id == other.robot1_id) and
+                (self.robot1_image_id == other.robot1_image_id)) or (
+                    (self.robot0_id == other.robot1_id) and
+                    (self.robot0_image_id == other.robot1_image_id) and
+                    (self.robot1_id == other.robot0_id) and
+                    (self.robot1_image_id == other.robot0_image_id))
 
 
 class AlgebraicConnectivityMaximization(object):

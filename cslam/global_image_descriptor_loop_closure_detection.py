@@ -171,14 +171,17 @@ class GlobalImageDescriptorLoopClosureDetection(object):
         # TODO: Only one robot per pair should initiate computation
         if msg.success:
             self.node.get_logger().info(
-                'New inter-robot Loop closure measurement.')
+                'New inter-robot loop closure measurement.')
             self.loop_closure_list.append(msg)
             # If geo verif succeeds, move from candidate to fixed edge in the graph
             self.lcm.candidate_selector.candidate_edges_to_fixed(
                 [self.inter_robot_loop_closure_msg_to_edge(msg)])
         else:
             self.node.get_logger().info(
-                'Failed inter-robot Loop closure measurement.')
+                'Failed inter-robot loop closure measurement.')
+            self.node.get_logger().info(
+                str(self.inter_robot_loop_closure_msg_to_edge(msg)) # TODO: remove
+            )
             # If geo verif fails, remove candidate
             self.lcm.candidate_selector.remove_candidate_edges(
                 [self.inter_robot_loop_closure_msg_to_edge(msg)])

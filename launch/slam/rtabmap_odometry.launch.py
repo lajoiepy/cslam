@@ -107,113 +107,125 @@ def launch_setup(context, *args, **kwargs):
                      value=LaunchConfiguration('use_sim_time')),
         # 'use_sim_time' will be set on all nodes following the line above
 
-        
         # RGB-D odometry
-        Node(package='rtabmap_ros',
-             executable='rgbd_odometry',
-             output="screen",
-             condition=IfCondition(
-                 PythonExpression([
-                     "'",
-                     LaunchConfiguration('icp_odometry'), "' != 'true' and '",
-                     LaunchConfiguration('visual_odometry'),
-                     "' == 'true' and '",
-                     LaunchConfiguration('stereo'), "' != 'true'"
-                 ])),
-             parameters=[{
-                 "frame_id":
-                 LaunchConfiguration('frame_id'),
-                 "odom_frame_id":
-                 LaunchConfiguration('vo_frame_id'),
-                 "publish_tf":
-                 LaunchConfiguration('publish_tf_odom'),
-                 "ground_truth_frame_id":
-                 LaunchConfiguration('ground_truth_frame_id').perform(context),
-                 "ground_truth_base_frame_id":
-                 LaunchConfiguration('ground_truth_base_frame_id').perform(
-                     context),
-                 "wait_for_transform":
-                 LaunchConfiguration('wait_for_transform'),
-                 "wait_imu_to_init":
-                 LaunchConfiguration('wait_imu_to_init'),
-                 "approx_sync":
-                 LaunchConfiguration('approx_sync'),
-                 "config_path":
-                 LaunchConfiguration('cfg').perform(context),
-                 "queue_size":
-                 LaunchConfiguration('queue_size'),
-                 "qos":
-                 LaunchConfiguration('qos_image'),
-                 "qos_camera_info":
-                 LaunchConfiguration('qos_camera_info'),
-                 "qos_imu":
-                 LaunchConfiguration('qos_imu'),
-                 "subscribe_rgbd":
-                 LaunchConfiguration('subscribe_rgbd'),
-                 "guess_frame_id":
-                 LaunchConfiguration('odom_guess_frame_id').perform(context),
-                 "guess_min_translation":
-                 LaunchConfiguration('odom_guess_min_translation'),
-                 "guess_min_rotation":
-                 LaunchConfiguration('odom_guess_min_rotation')
-             }],
-             remappings=[
-                 ("rgb/image",
-                  ConditionalText(
-                      ''.join([
-                          LaunchConfiguration('namespace').perform(context),
-                          LaunchConfiguration('stereo_namespace').perform(
-                              context),
-                          LaunchConfiguration('rgb_topic').perform(context),
-                          "_relay"
-                      ]), ''.join([
-                          LaunchConfiguration('namespace').perform(context),
-                          LaunchConfiguration('stereo_namespace').perform(
-                              context),
-                          LaunchConfiguration('rgb_topic').perform(context)
-                      ]),
-                      LaunchConfiguration('compressed').perform(context))),
-                 ("depth/image",
-                  ConditionalText(
-                      ''.join([
-                          LaunchConfiguration('namespace').perform(context),
-                          LaunchConfiguration('stereo_namespace').perform(
-                              context),
-                          LaunchConfiguration('depth_topic').perform(context),
-                          "_relay"
-                      ]), ''.join([
-                          LaunchConfiguration('namespace').perform(context),
-                          LaunchConfiguration('stereo_namespace').perform(
-                              context),
-                          LaunchConfiguration('depth_topic').perform(context)
-                      ]),
-                      LaunchConfiguration('compressed').perform(context))),
-                 ("rgb/camera_info", LaunchConfiguration('camera_info_topic')),
-                 ("rgbd_image",
-                  ConditionalText(
-                      ''.join([
-                          LaunchConfiguration('namespace').perform(context),
-                          LaunchConfiguration('stereo_namespace').perform(
-                              context),
-                          LaunchConfiguration('rgbd_topic').perform(context)
-                      ]), ''.join([
-                          LaunchConfiguration('namespace').perform(context),
-                          LaunchConfiguration('stereo_namespace').perform(
-                              context),
-                          LaunchConfiguration('rgbd_topic').perform(context),
-                          "_relay"
-                      ]),
-                      LaunchConfiguration('rgbd_sync').perform(context))),
-                 ("odom", LaunchConfiguration('odom_topic')),
-                 ("imu", LaunchConfiguration('imu_topic'))
-             ],
-             arguments=[
-                 LaunchConfiguration("args"),
-                 LaunchConfiguration("odom_args"),
-                 '--ros-args', '--log-level', 'error'
-             ],
-             prefix=LaunchConfiguration('launch_prefix'),
-             namespace=LaunchConfiguration('namespace')),
+        Node(
+            package='rtabmap_ros',
+            executable='rgbd_odometry',
+            output="screen",
+            condition=IfCondition(
+                PythonExpression([
+                    "'",
+                    LaunchConfiguration('icp_odometry'), "' != 'true' and '",
+                    LaunchConfiguration('visual_odometry'),
+                    "' == 'true' and '",
+                    LaunchConfiguration('stereo'), "' != 'true'"
+                ])),
+            parameters=[{
+                "frame_id":
+                LaunchConfiguration('frame_id'),
+                "odom_frame_id":
+                LaunchConfiguration('vo_frame_id'),
+                "publish_tf":
+                LaunchConfiguration('publish_tf_odom'),
+                "ground_truth_frame_id":
+                LaunchConfiguration('ground_truth_frame_id').perform(context),
+                "ground_truth_base_frame_id":
+                LaunchConfiguration('ground_truth_base_frame_id').perform(
+                    context),
+                "wait_for_transform":
+                LaunchConfiguration('wait_for_transform'),
+                "wait_imu_to_init":
+                LaunchConfiguration('wait_imu_to_init'),
+                "approx_sync":
+                LaunchConfiguration('approx_sync'),
+                "config_path":
+                LaunchConfiguration('cfg').perform(context),
+                "queue_size":
+                LaunchConfiguration('queue_size'),
+                "qos":
+                LaunchConfiguration('qos_image'),
+                "qos_camera_info":
+                LaunchConfiguration('qos_camera_info'),
+                "qos_imu":
+                LaunchConfiguration('qos_imu'),
+                "subscribe_rgbd":
+                LaunchConfiguration('subscribe_rgbd'),
+                "guess_frame_id":
+                LaunchConfiguration('odom_guess_frame_id').perform(context),
+                "guess_min_translation":
+                LaunchConfiguration('odom_guess_min_translation'),
+                "guess_min_rotation":
+                LaunchConfiguration('odom_guess_min_rotation')
+            }],
+            remappings=[
+                ("rgb/image",
+                 ConditionalText(
+                     ''.join([
+                         LaunchConfiguration('namespace').perform(context),
+                         LaunchConfiguration('stereo_namespace').perform(
+                             context),
+                         LaunchConfiguration('rgb_topic').perform(context),
+                         "_relay"
+                     ]), ''.join([
+                         LaunchConfiguration('namespace').perform(context),
+                         LaunchConfiguration('stereo_namespace').perform(
+                             context),
+                         LaunchConfiguration('rgb_topic').perform(context)
+                     ]),
+                     LaunchConfiguration('compressed').perform(context))),
+                ("depth/image",
+                 ConditionalText(
+                     ''.join([
+                         LaunchConfiguration('namespace').perform(context),
+                         LaunchConfiguration('stereo_namespace').perform(
+                             context),
+                         LaunchConfiguration('depth_topic').perform(context),
+                         "_relay"
+                     ]), ''.join([
+                         LaunchConfiguration('namespace').perform(context),
+                         LaunchConfiguration('stereo_namespace').perform(
+                             context),
+                         LaunchConfiguration('depth_topic').perform(context)
+                     ]),
+                     LaunchConfiguration('compressed').perform(context))),
+                ("rgb/camera_info", LaunchConfiguration('camera_info_topic')),
+                ("rgbd_image",
+                 ConditionalText(
+                     ''.join([
+                         LaunchConfiguration('namespace').perform(context),
+                         LaunchConfiguration('stereo_namespace').perform(
+                             context),
+                         LaunchConfiguration('rgbd_topic').perform(context)
+                     ]), ''.join([
+                         LaunchConfiguration('namespace').perform(context),
+                         LaunchConfiguration('stereo_namespace').perform(
+                             context),
+                         LaunchConfiguration('rgbd_topic').perform(context),
+                         "_relay"
+                     ]),
+                     LaunchConfiguration('rgbd_sync').perform(context))),
+                ("odom", LaunchConfiguration('odom_topic')),
+                ("imu", LaunchConfiguration('imu_topic'))
+            ],
+            arguments=[
+                LaunchConfiguration("args"),
+                LaunchConfiguration("odom_args"),
+                # Ensure that we don't lose tracking
+                '--Vis/MinInliers',
+                '8',
+                # Produce more keyframes
+                '--Odom/KeyFrameThr',
+                '0.0',
+                '--Odom/VisKeyFrameThr',
+                '0.0',
+                '--Odom/ScanKeyFrameThr',
+                '0.0',
+                '--ros-args',
+                '--log-level',
+                'error'
+            ],
+            prefix=LaunchConfiguration('launch_prefix'),
+            namespace=LaunchConfiguration('namespace')),
 
         # Stereo odometry
         Node(
@@ -264,9 +276,6 @@ def launch_setup(context, *args, **kwargs):
                 LaunchConfiguration('odom_guess_min_translation'),
                 "guess_min_rotation":
                 LaunchConfiguration('odom_guess_min_rotation'),
-                # Ensure that we don't lose tracking
-                "Vis/MinInliers":
-                "8"
             }],
             remappings=[
                 ("left/image_rect",
@@ -334,7 +343,19 @@ def launch_setup(context, *args, **kwargs):
             arguments=[
                 LaunchConfiguration("args"),
                 LaunchConfiguration("odom_args"),
-                 '--ros-args', '--log-level', LaunchConfiguration("log_level")
+                # Ensure that we don't lose tracking
+                '--Vis/MinInliers',
+                '8',
+                # Produce more keyframes
+                '--Odom/KeyFrameThr',
+                '0.0',
+                '--Odom/VisKeyFrameThr',
+                '0.0',
+                '--Odom/ScanKeyFrameThr',
+                '0.0',
+                '--ros-args',
+                '--log-level',
+                LaunchConfiguration("log_level")
             ],
             prefix=LaunchConfiguration('launch_prefix'),
             namespace=LaunchConfiguration('namespace')),
@@ -450,7 +471,8 @@ def generate_launch_description():
             description='Publish TF between map and odomerty.'),
         DeclareLaunchArgument('namespace', default_value='/r0',
                               description=''),
-        DeclareLaunchArgument('log_level', default_value='info',
+        DeclareLaunchArgument('log_level',
+                              default_value='info',
                               description=''),
         DeclareLaunchArgument('queue_size', default_value='10',
                               description=''),
