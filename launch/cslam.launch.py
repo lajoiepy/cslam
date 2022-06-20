@@ -22,7 +22,7 @@ def generate_launch_description():
                                   'config', 'cslam/'),
                               description=''),
         DeclareLaunchArgument('config_file',
-                              default_value='default.yaml',
+                              default_value='default_kitti.yaml',
                               description=''),
         DeclareLaunchArgument('config',
                               default_value=[
@@ -39,6 +39,7 @@ def generate_launch_description():
         DeclareLaunchArgument('log_level',
                               default_value='error',
                               description=''),
+        
         Node(package='cslam',
              executable='loop_closure_detection.py',
              name='cslam_loop_closure_detection',
@@ -71,14 +72,14 @@ def generate_launch_description():
         #         "nb_robots": LaunchConfiguration('nb_robots')
         #     }.items(),
         # ),
-        IncludeLaunchDescription(
-            PythonLaunchDescriptionSource(
-                os.path.join(get_package_share_directory('cslam'), 'launch',
-                             'slam', 'rtabmap_odometry.launch.py')),
-            launch_arguments={
-                'log_level': LaunchConfiguration('log_level'),
-                "robot_id": LaunchConfiguration('robot_id'),
-                "nb_robots": LaunchConfiguration('nb_robots'),
-            }.items(),
-        ),
+        # IncludeLaunchDescription(
+        #     PythonLaunchDescriptionSource(
+        #         os.path.join(get_package_share_directory('cslam'), 'launch',
+        #                      'slam', 'rtabmap_odometry.launch.py')),
+        #     launch_arguments={
+        #         'log_level': LaunchConfiguration('log_level'),
+        #         "robot_id": LaunchConfiguration('robot_id'),
+        #         "nb_robots": LaunchConfiguration('nb_robots'),
+        #     }.items(),
+        # ),
     ])

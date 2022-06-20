@@ -134,6 +134,7 @@ find_package(cslam_loop_detection_interfaces REQUIRED)
 add_executable(map_manager 
   src/MapManager.cpp 
   src/MapManagerNode.cpp 
+  src/StereoHandler.cpp 
   src/MsgConversion.cpp)
 add_dependencies(map_manager  
   map_manager

@@ -20,14 +20,12 @@ int main(int argc, char **argv) {
   node->declare_parameter<int>("robot_id", 0);
   
 
-  auto lcd = MapManager();
-  lcd.init(node);
+  auto lcd = std::make_shared<MapManager<StereoHandler>>(node);
 
   rclcpp::Rate rate(10);
 
   while (rclcpp::ok()) {
-    lcd.processNewKeyFrames();
-    //lcd.geometricVerification();
+    lcd->process_new_keyframes();
     rclcpp::spin_some(node);
     rate.sleep();
   }
