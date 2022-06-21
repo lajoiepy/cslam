@@ -1,9 +1,4 @@
 import unittest
-import sys  # TODO: remove
-
-sys.path.append(
-    '/home/lajoiepy/Documents/projects/c-slam/c-slam-ws/src/cslam/')
-
 from cslam.loop_closure_sparse_matching import LoopClosureSparseMatching
 import random
 import numpy as np

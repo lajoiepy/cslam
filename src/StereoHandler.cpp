@@ -232,36 +232,8 @@ void StereoHandler::stereo_callback(
     }
 }
 
-void StereoHandler::process_new_keyframe(){
-    if (!received_data_queue_.empty()) {
-        auto sensor_data = received_data_queue_.front();
-        received_data_queue_.pop_front();
-        // TODO: keyframe heuristic
-
-        if (sensor_data->isValid() &&
-            local_data_map_.find(sensor_data->id()) == local_data_map_.end()) {
-            cv::Mat rgb;
-            // rtabmap::LaserScan scan;
-            sensor_data->uncompressDataConst(&rgb, 0);
-            // pcl::PointCloud<pcl::PointXYZ>::Ptr cloud =
-            // rtabmap::util3d::laserScanToPointCloud(scan, scan.localTransform());
-            // Send keyframe for loop detection
-            send_keyframe(rgb, sensor_data->id());
-
-            local_data_map_.insert(std::make_pair(sensor_data->id(), sensor_data));
-        }
-    }
-}
-
-void StereoHandler::send_local_image_descriptors(
-    const std::shared_ptr<cslam_loop_detection_interfaces::srv::
-                              SendLocalImageDescriptors::Request>
-        request,
-    std::shared_ptr<cslam_loop_detection_interfaces::srv::
-                        SendLocalImageDescriptors::Response>
-        response) {
+void StereoHandler::compute_local_descriptors(std::shared_ptr<rtabmap::SensorData>& frame_data){
   // Extract local descriptors
-  auto frame_data = local_data_map_.at(request->image_id);
   frame_data->uncompressData();
   std::vector<cv::KeyPoint> kpts_from;
   cv::Mat image = frame_data->imageRaw();
@@ -298,21 +270,54 @@ void StereoHandler::send_local_image_descriptors(
   auto descriptors = detector->generateDescriptors(image, kpts);
   auto kpts3D = detector->generateKeypoints3D(*frame_data, kpts);
 
-  // Build message
   frame_data->setFeatures(kpts, kpts3D, descriptors);
+
+  // Clear costly data
+  frame_data->clearCompressedData();
+  frame_data->clearRawData();
+  
+  // Store descriptors
+  local_descriptors_map_.insert({frame_data->id(), frame_data});
+}
+
+void StereoHandler::process_new_keyframe(){
+    if (!received_data_queue_.empty()) {
+        auto sensor_data = received_data_queue_.front();
+        received_data_queue_.pop_front();
+        // TODO: keyframe heuristic
+
+        if (sensor_data->isValid() &&
+            local_descriptors_map_.find(sensor_data->id()) == local_descriptors_map_.end()) {
+            cv::Mat rgb;
+            // rtabmap::LaserScan scan;
+            sensor_data->uncompressDataConst(&rgb, 0);
+            // pcl::PointCloud<pcl::PointXYZ>::Ptr cloud =
+            // rtabmap::util3d::laserScanToPointCloud(scan, scan.localTransform());
+            // Send keyframe for loop detection
+            send_keyframe(rgb, sensor_data->id());
+
+            compute_local_descriptors(sensor_data);
+        }
+    }
+}
+
+void StereoHandler::sensor_data_to_rgbd_msg(const std::shared_ptr<
+        rtabmap::SensorData>
+        sensor_data, rtabmap_ros::msg::RGBDImage& msg_data) {
   rtabmap_ros::msg::RGBDImage data;
-  rtabmap_ros::rgbdImageToROS(*frame_data, data, "camera");
+  rtabmap_ros::rgbdImageToROS(*sensor_data, msg_data, "camera");
+}
 
-  // Clear images in message to save bandwidth
-  data.rgb = sensor_msgs::msg::Image();
-  data.depth = sensor_msgs::msg::Image();
-  data.rgb_compressed = sensor_msgs::msg::CompressedImage();
-  data.depth_compressed = sensor_msgs::msg::CompressedImage();
-  data.global_descriptor = rtabmap_ros::msg::GlobalDescriptor();
-
+void StereoHandler::send_local_image_descriptors(
+    const std::shared_ptr<cslam_loop_detection_interfaces::srv::
+                              SendLocalImageDescriptors::Request>
+        request,
+    std::shared_ptr<cslam_loop_detection_interfaces::srv::
+                        SendLocalImageDescriptors::Response>
+        response) {
   // Fill msg
   cslam_loop_detection_interfaces::msg::LocalImageDescriptors msg;
-  msg.data = data;
+  sensor_data_to_rgbd_msg(local_descriptors_map_.at(request->image_id), msg.data);
   msg.image_id = request->image_id;
   msg.robot_id = robot_id_;
   msg.receptor_image_id = request->receptor_image_id;
@@ -323,16 +328,15 @@ void StereoHandler::send_local_image_descriptors(
   response->success = true;
 }
 
-void StereoHandler::receive_local_image_descriptors(
-    const std::shared_ptr<
+void StereoHandler::local_descriptors_msg_to_sensor_data(const std::shared_ptr<
         cslam_loop_detection_interfaces::msg::LocalImageDescriptors>
-        msg) {
-  // Fill keypoints
+        msg, rtabmap::SensorData& sensor_data)   {
+  // Fill descriptors
   rtabmap::StereoCameraModel stereo_model =
       rtabmap_ros::stereoCameraModelFromROS(msg->data.rgb_camera_info,
                                             msg->data.depth_camera_info,
                                             rtabmap::Transform::getIdentity());
-  rtabmap::SensorData tmp_to(
+  sensor_data = rtabmap::SensorData(
       cv::Mat(), cv::Mat(), stereo_model, 0,
       rtabmap_ros::timestampFromROS(msg->data.header.stamp));
 
@@ -341,12 +345,21 @@ void StereoHandler::receive_local_image_descriptors(
   std::vector<cv::Point3f> kpts3D;
   rtabmap_ros::points3fFromROS(msg->data.points, kpts3D);
   auto descriptors = rtabmap::uncompressData(msg->data.descriptors);
-  tmp_to.setFeatures(kpts, kpts3D, descriptors);
+  sensor_data.setFeatures(kpts, kpts3D, descriptors);    
+}
+
+void StereoHandler::receive_local_image_descriptors(
+    const std::shared_ptr<
+        cslam_loop_detection_interfaces::msg::LocalImageDescriptors>
+        msg) {
+
+  rtabmap::SensorData tmp_to;
+  local_descriptors_msg_to_sensor_data(msg, tmp_to);
 
   // Compute transformation
   //  Registration params
   rtabmap::RegistrationInfo reg_info;
-  auto tmp_from = local_data_map_.at(msg->receptor_image_id);
+  auto tmp_from = local_descriptors_map_.at(msg->receptor_image_id);
   tmp_from->uncompressData();
   rtabmap::Transform t = registration_.computeTransformation(
       *tmp_from, tmp_to, rtabmap::Transform(), &reg_info);
@@ -358,7 +371,6 @@ void StereoHandler::receive_local_image_descriptors(
   lc.robot1_id = msg->robot_id;
   lc.robot1_image_id = msg->image_id;
   if (!t.isNull()) {
-    RCLCPP_INFO(node_->get_logger(), "Inter-Robot Link computed");
     lc.success = true;
     rtabmap_ros::transformToGeometryMsg(t, lc.transform);
     inter_robot_loop_closure_publishers_[lc.robot0_id]->publish(lc);
@@ -377,8 +389,6 @@ void StereoHandler::receive_local_image_descriptors(
 
 void StereoHandler::send_keyframe(const rtabmap::SensorData &data,
                                   const int id) {
-  RCLCPP_INFO(node_->get_logger(),
-              "Process Image %d for Loop Closure Detection", id);
   // Image message
   std_msgs::msg::Header header;
   header.stamp = node_->now();

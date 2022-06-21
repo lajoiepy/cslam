@@ -76,8 +76,6 @@ class GlobalImageDescriptorLoopClosureDetection(object):
         """
         # Add for matching
         self.lcm.add_local_keyframe(embedding, id)
-        self.node.get_logger().info("local distance other: " + str(self.lcm.d)) # TODO: remove
-        self.node.get_logger().info("local Similarity local: " + str(self.lcm.similarity)) # TODO: remove
 
         # TODO: Maintain list to send
         msg = GlobalImageDescriptor()
@@ -109,9 +107,6 @@ class GlobalImageDescriptorLoopClosureDetection(object):
         """
         # Find matches that maximize the algebraic connectivity
         selection = self.lcm.select_candidates(self.loop_closure_budget)
-        self.node.get_logger().info(
-            'detec_inter.')# TODO: remove
-        self.node.get_logger().info(str(selection))
 
         # Extract and publish local descriptors
         for match in selection:
@@ -145,8 +140,6 @@ class GlobalImageDescriptorLoopClosureDetection(object):
         """
         if msg.robot_id != self.robot_id:
             self.lcm.add_other_robot_keyframe(msg)
-            self.node.get_logger().info("global distance other: " + str(self.lcm.d)) # TODO: remove
-            self.node.get_logger().info("global Similarity other: " + str(self.lcm.similarity)) # TODO: remove
 
     def inter_robot_loop_closure_msg_to_edge(self, msg):
         """ Convert a inter-robot loop closure to an edge 
@@ -179,9 +172,6 @@ class GlobalImageDescriptorLoopClosureDetection(object):
         else:
             self.node.get_logger().info(
                 'Failed inter-robot loop closure measurement.')
-            self.node.get_logger().info(
-                str(self.inter_robot_loop_closure_msg_to_edge(msg)) # TODO: remove
-            )
             # If geo verif fails, remove candidate
             self.lcm.candidate_selector.remove_candidate_edges(
                 [self.inter_robot_loop_closure_msg_to_edge(msg)])

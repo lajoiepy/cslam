@@ -75,7 +75,7 @@ public:
           response);
 
   /**
-   * @brief Message callback to receive keypoints and compute
+   * @brief Message callback to receive descriptors and compute
    *
    * @param msg local descriptors
    */
@@ -83,6 +83,33 @@ public:
       const std::shared_ptr<
           cslam_loop_detection_interfaces::msg::LocalImageDescriptors>
           msg);
+
+  /**
+   * @brief Computes local 3D descriptors from frame data and store them
+   * 
+   * @param frame_data Full frame data
+   */
+  void compute_local_descriptors(std::shared_ptr<rtabmap::SensorData>& frame_data);
+
+  /**
+   * @brief converts descriptors to sensore data
+   * 
+   * @param msg local descriptors
+   * @return rtabmap::SensorData& 
+   */
+  void local_descriptors_msg_to_sensor_data(const std::shared_ptr<
+        cslam_loop_detection_interfaces::msg::LocalImageDescriptors>
+        msg, rtabmap::SensorData& sensor_data);
+
+  /**
+   * @brief converts sensor data to descriptor msg
+   * 
+   * @param sensor_data local descriptors
+   * @param msg_data rtabmap_ros::msg::RGBDImage& 
+   */
+  void sensor_data_to_rgbd_msg(const std::shared_ptr<
+        rtabmap::SensorData>
+        sensor_data, rtabmap_ros::msg::RGBDImage& msg_data);
 
   /**
    * @brief Function to send the image to the python node
@@ -109,7 +136,7 @@ public:
 private:
 
   std::deque<std::shared_ptr<rtabmap::SensorData>> received_data_queue_;
-  std::map<int, std::shared_ptr<rtabmap::SensorData>> local_data_map_;
+  std::map<int, std::shared_ptr<rtabmap::SensorData>> local_descriptors_map_;
 
   std::shared_ptr<rclcpp::Node> node_;
 
