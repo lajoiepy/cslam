@@ -9,7 +9,6 @@ from sensor_msgs.msg import Image
 
 from cslam.global_image_descriptor_loop_closure_detection import GlobalImageDescriptorLoopClosureDetection
 
-
 class LoopClosureDetection(Node):
     """ Global image descriptor matching for loop closure detection """
 
@@ -27,34 +26,37 @@ class LoopClosureDetection(Node):
                         ('loop_closure_budget', 5), ('detection_period', 5),
                         ('nb_best_matches', 10), ('image_crop_size', None),
                         ('intra_loop_min_inbetween_keyframes', 10),
+                        ('max_alive_delay_sec', 5),
+                        ('alive_check_period_sec', 0.5),
                         ('intra_robot_loop_closure_detection', False),
                         ('global_descriptor_topic', None)])
-        params = {}
-        params['similarity_threshold'] = self.get_parameter(
+        self.params = {}
+        self.params['similarity_threshold'] = self.get_parameter(
             'similarity_threshold').value
-        params['intra_loop_min_inbetween_keyframes'] = self.get_parameter(
+        self.params['intra_loop_min_inbetween_keyframes'] = self.get_parameter(
             'intra_loop_min_inbetween_keyframes').value
-        params['nb_best_matches'] = self.get_parameter('nb_best_matches').value
-        params['global_descriptor_technique'] = self.get_parameter(
+        self.params['nb_best_matches'] = self.get_parameter('nb_best_matches').value
+        self.params['global_descriptor_technique'] = self.get_parameter(
             'global_descriptor_technique').value
-        params['nn_checkpoint'] = self.get_parameter('nn_checkpoint').value
-        params['robot_id'] = self.get_parameter('robot_id').value
-        params['nb_robots'] = self.get_parameter('nb_robots').value
-        params['similarity_loc'] = self.get_parameter('similarity_loc').value
-        params['similarity_scale'] = self.get_parameter(
+        self.params['nn_checkpoint'] = self.get_parameter('nn_checkpoint').value
+        self.params['robot_id'] = self.get_parameter('robot_id').value
+        self.params['nb_robots'] = self.get_parameter('nb_robots').value
+        self.params['similarity_loc'] = self.get_parameter('similarity_loc').value
+        self.params['similarity_scale'] = self.get_parameter(
             'similarity_scale').value
-        params['loop_closure_budget'] = self.get_parameter(
+        self.params['loop_closure_budget'] = self.get_parameter(
             'loop_closure_budget').value
-        params['intra_robot_loop_closure_detection'] = self.get_parameter(
+        self.params['intra_robot_loop_closure_detection'] = self.get_parameter(
             'intra_robot_loop_closure_detection').value
-        params['detection_period'] = self.get_parameter(
+        self.params['detection_period'] = self.get_parameter(
             'detection_period').value
-        params["image_crop_size"] = self.get_parameter('image_crop_size').value
+        self.params["image_crop_size"] = self.get_parameter('image_crop_size').value
+        self.params["max_alive_delay_sec"] = self.get_parameter('max_alive_delay_sec').value
+        self.params["alive_check_period_sec"] = self.get_parameter('alive_check_period_sec').value
 
-        self.glcd = GlobalImageDescriptorLoopClosureDetection(params, self)
-        self.loop_detection_timers = self.create_timer(
-            params['detection_period'], self.glcd.detect_inter)
-
+        self.glcd = GlobalImageDescriptorLoopClosureDetection(self.params, self)
+        self.loop_detection_timer = self.create_timer(
+            self.params['detection_period'], self.glcd.detect_inter)
 
 if __name__ == '__main__':
 

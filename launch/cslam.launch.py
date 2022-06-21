@@ -61,7 +61,7 @@ def generate_launch_description():
              ],
              prefix=LaunchConfiguration('launch_prefix'),
              namespace=LaunchConfiguration('namespace')),
-        # TODO: remove
+        # TODO: add param
         # IncludeLaunchDescription(
         #     PythonLaunchDescriptionSource(
         #         os.path.join(get_package_share_directory('cslam'), 'launch',

@@ -33,6 +33,7 @@ find_package(nav2_msgs REQUIRED)
 find_package(stereo_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(visualization_msgs REQUIRED)
+find_package(test_msgs REQUIRED)
 find_package(image_transport REQUIRED)
 find_package(tf2 REQUIRED)
 find_package(tf2_eigen REQUIRED)
@@ -118,6 +119,7 @@ SET(Libraries
    message_filters
    class_loader
    visualization_msgs
+   test_msgs
    image_geometry
    stereo_msgs
    tf2_geometry_msgs

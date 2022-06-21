@@ -23,4 +23,6 @@
     # Geometric verification params
     pnp_min_inliers: 6
     # Other params
+    max_alive_delay_sec: 5
+    alive_check_period_sec: 1.0
     intra_robot_loop_closure_detection: false

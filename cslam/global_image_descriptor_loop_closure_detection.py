@@ -18,6 +18,8 @@ from cslam_loop_detection_interfaces.srv import SendLocalImageDescriptors
 import rclpy
 from rclpy.node import Node
 
+from cslam.neighbor_monitor import NeighborMonitor
+from test_msgs.msg import Empty as EmptyMsg
 
 class GlobalImageDescriptorLoopClosureDetection(object):
     """ Global Image descriptor matching """
@@ -66,6 +68,34 @@ class GlobalImageDescriptorLoopClosureDetection(object):
             SendLocalImageDescriptors, 'send_local_image_descriptors')
 
         self.loop_closure_list = []
+
+        # Listen for changes in node liveliness
+        self.alive_publisher = self.node.create_publisher(EmptyMsg, 'alive', 10)
+        self.neighbors_monitors = {}
+        for id in range(self.params['nb_robots']):
+            if id != self.params['robot_id']:
+                self.neighbors_monitors[id] = NeighborMonitor(self.node, id, self.params['max_alive_delay_sec'])
+        
+        self.alive_timer = self.node.create_timer(self.params['alive_check_period_sec'], self.alive_timer_callback)
+
+    def alive_timer_callback(self):
+        """Publish alive messagee periodically
+        """
+        self.alive_publisher.publish(EmptyMsg())
+
+    def check_neighbors_in_range(self):
+        """Check which neighbors are in range
+        
+        """
+        is_robot_in_range = {}
+        for i in range(self.nb_robots):
+            if i == self.robot_id:
+                is_robot_in_range[i] = True
+            elif self.neighbors_monitors[i].is_alive():
+                is_robot_in_range[i] = True
+            else:
+                is_robot_in_range[i] = False
+        return is_robot_in_range
 
     def add_keyframe(self, embedding, id):
         """ Add keyframe to matching list
