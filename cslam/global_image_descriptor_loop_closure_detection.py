@@ -11,15 +11,16 @@ from cslam.netvlad import NetVLAD
 from cslam.loop_closure_sparse_matching import LoopClosureSparseMatching
 
 from cslam_common_interfaces.msg import KeyframeRGB
-from cslam_loop_detection_interfaces.msg import GlobalImageDescriptor
+from cslam_loop_detection_interfaces.msg import GlobalImageDescriptor, GlobalImageDescriptors
 from cslam_loop_detection_interfaces.msg import InterRobotLoopClosure
 from cslam_loop_detection_interfaces.srv import SendLocalImageDescriptors
 
 import rclpy
 from rclpy.node import Node
 
-from cslam.neighbor_monitor import NeighborMonitor
+from cslam.neighbors_manager import NeighborManager
 from test_msgs.msg import Empty as EmptyMsg
+from cslam.utils.utils import list_chunks
 
 class GlobalImageDescriptorLoopClosureDetection(object):
     """ Global Image descriptor matching """
@@ -55,9 +56,9 @@ class GlobalImageDescriptorLoopClosureDetection(object):
         self.params['global_descriptor_topic'] = self.node.get_parameter(
             'global_descriptor_topic').value
         self.global_descriptor_publisher = self.node.create_publisher(
-            GlobalImageDescriptor, self.params['global_descriptor_topic'], 100)
+            GlobalImageDescriptors, self.params['global_descriptor_topic'], 100)
         self.global_descriptor_subscriber = self.node.create_subscription(
-            GlobalImageDescriptor, self.params['global_descriptor_topic'],
+            GlobalImageDescriptors, self.params['global_descriptor_topic'],
             self.global_descriptor_callback, 100)
         self.receive_keyframe_subscriber = self.node.create_subscription(
             KeyframeRGB, 'keyframe_data', self.receive_keyframe, 100)
@@ -72,31 +73,18 @@ class GlobalImageDescriptorLoopClosureDetection(object):
 
         # Listen for changes in node liveliness
         self.alive_publisher = self.node.create_publisher(EmptyMsg, 'alive', 10)
-        self.neighbors_monitors = {}
-        for id in range(self.nb_robots):
-            if id != self.robot_id:
-                self.neighbors_monitors[id] = NeighborMonitor(self.node, id, self.params['max_alive_delay_sec'])
-        
+        self.neighbor_manager = NeighborManager(self.node, self.robot_id, self.nb_robots, self.params['max_alive_delay_sec'])
+
         self.alive_timer = self.node.create_timer(self.params['alive_check_period_sec'], self.alive_timer_callback)
+
+        self.global_descriptors_buffer = []
+        self.global_descriptors_timer = self.node.create_timer(self.params['global_descriptor_publication_period'], self.global_descriptors_timer_callback)
+
 
     def alive_timer_callback(self):
         """Publish alive messagee periodically
         """
         self.alive_publisher.publish(EmptyMsg())
-
-    def check_neighbors_in_range(self):
-        """Check which neighbors are in range
-        
-        """
-        is_robot_in_range = {}
-        for i in range(self.nb_robots):
-            if i == self.robot_id:
-                is_robot_in_range[i] = True
-            elif self.neighbors_monitors[i].is_alive():
-                is_robot_in_range[i] = True
-            else:
-                is_robot_in_range[i] = False
-        return is_robot_in_range
 
     def add_keyframe(self, embedding, id):
         """ Add keyframe to matching list
@@ -108,14 +96,34 @@ class GlobalImageDescriptorLoopClosureDetection(object):
         # Add for matching
         self.lcm.add_local_keyframe(embedding, id)
 
-        # TODO: Maintain list to send
+        # Store global descriptor
         msg = GlobalImageDescriptor()
         msg.image_id = id
         msg.robot_id = self.robot_id
         msg.descriptor = embedding.tolist()
-        # TODO: publish missing descriptors when in range
-        # TODO: publish in batches of non-already transmitted
-        self.global_descriptor_publisher.publish(msg)
+        self.global_descriptors_buffer.append(msg)
+
+    def delete_useless_descriptors(self):
+        """Deletes global descriptors
+           because all other robots have already received 
+           some descriptors
+        """
+        from_kf_id = self.neighbor_manager.useless_descriptors(self.global_descriptors_buffer[-1].image_id)
+        if from_kf_id > self.global_descriptors_buffer[0].image_id:
+            self.global_descriptors_buffer = [e for e in self.global_descriptors_buffer if e.image_id > from_kf_id]
+
+    def global_descriptors_timer_callback(self):
+        """Publish global descriptors message periodically
+        """
+        if len(self.global_descriptors_buffer) > 0:
+            from_kf_id = self.neighbor_manager.select_from_which_kf_to_send(self.global_descriptors_buffer[-1].image_id)
+
+            msgs = list_chunks(self.global_descriptors_buffer, from_kf_id, self.params['global_descriptor_publication_max_elems_per_msg'])
+
+            for m in msgs:
+                self.global_descriptor_publisher.publish(m)
+            
+            self.delete_useless_descriptors()
 
     def detect_intra(self, embedding, id):
         """ Detect intra-robot loop closures
@@ -137,7 +145,7 @@ class GlobalImageDescriptorLoopClosureDetection(object):
             list(int): selected keyframes from other robots to match
         """
         # Find matches that maximize the algebraic connectivity
-        selection = self.lcm.select_candidates(self.loop_closure_budget, self.check_neighbors_in_range())
+        selection = self.lcm.select_candidates(self.loop_closure_budget, self.neighbor_manager.check_neighbors_in_range())
 
         # Extract and publish local descriptors
         for match in selection:
@@ -167,10 +175,12 @@ class GlobalImageDescriptorLoopClosureDetection(object):
         """Callback for descriptors received from other robots.
 
         Args:
-            msg (cslam_loop_detection_interfaces::msg::GlobalImageDescriptor): descriptor
+            msg (cslam_loop_detection_interfaces::msg::GlobalImageDescriptors): descriptor
         """
-        if msg.robot_id != self.robot_id:
-            self.lcm.add_other_robot_keyframe(msg)
+        unknown_range = self.neighbor_manager.get_unknown_range(msg[0].image_id, msg[-1].image_id, msg[0].robot_id)
+        for i in unknown_range:
+            if msg[i].robot_id != self.robot_id:
+                self.lcm.add_other_robot_keyframe(msg[i])
 
     def inter_robot_loop_closure_msg_to_edge(self, msg):
         """ Convert a inter-robot loop closure to an edge 

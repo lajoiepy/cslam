@@ -15,6 +15,8 @@ class NeighborMonitor():
         self.alive = False
         self.init_time =  self.node.get_clock().now()
         self.latest_time_stamp = self.init_time
+        self.last_keyframe_received = 0
+        self.last_keyframe_sent = 0
                    
         self.alive_subscriber = self.node.create_subscription(
             EmptyMsg, '/r' + str(id) + '/' + 'alive', self.alive_callback, 10)
