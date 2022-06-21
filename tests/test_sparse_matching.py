@@ -101,7 +101,10 @@ class TestSparseMatching(unittest.TestCase):
             lcsm.add_other_robot_keyframe(msg)
 
         nb_candidates = 20
-        selection = lcsm.select_candidates(nb_candidates)
+        is_robot_considered = {}
+        for i in range(params['nb_robots']):
+            is_robot_considered[i] = True
+        selection = lcsm.select_candidates(nb_candidates, is_robot_considered)
         self.assertEqual(len(selection), nb_candidates)
 
     def test_select_candidates1(self):
@@ -127,7 +130,11 @@ class TestSparseMatching(unittest.TestCase):
             lcsm.add_other_robot_keyframe(msg)
 
         nb_candidates = 20
-        selection = lcsm.select_candidates(nb_candidates)
+
+        is_robot_considered = {}
+        for i in range(params['nb_robots']):
+            is_robot_considered[i] = True
+        selection = lcsm.select_candidates(nb_candidates, is_robot_considered)
         self.assertEqual(len(selection), nb_candidates)
 
     def test_select_candidates2(self):
@@ -154,7 +161,12 @@ class TestSparseMatching(unittest.TestCase):
             lcsm.add_other_robot_keyframe(msg)
 
         nb_candidates = 20
-        selection = lcsm.select_candidates(nb_candidates)
+
+        is_robot_considered = {}
+        for i in range(params['nb_robots']):
+            is_robot_considered[i] = True
+
+        selection = lcsm.select_candidates(nb_candidates, is_robot_considered)
         self.assertEqual(len(selection), nb_candidates)
 
 if __name__ == "__main__":

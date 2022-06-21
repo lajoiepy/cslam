@@ -34,6 +34,7 @@ class GlobalImageDescriptorLoopClosureDetection(object):
         self.params = params
         self.node = node
         self.robot_id = self.params['robot_id']
+        self.nb_robots = self.params['nb_robots']
 
         self.lcm = LoopClosureSparseMatching(params)
         self.loop_closure_budget = self.params["loop_closure_budget"]
@@ -72,8 +73,8 @@ class GlobalImageDescriptorLoopClosureDetection(object):
         # Listen for changes in node liveliness
         self.alive_publisher = self.node.create_publisher(EmptyMsg, 'alive', 10)
         self.neighbors_monitors = {}
-        for id in range(self.params['nb_robots']):
-            if id != self.params['robot_id']:
+        for id in range(self.nb_robots):
+            if id != self.robot_id:
                 self.neighbors_monitors[id] = NeighborMonitor(self.node, id, self.params['max_alive_delay_sec'])
         
         self.alive_timer = self.node.create_timer(self.params['alive_check_period_sec'], self.alive_timer_callback)
@@ -136,7 +137,7 @@ class GlobalImageDescriptorLoopClosureDetection(object):
             list(int): selected keyframes from other robots to match
         """
         # Find matches that maximize the algebraic connectivity
-        selection = self.lcm.select_candidates(self.loop_closure_budget)
+        selection = self.lcm.select_candidates(self.loop_closure_budget, self.check_neighbors_in_range())
 
         # Extract and publish local descriptors
         for match in selection:

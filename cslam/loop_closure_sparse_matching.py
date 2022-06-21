@@ -98,11 +98,12 @@ class LoopClosureSparseMatching(object):
             return kf, kfs
         return None, None
 
-    def select_candidates(self, number_of_candidates):
+    def select_candidates(self, number_of_candidates, is_neighbor_in_range):
         """Select inter-robot loop closure candidates according to budget
 
         Args:
             number_of_candidates (int): inter-robot loop closure budget
+            is_neighbor_in_range: dict(int, bool): indicates which other robots are in communication range 
 
         Returns:
             list(EdgeInterRobot): selected edges
@@ -110,6 +111,6 @@ class LoopClosureSparseMatching(object):
         if len(self.candidate_selector.candidate_edges
                ) >= number_of_candidates:
             return self.candidate_selector.select_candidates(
-                number_of_candidates)
+                number_of_candidates, is_neighbor_in_range)
         else:
             return []

@@ -281,8 +281,12 @@ class AlgebraicConnectivityMaximization(object):
                                robot1_image_id, edges[c].weight))
         return recovered_inter_robot_edges
 
-    def check_graph_disconnections(self):
+    def check_graph_disconnections(self, is_other_robot_considered):
         """Check if the current graph of potential matches is connected
+
+        Args:
+            is_other_robot_considered: dict(int, bool): indicates which 
+                            other robots are are to be included 
         
         Returns:
             dict(int, bool): dict indicating if each robot is connected
@@ -295,11 +299,15 @@ class AlgebraicConnectivityMaximization(object):
             else:
                 is_robot_connected[i] = False
         for edge in self.fixed_edges:
-            is_robot_connected[edge.robot0_id] = True
-            is_robot_connected[edge.robot1_id] = True
+            if is_other_robot_considered[edge.robot0_id]:
+                is_robot_connected[edge.robot0_id] = True
+            if is_other_robot_considered[edge.robot1_id]:
+                is_robot_connected[edge.robot1_id] = True
         for edge in self.candidate_edges.values():
-            is_robot_connected[edge.robot0_id] = True
-            is_robot_connected[edge.robot1_id] = True
+            if is_other_robot_considered[edge.robot0_id]:
+                is_robot_connected[edge.robot0_id] = True
+            if is_other_robot_considered[edge.robot1_id]:
+                is_robot_connected[edge.robot1_id] = True
         return is_robot_connected
 
     def check_initial_fixed_measurements_exists(self, is_robot_included):
@@ -353,20 +361,22 @@ class AlgebraicConnectivityMaximization(object):
 
     def select_candidates(self,
                           nb_candidates_to_choose,
+                          is_other_robot_considered,
                           greedy_initialization=True):
         """Solve algebraic connectivity maximization
 
         Args:
             nb_candidates_to_choose (int): number of candidates to choose,
                             related to a computation/communication budget
+            is_other_robot_considered: dict(int, bool): indicates which 
+                            other robots are are to be included 
             greedy_initialization: perform greedy initialization based on similarity
 
         Returns:
             list(EdgeInterRobot): selected edges
         """
         # Check connectivity
-        is_robot_included = self.check_graph_disconnections()
-        # TODO: check if robots are in range
+        is_robot_included = self.check_graph_disconnections(is_other_robot_considered)
 
         # Rekey multi-robot edges to single graph
         self.compute_offsets(is_robot_included)

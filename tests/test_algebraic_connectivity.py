@@ -81,7 +81,8 @@ class TestAlgebraicConnectivity(unittest.TestCase):
         ac = AlgebraicConnectivityMaximization()
         ac.set_graph(fixed_edges_list, candidate_edges_list)
         start = timer()
-        selection = ac.select_candidates(nb_candidates_to_choose,
+        is_robot_considered = {0: True}
+        selection = ac.select_candidates(nb_candidates_to_choose, is_robot_considered,
                                          greedy_initialization=False)
         stop = timer()
         self.assertEqual(len(selection), nb_candidates_to_choose)
@@ -102,7 +103,8 @@ class TestAlgebraicConnectivity(unittest.TestCase):
             i = i + 1
         ac = AlgebraicConnectivityMaximization()
         ac.set_graph(fixed_edges_list, candidate_edges_list)
-        is_robot_included = ac.check_graph_disconnections()
+        is_robot_considered = {0: True}
+        is_robot_included = ac.check_graph_disconnections(is_robot_considered)
         ac.compute_offsets(is_robot_included)
         edges = ac.rekey_edges(ac.candidate_edges.values(), is_robot_included)
         w_init = ac.greedy_initialization(nb_candidates_to_choose, edges)
@@ -123,7 +125,8 @@ class TestAlgebraicConnectivity(unittest.TestCase):
         ac.set_graph(fixed_edges_list, candidate_edges_list)
 
         # Solve the initial graph
-        selection0 = ac.select_candidates(nb_candidates_to_choose,
+        is_robot_considered = {0: True}
+        selection0 = ac.select_candidates(nb_candidates_to_choose, is_robot_considered,
                                           greedy_initialization=False)
         self.assertEqual(len(selection0), nb_candidates_to_choose)
 
@@ -133,18 +136,18 @@ class TestAlgebraicConnectivity(unittest.TestCase):
             ac.add_candidate_edge(
                 EdgeInterRobot(0, random.choice(range(nb_poses)), 0,
                                random.choice(range(nb_poses)), 1.0))
-        selection1 = ac.select_candidates(nb_candidates_to_choose,
+        selection1 = ac.select_candidates(nb_candidates_to_choose, is_robot_considered,
                                           greedy_initialization=False)
         self.assertEqual(len(selection1), nb_candidates_to_choose)
 
-        selection2 = ac.select_candidates(nb_candidates_to_choose + 2,
+        selection2 = ac.select_candidates(nb_candidates_to_choose + 2, is_robot_considered,
                                           greedy_initialization=False)
         self.assertEqual(len(selection2), nb_candidates_to_choose + 2)
         for i in range(nb_add_edges):
             ac.add_candidate_edge(
                 EdgeInterRobot(0, random.choice(range(nb_poses)), 0,
                                random.choice(range(nb_poses)), 1.0))
-        selection3 = ac.select_candidates(nb_candidates_to_choose + 2,
+        selection3 = ac.select_candidates(nb_candidates_to_choose + 2, is_robot_considered,
                                           greedy_initialization=False)
         self.assertEqual(len(selection3), nb_candidates_to_choose + 2)
 
@@ -161,7 +164,8 @@ class TestAlgebraicConnectivity(unittest.TestCase):
         ac.set_graph(fixed_edges_list, candidate_edges_list)
 
         # Solve the initial graph
-        selection0 = ac.select_candidates(nb_candidates_to_choose,
+        is_robot_considered = {0: True}
+        selection0 = ac.select_candidates(nb_candidates_to_choose, is_robot_considered,
                                           greedy_initialization=False)
         self.assertEqual(len(selection0), nb_candidates_to_choose)
 
@@ -171,7 +175,7 @@ class TestAlgebraicConnectivity(unittest.TestCase):
             ac.add_fixed_edge(
                 EdgeInterRobot(0, random.choice(range(nb_poses)), 0,
                                random.choice(range(nb_poses)), 1.0))
-        selection1 = ac.select_candidates(nb_candidates_to_choose,
+        selection1 = ac.select_candidates(nb_candidates_to_choose, is_robot_considered,
                                           greedy_initialization=False)
         self.assertEqual(len(selection1), nb_candidates_to_choose)
 
@@ -188,7 +192,8 @@ class TestAlgebraicConnectivity(unittest.TestCase):
         ac.set_graph(fixed_edges_list, candidate_edges_list)
 
         # Solve the initial graph
-        selection0 = ac.select_candidates(nb_candidates_to_choose,
+        is_robot_considered = {0: True}
+        selection0 = ac.select_candidates(nb_candidates_to_choose, is_robot_considered,
                                           greedy_initialization=False)
         self.assertEqual(len(selection0), nb_candidates_to_choose)
         nb_candidates0 = len(ac.candidate_edges)
@@ -216,7 +221,10 @@ class TestAlgebraicConnectivity(unittest.TestCase):
         ac.set_graph(fixed_edges_list, candidate_edges_list)
 
         # Solve the initial graph
-        selection0 = ac.select_candidates(nb_candidates_to_choose,
+        is_robot_considered = {}
+        for i in range(nb_robots):
+            is_robot_considered[i] = True
+        selection0 = ac.select_candidates(nb_candidates_to_choose, is_robot_considered,
                                           greedy_initialization=False)
         self.assertEqual(len(selection0), nb_candidates_to_choose)
         nb_candidates0 = len(ac.candidate_edges)
@@ -250,13 +258,14 @@ class TestAlgebraicConnectivity(unittest.TestCase):
         ac.set_graph(fixed_edges_list, candidate_edges_list)
 
         # Solve the initial graph
-        selection0 = ac.select_candidates(nb_candidates_to_choose,
+        is_robot_considered = {0: True}
+        selection0 = ac.select_candidates(nb_candidates_to_choose, is_robot_considered,
                                           greedy_initialization=False)
         self.assertEqual(len(selection0), nb_candidates_to_choose)
 
         # Swap edge, make sure that none are the same
         ac.candidate_edges_to_fixed(selection0)
-        selection1 = ac.select_candidates(nb_candidates_to_choose,
+        selection1 = ac.select_candidates(nb_candidates_to_choose, is_robot_considered,
                                           greedy_initialization=False)
         for e0 in selection0:
             for e1 in selection1:
@@ -271,6 +280,10 @@ class TestAlgebraicConnectivity(unittest.TestCase):
         nb_poses = 10
         nb_candidate_edges = 10
         nb_robots = 3
+        is_robot_considered = {}
+        for i in range(nb_robots):
+            is_robot_considered[i] = True
+
         fixed_edges_list, candidate_edges_list = build_multi_robot_graph(
             nb_poses, nb_candidate_edges, nb_robots)
 
@@ -278,10 +291,21 @@ class TestAlgebraicConnectivity(unittest.TestCase):
                                                nb_robots=nb_robots)
         ac.set_graph(fixed_edges_list, candidate_edges_list)
 
-        is_robot_included = ac.check_graph_disconnections()
+        is_robot_included = ac.check_graph_disconnections(is_robot_considered)
 
         for r in is_robot_included:
             self.assertTrue(is_robot_included[r])
+
+        is_robot_considered[1] = False
+
+        is_robot_included = ac.check_graph_disconnections(is_robot_considered)
+        for r in is_robot_included:
+            if is_robot_considered[r]:
+                self.assertTrue(is_robot_included[r])
+            else:
+                self.assertFalse(is_robot_included[r])
+
+        is_robot_considered[1] = True
 
         # Robot 0 not connected
         robot_id = 1
@@ -309,7 +333,7 @@ class TestAlgebraicConnectivity(unittest.TestCase):
                                                nb_robots=nb_robots)
         ac.set_graph(fixed_edges_list, candidate_edges_list)
 
-        is_robot_included = ac.check_graph_disconnections()
+        is_robot_included = ac.check_graph_disconnections(is_robot_considered)
 
         for r in is_robot_included:
             if r == 0:
@@ -332,7 +356,10 @@ class TestAlgebraicConnectivity(unittest.TestCase):
                                                nb_robots=nb_robots)
         ac.set_graph(fixed_edges_list, candidate_edges_list)
 
-        is_robot_included = ac.check_graph_disconnections()
+        is_robot_considered = {}
+        for i in range(nb_robots):
+            is_robot_considered[i] = True
+        is_robot_included = ac.check_graph_disconnections(is_robot_considered)
         ac.compute_offsets(is_robot_included)
 
         nb_poses = ac.nb_poses
@@ -361,7 +388,7 @@ class TestAlgebraicConnectivity(unittest.TestCase):
                                                nb_robots=nb_robots)
         ac.set_graph(fixed_edges_list, candidate_edges_list)
 
-        is_robot_included = ac.check_graph_disconnections()
+        is_robot_included = ac.check_graph_disconnections(is_robot_considered)
         ac.compute_offsets(is_robot_included)
         
         self.assertEqual(ac.offsets[0], 0)
@@ -393,7 +420,7 @@ class TestAlgebraicConnectivity(unittest.TestCase):
                                                nb_robots=nb_robots)
         ac.set_graph(fixed_edges_list, candidate_edges_list)
 
-        is_robot_included = ac.check_graph_disconnections()
+        is_robot_included = ac.check_graph_disconnections(is_robot_considered)
         ac.compute_offsets(is_robot_included)
 
         self.assertEqual(ac.offsets[0], 0)
@@ -416,7 +443,10 @@ class TestAlgebraicConnectivity(unittest.TestCase):
                                                nb_robots=nb_robots)
         ac.set_graph(fixed_edges_list, candidate_edges_list)
 
-        is_robot_included = ac.check_graph_disconnections()
+        is_robot_considered = {}
+        for i in range(nb_robots):
+            is_robot_considered[i] = True
+        is_robot_included = ac.check_graph_disconnections(is_robot_considered)
 
         ac.compute_offsets(is_robot_included)
         rekeyed_fixed_edges = ac.rekey_edges(ac.fixed_edges, is_robot_included)
@@ -455,8 +485,12 @@ class TestAlgebraicConnectivity(unittest.TestCase):
                                                nb_robots=nb_robots)
         ac.set_graph(fixed_edges_list, candidate_edges_list)
 
+        is_robot_considered = {}
+        for i in range(nb_robots):
+            is_robot_considered[i] = True
+
         # Solve the graph
-        selection = ac.select_candidates(nb_candidates_to_choose,
+        selection = ac.select_candidates(nb_candidates_to_choose, is_robot_considered,
                                          greedy_initialization=False)
         self.assertEqual(len(selection), nb_candidates_to_choose)
         for s in selection:
@@ -485,8 +519,12 @@ class TestAlgebraicConnectivity(unittest.TestCase):
                                                nb_robots=nb_robots)
         ac.set_graph(fixed_edges_list, candidate_edges_list)
 
+        is_robot_considered = {}
+        for i in range(nb_robots):
+            is_robot_considered[i] = True
+
         # Solve the graph
-        selection = ac.select_candidates(nb_candidates_to_choose,
+        selection = ac.select_candidates(nb_candidates_to_choose, is_robot_considered,
                                          greedy_initialization=False)
         self.assertEqual(len(selection), nb_candidates_to_choose)
 
@@ -500,6 +538,10 @@ class TestAlgebraicConnectivity(unittest.TestCase):
         nb_robots = 3
         nb_candidates_to_choose = 10
 
+        is_robot_considered = {}
+        for i in range(nb_robots):
+            is_robot_considered[i] = True
+
         # Should at least differ half the time
         nb_tests = 10
         nb_diff = 0
@@ -512,7 +554,7 @@ class TestAlgebraicConnectivity(unittest.TestCase):
             ac.set_graph(fixed_edges_list, candidate_edges_list)
 
             # Check that the solution differs from the greedy initial guess
-            is_robot_included = ac.check_graph_disconnections()
+            is_robot_included = ac.check_graph_disconnections(is_robot_considered)
             ac.compute_offsets(is_robot_included)
             rekeyed_fixed_edges = ac.rekey_edges(ac.fixed_edges,
                                                 is_robot_included)
