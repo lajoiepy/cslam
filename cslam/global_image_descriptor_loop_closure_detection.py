@@ -153,6 +153,7 @@ class GlobalImageDescriptorLoopClosureDetection(object):
         for match in selection:
             # Call C++ code to send publish local descriptors
             req = SendLocalImageDescriptors.Request()
+            
             req.image_id = match.robot0_image_id
             req.receptor_robot_id = match.robot1_id
             req.receptor_image_id = match.robot1_image_id

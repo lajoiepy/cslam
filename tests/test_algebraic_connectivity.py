@@ -196,6 +196,14 @@ class TestAlgebraicConnectivity(unittest.TestCase):
         selection0 = ac.select_candidates(nb_candidates_to_choose, is_robot_considered,
                                           greedy_initialization=False)
         self.assertEqual(len(selection0), nb_candidates_to_choose)
+
+        test = set()
+        for e in selection0:
+            self.assertIn(e, list(ac.candidate_edges.values()))
+            test.add(e)
+        # Check that there are no duplicates
+        self.assertEqual(len(test), nb_candidates_to_choose)
+
         nb_candidates0 = len(ac.candidate_edges)
 
         # Remove edges
@@ -227,6 +235,10 @@ class TestAlgebraicConnectivity(unittest.TestCase):
         selection0 = ac.select_candidates(nb_candidates_to_choose, is_robot_considered,
                                           greedy_initialization=False)
         self.assertEqual(len(selection0), nb_candidates_to_choose)
+
+        for e in selection0:
+            self.assertIn(e, list(ac.candidate_edges.values()))
+
         nb_candidates0 = len(ac.candidate_edges)
 
         # Remove edges
@@ -263,10 +275,20 @@ class TestAlgebraicConnectivity(unittest.TestCase):
                                           greedy_initialization=False)
         self.assertEqual(len(selection0), nb_candidates_to_choose)
 
+        for e in selection0:
+            self.assertIn(e, list(ac.candidate_edges.values()))
+
         # Swap edge, make sure that none are the same
         ac.candidate_edges_to_fixed(selection0)
+        for e in selection0:
+            self.assertNotIn(e, list(ac.candidate_edges.values()))
+
         selection1 = ac.select_candidates(nb_candidates_to_choose, is_robot_considered,
                                           greedy_initialization=False)
+    
+        for e in selection1:
+            self.assertIn(e, list(ac.candidate_edges.values()))
+
         for e0 in selection0:
             for e1 in selection1:
                 self.assertFalse(e0.robot0_image_id == e1.robot0_image_id
@@ -462,7 +484,7 @@ class TestAlgebraicConnectivity(unittest.TestCase):
             self.assertEqual(r.i, e.robot0_image_id + e.robot0_id * 10)
             self.assertEqual(r.j, e.robot1_image_id + e.robot1_id * 10)
 
-        recovered_edges = ac.recover_inter_robot_edges(rekeyed_candidate_edges)
+        recovered_edges = ac.recover_inter_robot_edges(rekeyed_candidate_edges, is_robot_included)
         for i in range(len(values)):
             e = values[i]
             r = recovered_edges[i]

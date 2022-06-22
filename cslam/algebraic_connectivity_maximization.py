@@ -255,11 +255,12 @@ class AlgebraicConnectivityMaximization(object):
                          self.fixed_weight))
         return odom_edges
 
-    def recover_inter_robot_edges(self, edges):
+    def recover_inter_robot_edges(self, edges, is_robot_included):
         """Recover IDs from before rekey_edges()
 
         Args:
             edges (list(Edge)): rekeyed edges
+            is_robot_included (dict(int, bool)): indicates if a robot is included
 
         Returns:
             list(EdgeInterRobot): edges
@@ -268,12 +269,12 @@ class AlgebraicConnectivityMaximization(object):
         for c in range(len(edges)):
             robot0_id = 0
             robot1_id = 0
-            for o in range(len(self.offsets)):
+            for o in self.offsets:
                 if o != 0:
-                    if edges[c].i >= self.offsets[o]:
-                        robot0_id = robot0_id + 1
-                    if edges[c].j >= self.offsets[o]:
-                        robot1_id = robot1_id + 1
+                    if is_robot_included[o] and edges[c].i >= self.offsets[o]:
+                        robot0_id = o
+                    if is_robot_included[o] and edges[c].j >= self.offsets[o]:
+                        robot1_id = o
             robot0_image_id = edges[c].i - self.offsets[robot0_id]
             robot1_image_id = edges[c].j - self.offsets[robot1_id]
             recovered_inter_robot_edges.append(
@@ -412,7 +413,7 @@ class AlgebraicConnectivityMaximization(object):
                 for i in np.nonzero(result.astype(int))[0]
             ]
             # Return selected multi-robot edges
-            return self.recover_inter_robot_edges(selected_edges)
+            return self.recover_inter_robot_edges(selected_edges, is_robot_included)
         else:
             return []
 
