@@ -15,7 +15,7 @@
     similarity_loc: 1.0
     similarity_scale: 0.25
     # Global descriptor params
-    global_descriptor_topic: "/global_descriptor"
+    global_descriptor_topic: "/global_descriptors"
     global_descriptor_technique: "netvlad"
     nn_checkpoint: "/home/lajoiepy/Documents/projects/SelfSupervisedPlaceRecognition/pytorch-NetVlad/runs/Nov24_23-21-16_vgg16_netvlad-Pit-Baseline/checkpoints/model_best.pth.tar"
     pca_checkpoint: "/home/lajoiepy/Documents/projects/SelfSupervisedPlaceRecognition/pytorch-NetVlad/pca.pkl"

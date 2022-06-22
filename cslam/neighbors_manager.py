@@ -30,12 +30,14 @@ class NeighborManager():
         """
         from_kf_id = latest_local_id
         for i in range(self.nb_robots):
-            if self.neighbors_monitors[i].is_alive():
-                from_kf_id = min(self.neighbors_monitors[i].last_keyframe_sent, from_kf_id)
+            if i != self.robot_id:
+                if self.neighbors_monitors[i].is_alive():
+                    from_kf_id = min(self.neighbors_monitors[i].last_keyframe_sent, from_kf_id)
         
         for i in range(self.nb_robots):
-            if self.neighbors_monitors[i].is_alive():
-                self.neighbors_monitors[id].last_keyframe_sent = from_kf_id
+            if i != self.robot_id:
+                if self.neighbors_monitors[i].is_alive():
+                    self.neighbors_monitors[i].last_keyframe_sent = from_kf_id
 
         return from_kf_id
 
@@ -72,7 +74,7 @@ class NeighborManager():
             range: indexes in list to process
         """
         if self.neighbors_monitors[other_robot_id].last_keyframe_received >= end_id:
-            list_index_range = range()
+            list_index_range = range(0)
         else:
             s = max(0, self.neighbors_monitors[other_robot_id].last_keyframe_received - start_id)
             list_index_range = range(s, end_id-start_id+1)

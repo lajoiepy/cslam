@@ -121,7 +121,9 @@ class GlobalImageDescriptorLoopClosureDetection(object):
             msgs = list_chunks(self.global_descriptors_buffer, from_kf_id, self.params['global_descriptor_publication_max_elems_per_msg'])
 
             for m in msgs:
-                self.global_descriptor_publisher.publish(m)
+                global_descriptors = GlobalImageDescriptors()
+                global_descriptors.descriptors = m
+                self.global_descriptor_publisher.publish(global_descriptors)
             
             self.delete_useless_descriptors()
 
@@ -175,12 +177,12 @@ class GlobalImageDescriptorLoopClosureDetection(object):
         """Callback for descriptors received from other robots.
 
         Args:
-            msg (cslam_loop_detection_interfaces::msg::GlobalImageDescriptors): descriptor
+            msg (cslam_loop_detection_interfaces::msg::GlobalImageDescriptors): descriptors
         """
-        unknown_range = self.neighbor_manager.get_unknown_range(msg[0].image_id, msg[-1].image_id, msg[0].robot_id)
-        for i in unknown_range:
-            if msg[i].robot_id != self.robot_id:
-                self.lcm.add_other_robot_keyframe(msg[i])
+        if msg.descriptors[0].robot_id != self.robot_id:
+            unknown_range = self.neighbor_manager.get_unknown_range(msg.descriptors[0].image_id, msg.descriptors[-1].image_id, msg.descriptors[0].robot_id)
+            for i in unknown_range:
+                self.lcm.add_other_robot_keyframe(msg.descriptors[i])
 
     def inter_robot_loop_closure_msg_to_edge(self, msg):
         """ Convert a inter-robot loop closure to an edge 
