@@ -39,7 +39,11 @@ private:
 
   unsigned int nb_robots_, robot_id_;
 
+  int map_manager_process_period_ms_;
+
   DataHandlerType local_data_handler_;
+
+  rclcpp::TimerBase::SharedPtr process_timer_;
 };
 
 // List possible data types for C++ linker

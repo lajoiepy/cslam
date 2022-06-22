@@ -147,6 +147,18 @@ ament_target_dependencies(map_manager
 set_target_properties(map_manager 
   PROPERTIES OUTPUT_NAME "map_manager")
 
+add_executable(pose_graph_manager 
+  src/back_end/pose_graph_manager.cpp
+  src/back_end/pose_graph_manager_node.cpp)
+add_dependencies(pose_graph_manager  
+pose_graph_manager
+  ${${PROJECT_NAME}_EXPORTED_TARGETS})
+ament_target_dependencies(pose_graph_manager 
+  ${Libraries} 
+  cslam_common_interfaces cslam_loop_detection_interfaces)
+set_target_properties(pose_graph_manager 
+  PROPERTIES OUTPUT_NAME "pose_graph_manager")
+
 # Only required when using messages built from the same package
 # https://index.ros.org/doc/ros2/Tutorials/Rosidl-Tutorial/
 get_default_rmw_implementation(rmw_implementation)
@@ -168,7 +180,7 @@ install(DIRECTORY
 
 # Install nodes
 install(
-  TARGETS map_manager
+  TARGETS map_manager pose_graph_manager
   DESTINATION lib/${PROJECT_NAME}
 )
 

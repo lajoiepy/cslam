@@ -1,8 +1,7 @@
 #include "cslam/front_end/map_manager.h"
 
 /**
- * @brief Node to interface with RTAB-map library for keyframe and 3D features
- * handling
+ * @brief Node to manage the sensor data and registration
  *
  * @param argc
  * @param argv
@@ -18,17 +17,11 @@ int main(int argc, char **argv) {
   node->declare_parameter<int>("max_keyframe_queue_size", 10);
   node->declare_parameter<int>("nb_robots", 1);
   node->declare_parameter<int>("robot_id", 0);
-  
+  node->declare_parameter<int>("map_manager_process_period_ms", 100);
 
   auto lcd = std::make_shared<MapManager<StereoHandler>>(node);
 
-  rclcpp::Rate rate(10);
-
-  while (rclcpp::ok()) {
-    lcd->process_new_keyframes();
-    rclcpp::spin_some(node);
-    rate.sleep();
-  }
+  rclcpp::spin(node);
 
   rclcpp::shutdown();
 
