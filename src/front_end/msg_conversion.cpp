@@ -25,7 +25,7 @@ ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#include "rtabmap_ros/MsgConversion.h"
+#include "cslam/front_end/msg_conversion.h"
 
 #include <opencv2/highgui/highgui.hpp>
 #include <zlib.h>

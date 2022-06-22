@@ -5,7 +5,7 @@
 
 #include <chrono>
 
-#include "cslam/StereoHandler.h"
+#include "cslam/front_end/stereo_handler.h"
 
 /**
  * @brief Loop Closure Detection Management

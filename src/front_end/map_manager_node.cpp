@@ -1,4 +1,4 @@
-#include "cslam/MapManager.h"
+#include "cslam/front_end/map_manager.h"
 
 /**
  * @brief Node to interface with RTAB-map library for keyframe and 3D features

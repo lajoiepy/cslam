@@ -7,8 +7,6 @@
 #include <rtabmap_ros/srv/add_link.hpp>
 #include <rtabmap_ros/srv/get_map.hpp>
 
-#include <rtabmap_ros/MsgConversion.h>
-
 #include <rtabmap/core/Compression.h>
 #include <rtabmap/core/Memory.h>
 #include <rtabmap/core/RegistrationVis.h>
@@ -42,6 +40,8 @@
 #include <thread>
 
 #include <memory>
+
+#include "cslam/front_end/msg_conversion.h"
 
 class StereoHandler {
 public:

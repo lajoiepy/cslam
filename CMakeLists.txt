@@ -134,10 +134,10 @@ find_package(cslam_common_interfaces REQUIRED)
 find_package(cslam_loop_detection_interfaces REQUIRED)
 
 add_executable(map_manager 
-  src/MapManager.cpp 
-  src/MapManagerNode.cpp 
-  src/StereoHandler.cpp 
-  src/MsgConversion.cpp)
+  src/front_end/map_manager.cpp 
+  src/front_end/map_manager_node.cpp 
+  src/front_end/stereo_handler.cpp 
+  src/front_end/msg_conversion.cpp)
 add_dependencies(map_manager  
   map_manager
   ${${PROJECT_NAME}_EXPORTED_TARGETS})
