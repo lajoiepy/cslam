@@ -18,7 +18,7 @@
 #include <rtabmap/utilite/UStl.h>
 
 #include <message_filters/subscriber.h>
-#include <message_filters/sync_policies/exact_time.h>
+#include <message_filters/sync_policies/approximate_time.h>
 #include <message_filters/synchronizer.h>
 #include <message_filters/time_synchronizer.h>
 
@@ -35,6 +35,7 @@
 #include <cslam_loop_detection_interfaces/msg/local_image_descriptors.hpp>
 #include <cslam_loop_detection_interfaces/srv/send_local_image_descriptors.hpp>
 #include <cslam_loop_detection_interfaces/msg/inter_robot_loop_closure.hpp>
+#include <nav_msgs/msg/odometry.hpp>
 #include <deque>
 #include <functional>
 #include <thread>
@@ -126,15 +127,17 @@ public:
    * @param imageRectRight 
    * @param cameraInfoLeft 
    * @param cameraInfoRight 
+   * @param odom 
    */
   void stereo_callback(
 			const sensor_msgs::msg::Image::ConstSharedPtr imageRectLeft,
 			const sensor_msgs::msg::Image::ConstSharedPtr imageRectRight,
 			const sensor_msgs::msg::CameraInfo::ConstSharedPtr cameraInfoLeft,
-			const sensor_msgs::msg::CameraInfo::ConstSharedPtr cameraInfoRight);
+			const sensor_msgs::msg::CameraInfo::ConstSharedPtr cameraInfoRight,
+            const nav_msgs::msg::Odometry::ConstSharedPtr odom);
 
 private:
-
+  // TODO: document
   std::deque<std::shared_ptr<rtabmap::SensorData>> received_data_queue_;
   std::map<int, std::shared_ptr<rtabmap::SensorData>> local_descriptors_map_;
 
@@ -142,12 +145,13 @@ private:
 
   unsigned int min_inliers_, nb_robots_, robot_id_, max_queue_size_, nb_local_frames_;
 
-  image_transport::SubscriberFilter imageRectLeft_;
-  image_transport::SubscriberFilter imageRectRight_;
-  message_filters::Subscriber<sensor_msgs::msg::CameraInfo> cameraInfoLeft_;
-  message_filters::Subscriber<sensor_msgs::msg::CameraInfo> cameraInfoRight_;
-  typedef message_filters::sync_policies::ExactTime<sensor_msgs::msg::Image, sensor_msgs::msg::Image, sensor_msgs::msg::CameraInfo, sensor_msgs::msg::CameraInfo> ExactSyncPolicy;
-  message_filters::Synchronizer<ExactSyncPolicy> * exactSync_;
+  image_transport::SubscriberFilter image_rect_left_;
+  image_transport::SubscriberFilter image_rect_right_;
+  message_filters::Subscriber<sensor_msgs::msg::CameraInfo> camera_info_left_;
+  message_filters::Subscriber<sensor_msgs::msg::CameraInfo> camera_info_right_;
+  message_filters::Subscriber<nav_msgs::msg::Odometry>  odometry_;
+  typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::msg::Image, sensor_msgs::msg::Image, sensor_msgs::msg::CameraInfo, sensor_msgs::msg::CameraInfo, nav_msgs::msg::Odometry> SyncPolicy;
+  message_filters::Synchronizer<SyncPolicy> * sync_policy_;
 
   rclcpp::Service<
       cslam_loop_detection_interfaces::srv::SendLocalImageDescriptors>::

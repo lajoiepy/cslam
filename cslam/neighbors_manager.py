@@ -1,14 +1,14 @@
 from cslam.neighbor_monitor import NeighborMonitor
 
 class NeighborManager():
-    def __init__(self, node, robot_id, nb_robots, max_delay_sec):
+    def __init__(self, node, robot_id, nb_robots, is_enabled,  max_delay_sec):
         self.node = node
         self.robot_id = robot_id
         self.nb_robots = nb_robots
         self.neighbors_monitors = {}
         for id in range(self.nb_robots):
             if id != self.robot_id:
-                self.neighbors_monitors[id] = NeighborMonitor(self.node, id, max_delay_sec)
+                self.neighbors_monitors[id] = NeighborMonitor(self.node, id, is_enabled, max_delay_sec)
 
     def check_neighbors_in_range(self):
         """Check which neighbors are in range
@@ -28,16 +28,20 @@ class NeighborManager():
         """This function finds the range of descriptors to send
         so that we do not loose info
         """
+        self.node.get_logger().info('Select ' + str(self.robot_id) + ' =') # TODO: remove
+        self.node.get_logger().info(str(latest_local_id))       
+
         from_kf_id = latest_local_id
         for i in range(self.nb_robots):
             if i != self.robot_id:
                 if self.neighbors_monitors[i].is_alive():
                     from_kf_id = min(self.neighbors_monitors[i].last_keyframe_sent, from_kf_id)
+                    self.node.get_logger().info("Robot " + str(i) + " | "+str(self.neighbors_monitors[i].last_keyframe_sent))    
         
         for i in range(self.nb_robots):
             if i != self.robot_id:
                 if self.neighbors_monitors[i].is_alive():
-                    self.neighbors_monitors[i].last_keyframe_sent = from_kf_id
+                    self.neighbors_monitors[i].last_keyframe_sent = latest_local_id
 
         return from_kf_id
 

@@ -19,7 +19,7 @@ import rclpy
 from rclpy.node import Node
 
 from cslam.neighbors_manager import NeighborManager
-from test_msgs.msg import Empty as EmptyMsg
+from std_msgs.msg import String
 from cslam.utils.utils import list_chunks
 
 class GlobalImageDescriptorLoopClosureDetection(object):
@@ -36,6 +36,7 @@ class GlobalImageDescriptorLoopClosureDetection(object):
         self.node = node
         self.robot_id = self.params['robot_id']
         self.nb_robots = self.params['nb_robots']
+        self.enable_neighbor_monitoring = self.params['enable_neighbor_monitoring']
 
         self.lcm = LoopClosureSparseMatching(params)
         self.loop_closure_budget = self.params["loop_closure_budget"]
@@ -72,19 +73,25 @@ class GlobalImageDescriptorLoopClosureDetection(object):
         self.loop_closure_list = []
 
         # Listen for changes in node liveliness
-        self.alive_publisher = self.node.create_publisher(EmptyMsg, 'alive', 10)
-        self.neighbor_manager = NeighborManager(self.node, self.robot_id, self.nb_robots, self.params['max_alive_delay_sec'])
+        self.alive_publisher = self.node.create_publisher(String, '/r' + str(self.robot_id) + '_' + 'alive', 10)
+        self.neighbor_manager = NeighborManager(self.node, self.robot_id, self.nb_robots, self.enable_neighbor_monitoring, self.params['max_alive_delay_sec'])
 
+        self.node.get_logger().info('Create timer=')# TODO: remove
+        self.node.get_logger().info(str(self.params['alive_check_period_sec']))
         self.alive_timer = self.node.create_timer(self.params['alive_check_period_sec'], self.alive_timer_callback)
 
         self.global_descriptors_buffer = []
-        self.global_descriptors_timer = self.node.create_timer(self.params['global_descriptor_publication_period'], self.global_descriptors_timer_callback)
+        self.global_descriptors_timer = self.node.create_timer(self.params['global_descriptor_publication_period_sec'], self.global_descriptors_timer_callback)
 
 
     def alive_timer_callback(self):
-        """Publish alive messagee periodically
+        """Publish alive message periodically
         """
-        self.alive_publisher.publish(EmptyMsg())
+        self.node.get_logger().info('Alive ' + str(self.robot_id)) # TODO: remove
+        msg = String()
+        msg.data = 'Hello World'
+        self.alive_publisher.publish(msg)
+        self.node.get_logger().info('After Alive ' + str(self.robot_id))
 
     def add_keyframe(self, embedding, id):
         """ Add keyframe to matching list
@@ -102,6 +109,9 @@ class GlobalImageDescriptorLoopClosureDetection(object):
         msg.robot_id = self.robot_id
         msg.descriptor = embedding.tolist()
         self.global_descriptors_buffer.append(msg)
+        self.node.get_logger().info('Add gdesc=')
+        self.node.get_logger().info(str(self.robot_id))
+        self.node.get_logger().info(str(id))
 
     def delete_useless_descriptors(self):
         """Deletes global descriptors
@@ -109,7 +119,7 @@ class GlobalImageDescriptorLoopClosureDetection(object):
            some descriptors
         """
         from_kf_id = self.neighbor_manager.useless_descriptors(self.global_descriptors_buffer[-1].image_id)
-        if from_kf_id > self.global_descriptors_buffer[0].image_id:
+        if from_kf_id >= self.global_descriptors_buffer[0].image_id:
             self.global_descriptors_buffer = [e for e in self.global_descriptors_buffer if e.image_id > from_kf_id]
 
     def global_descriptors_timer_callback(self):
@@ -117,10 +127,18 @@ class GlobalImageDescriptorLoopClosureDetection(object):
         """
         if len(self.global_descriptors_buffer) > 0:
             from_kf_id = self.neighbor_manager.select_from_which_kf_to_send(self.global_descriptors_buffer[-1].image_id)
+            self.node.get_logger().info('Test=')
+            self.node.get_logger().info(str(from_kf_id))
+            self.node.get_logger().info(str(self.global_descriptors_buffer[0].image_id))# TODO: remove
+            self.node.get_logger().info(str(self.global_descriptors_buffer[-1].image_id))# TODO: remove
+            self.node.get_logger().info(str(len(self.global_descriptors_buffer)))# TODO: remove
 
-            msgs = list_chunks(self.global_descriptors_buffer, from_kf_id, self.params['global_descriptor_publication_max_elems_per_msg'])
+            msgs = list_chunks(self.global_descriptors_buffer, from_kf_id - self.global_descriptors_buffer[0].image_id, self.params['global_descriptor_publication_max_elems_per_msg'])
 
+            self.node.get_logger().info('Msgs=')# TODO: remove
             for m in msgs:
+                for n in m:# TODO: remove
+                    self.node.get_logger().info(str(n.image_id))# TODO: remove
                 global_descriptors = GlobalImageDescriptors()
                 global_descriptors.descriptors = m
                 self.global_descriptor_publisher.publish(global_descriptors)

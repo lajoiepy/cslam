@@ -35,6 +35,7 @@ public:
 
 private:
 
+  // TODO: document
   std::shared_ptr<rclcpp::Node> node_;
 
   unsigned int nb_robots_, robot_id_;

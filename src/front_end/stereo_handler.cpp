@@ -8,6 +8,7 @@ StereoHandler::StereoHandler(std::shared_ptr<rclcpp::Node> &node): node_(node){
     node->declare_parameter<std::string>("right_image_topic", "right/image_rect");
     node->declare_parameter<std::string>("left_camera_info_topic", "left/camera_info");
     node->declare_parameter<std::string>("right_camera_info_topic", "right/camera_info");
+    node->declare_parameter<std::string>("odom_topic", "odom");
     node_->get_parameter("max_keyframe_queue_size", max_queue_size_);
 
     nb_local_frames_ = 0;
@@ -15,13 +16,14 @@ StereoHandler::StereoHandler(std::shared_ptr<rclcpp::Node> &node): node_(node){
 
     // Subscriber for stereo images
     int queue_size = 10; // TODO: param
-    imageRectLeft_.subscribe(node_.get(), node_->get_parameter("left_image_topic").as_string(), "raw", rclcpp::QoS(queue_size).reliability((rmw_qos_reliability_policy_t)2).get_rmw_qos_profile());
-    imageRectRight_.subscribe(node_.get(), node_->get_parameter("right_image_topic").as_string(), "raw", rclcpp::QoS(queue_size).reliability((rmw_qos_reliability_policy_t)2).get_rmw_qos_profile());
-    cameraInfoLeft_.subscribe(node_.get(), node_->get_parameter("left_camera_info_topic").as_string(), rclcpp::QoS(queue_size).reliability((rmw_qos_reliability_policy_t)2).get_rmw_qos_profile());
-    cameraInfoRight_.subscribe(node_.get(), node_->get_parameter("right_camera_info_topic").as_string(), rclcpp::QoS(queue_size).reliability((rmw_qos_reliability_policy_t)2).get_rmw_qos_profile());
+    image_rect_left_.subscribe(node_.get(), node_->get_parameter("left_image_topic").as_string(), "raw", rclcpp::QoS(queue_size).reliability((rmw_qos_reliability_policy_t)2).get_rmw_qos_profile());
+    image_rect_right_.subscribe(node_.get(), node_->get_parameter("right_image_topic").as_string(), "raw", rclcpp::QoS(queue_size).reliability((rmw_qos_reliability_policy_t)2).get_rmw_qos_profile());
+    camera_info_left_.subscribe(node_.get(), node_->get_parameter("left_camera_info_topic").as_string(), rclcpp::QoS(queue_size).reliability((rmw_qos_reliability_policy_t)2).get_rmw_qos_profile());
+    camera_info_right_.subscribe(node_.get(), node_->get_parameter("right_camera_info_topic").as_string(), rclcpp::QoS(queue_size).reliability((rmw_qos_reliability_policy_t)2).get_rmw_qos_profile());
+    odometry_.subscribe(node_.get(), node_->get_parameter("odom_topic").as_string(), rclcpp::QoS(queue_size).reliability((rmw_qos_reliability_policy_t)2).get_rmw_qos_profile());
 
-    exactSync_ = new message_filters::Synchronizer<ExactSyncPolicy>(ExactSyncPolicy(queue_size), imageRectLeft_, imageRectRight_, cameraInfoLeft_, cameraInfoRight_);
-    exactSync_->registerCallback(std::bind(&StereoHandler::stereo_callback, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4));
+    sync_policy_ = new message_filters::Synchronizer<SyncPolicy>(SyncPolicy(queue_size), image_rect_left_, image_rect_right_, camera_info_left_, camera_info_right_, odometry_);
+    sync_policy_->registerCallback(std::bind(&StereoHandler::stereo_callback, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4, std::placeholders::_5));
     
     // Service to extract and publish local image descriptors to another robot
     send_local_descriptors_srv_ = node_->create_service<
@@ -83,7 +85,8 @@ void StereoHandler::stereo_callback(
 		const sensor_msgs::msg::Image::ConstSharedPtr imageRectLeft,
 		const sensor_msgs::msg::Image::ConstSharedPtr imageRectRight,
 		const sensor_msgs::msg::CameraInfo::ConstSharedPtr cameraInfoLeft,
-		const sensor_msgs::msg::CameraInfo::ConstSharedPtr cameraInfoRight)
+		const sensor_msgs::msg::CameraInfo::ConstSharedPtr cameraInfoRight,
+        const nav_msgs::msg::Odometry::ConstSharedPtr odom)
 {
     if(!(imageRectLeft->encoding.compare(sensor_msgs::image_encodings::TYPE_8UC1) ==0 ||
             imageRectLeft->encoding.compare(sensor_msgs::image_encodings::MONO8) ==0 ||

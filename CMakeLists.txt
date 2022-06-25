@@ -33,7 +33,6 @@ find_package(nav2_msgs REQUIRED)
 find_package(stereo_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(visualization_msgs REQUIRED)
-find_package(test_msgs REQUIRED)
 find_package(image_transport REQUIRED)
 find_package(tf2 REQUIRED)
 find_package(tf2_eigen REQUIRED)
@@ -62,6 +61,10 @@ find_package(octomap_msgs)
 #find_package(fiducial_msgs)
 
 find_package(RTABMap 0.20.18 REQUIRED)
+
+# Find GTSAM
+find_package(GTSAM CONFIG REQUIRED)
+message("GTSAM Libraries: ${GTSAM_LIBRARIES}")
 
 # kinetic issue, rtabmap now requires at least c++11
 include(CheckCXXCompilerFlag)
@@ -98,7 +101,9 @@ include_directories(
   ${RTABMap_INCLUDE_DIRS}
   ${rtabmap_ros_INCLUDE_DIRS}
   ${PCL_INCLUDE_DIRS}
+  ${GTSAM_INCLUDE_DIR}
 )
+link_directories(${GTSAM_LIBRARY_DIRS})
 
 # libraries
 SET(Libraries
@@ -119,7 +124,6 @@ SET(Libraries
    message_filters
    class_loader
    visualization_msgs
-   test_msgs
    image_geometry
    stereo_msgs
    tf2_geometry_msgs
@@ -128,6 +132,7 @@ SET(Libraries
    perception_pcl
    RTABMap
    rtabmap_ros
+   #gtsam
 )
 
 find_package(cslam_common_interfaces REQUIRED)
