@@ -32,6 +32,7 @@
 
 #include <chrono>
 #include <cslam_common_interfaces/msg/keyframe_rgb.hpp>
+#include <cslam_common_interfaces/msg/keyframe_odom.hpp>
 #include <cslam_loop_detection_interfaces/msg/local_image_descriptors.hpp>
 #include <cslam_loop_detection_interfaces/srv/send_local_image_descriptors.hpp>
 #include <cslam_loop_detection_interfaces/msg/inter_robot_loop_closure.hpp>
@@ -114,14 +115,15 @@ public:
 
   /**
    * @brief Function to send the image to the python node
+   * TODO: Move to parent class
    *
    * @param data keyframe data
    * @param id keyframe id
    */
-  void send_keyframe(const rtabmap::SensorData &data, const int id);
+  void send_keyframe(const rtabmap::SensorData &data,  const nav_msgs::msg::Odometry::ConstSharedPtr odom, const int id);
 
   /**
-   * @brief Call back receiving sync data from camera
+   * @brief Callback receiving sync data from camera
    * 
    * @param imageRectLeft 
    * @param imageRectRight 
@@ -138,7 +140,7 @@ public:
 
 private:
   // TODO: document
-  std::deque<std::shared_ptr<rtabmap::SensorData>> received_data_queue_;
+  std::deque<std::pair<std::shared_ptr<rtabmap::SensorData>, nav_msgs::msg::Odometry::ConstSharedPtr>> received_data_queue_;
   std::map<int, std::shared_ptr<rtabmap::SensorData>> local_descriptors_map_;
 
   std::shared_ptr<rclcpp::Node> node_;
@@ -163,6 +165,9 @@ private:
 
   rclcpp::Publisher<cslam_common_interfaces::msg::KeyframeRGB>::SharedPtr
       keyframe_data_publisher_;
+
+  rclcpp::Publisher<cslam_common_interfaces::msg::KeyframeOdom>::SharedPtr
+      keyframe_odom_publisher_;
 
   rclcpp::Subscription<
       cslam_loop_detection_interfaces::msg::LocalImageDescriptors>::SharedPtr

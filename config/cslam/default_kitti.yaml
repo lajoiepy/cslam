@@ -31,3 +31,4 @@
     global_descriptor_publication_period_sec: 1.0
     global_descriptor_publication_max_elems_per_msg: 10
     intra_robot_loop_closure_detection: false
+    pose_graph_manager_process_period_ms: 500

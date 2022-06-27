@@ -43,6 +43,11 @@ StereoHandler::StereoHandler(std::shared_ptr<rclcpp::Node> &node): node_(node){
         node_->create_publisher<cslam_common_interfaces::msg::KeyframeRGB>(
             "keyframe_data", 100);
 
+    // Publisher for odometry with ID
+    keyframe_odom_publisher_ =
+        node_->create_publisher<cslam_common_interfaces::msg::KeyframeOdom>(
+            "keyframe_odom", 100);
+
     // Publishers to other robots local descriptors subscribers
     for (unsigned int id = 0; id < nb_robots_; id++) {
         if (id != robot_id_) {
@@ -217,7 +222,7 @@ void StereoHandler::stereo_callback(
                 nb_local_frames_,
                 rtabmap_ros::timestampFromROS(stamp));
             
-        received_data_queue_.push_back(data);
+        received_data_queue_.push_back(std::make_pair(data, odom));
         if (received_data_queue_.size() > max_queue_size_) {
             // Remove the oldest keyframes if we exceed the maximum size
             received_data_queue_.pop_front();
@@ -289,17 +294,17 @@ void StereoHandler::process_new_keyframe(){
         received_data_queue_.pop_front();
         // TODO: keyframe heuristic
 
-        if (sensor_data->isValid() &&
-            local_descriptors_map_.find(sensor_data->id()) == local_descriptors_map_.end()) {
+        if (sensor_data.first->isValid() &&
+            local_descriptors_map_.find(sensor_data.first->id()) == local_descriptors_map_.end()) {
             cv::Mat rgb;
             // rtabmap::LaserScan scan;
-            sensor_data->uncompressDataConst(&rgb, 0);
+            sensor_data.first->uncompressDataConst(&rgb, 0);
             // pcl::PointCloud<pcl::PointXYZ>::Ptr cloud =
             // rtabmap::util3d::laserScanToPointCloud(scan, scan.localTransform());
             // Send keyframe for loop detection
-            send_keyframe(rgb, sensor_data->id());
+            send_keyframe(rgb, sensor_data.second, sensor_data.first->id());
 
-            compute_local_descriptors(sensor_data);
+            compute_local_descriptors(sensor_data.first);
         }
     }
 }
@@ -391,6 +396,7 @@ void StereoHandler::receive_local_image_descriptors(
 }
 
 void StereoHandler::send_keyframe(const rtabmap::SensorData &data,
+                                  const nav_msgs::msg::Odometry::ConstSharedPtr odom,
                                   const int id) {
   // Image message
   std_msgs::msg::Header header;
@@ -402,4 +408,10 @@ void StereoHandler::send_keyframe(const rtabmap::SensorData &data,
   keyframe_msg.id = id;
 
   keyframe_data_publisher_->publish(keyframe_msg);
+
+  cslam_common_interfaces::msg::KeyframeOdom odom_msg;
+  odom_msg.id = id;
+  odom_msg.odom = *odom;
+  keyframe_odom_publisher_->publish(odom_msg);
+
 }

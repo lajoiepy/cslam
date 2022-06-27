@@ -10,11 +10,9 @@ from launch_ros.actions import Node
 
 
 def launch_setup(context, *args, **kwargs):    
-    loop_detection_node_name = 'r' + LaunchConfiguration('robot_id').perform(context) + '_cslam_loop_closure_detection'
-
     loop_detection_node = Node(package='cslam',
             executable='loop_closure_detection.py',
-            name=loop_detection_node_name,
+            name='cslam_loop_closure_detection',
             parameters=[
                 LaunchConfiguration('config'), {
                     "robot_id": LaunchConfiguration('robot_id'),
@@ -23,11 +21,21 @@ def launch_setup(context, *args, **kwargs):
             ],
             namespace=LaunchConfiguration('namespace'))
 
-    map_manager_node_name = 'r' + LaunchConfiguration('robot_id').perform(context) + '_cslam_map_manager'
-
     map_manager_node = Node(package='cslam',
             executable='map_manager',
-            name=map_manager_node_name,
+            name='cslam_map_manager',
+            parameters=[
+                LaunchConfiguration('config'), {
+                    "robot_id": LaunchConfiguration('robot_id'),
+                    "nb_robots": LaunchConfiguration('nb_robots'),
+                }
+            ],
+            prefix=LaunchConfiguration('launch_prefix'),
+            namespace=LaunchConfiguration('namespace'))
+
+    pose_graph_manager_node = Node(package='cslam',
+            executable='pose_graph_manager',
+            name='cslam_pose_graph_manager',
             parameters=[
                 LaunchConfiguration('config'), {
                     "robot_id": LaunchConfiguration('robot_id'),
@@ -40,6 +48,7 @@ def launch_setup(context, *args, **kwargs):
     return [
         loop_detection_node,
         map_manager_node,
+        pose_graph_manager_node,
     ]
 
 def generate_launch_description():
