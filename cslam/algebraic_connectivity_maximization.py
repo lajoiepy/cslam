@@ -1,5 +1,5 @@
-from cslam.third_party.mac.mac import MAC
-from cslam.third_party.mac.utils import Edge, weight_graph_lap_from_edge_list
+from cslam.mac.mac import MAC
+from cslam.mac.utils import Edge, weight_graph_lap_from_edge_list
 import numpy as np
 from typing import NamedTuple
 

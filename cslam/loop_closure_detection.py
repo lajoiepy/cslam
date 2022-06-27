@@ -26,8 +26,8 @@ class LoopClosureDetection(Node):
                         ('loop_closure_budget', 5), ('detection_period', 5),
                         ('nb_best_matches', 10), ('image_crop_size', None),
                         ('intra_loop_min_inbetween_keyframes', 10),
-                        ('max_alive_delay_sec', 5),
-                        ('alive_check_period_sec', 0.5),
+                        ('max_heartbeat_delay_sec', 5),
+                        ('heartbeat_check_period_sec', 0.5),
                         ('global_descriptor_publication_period_sec', 1.0),
                         ('global_descriptor_publication_max_elems_per_msg', 10),
                         ('enable_neighbor_monitoring', False),
@@ -55,8 +55,8 @@ class LoopClosureDetection(Node):
             'detection_period').value
         self.params["image_crop_size"] = self.get_parameter('image_crop_size').value
         self.params["enable_neighbor_monitoring"] = self.get_parameter('enable_neighbor_monitoring').value
-        self.params["max_alive_delay_sec"] = self.get_parameter('max_alive_delay_sec').value
-        self.params["alive_check_period_sec"] = self.get_parameter('alive_check_period_sec').value
+        self.params["max_heartbeat_delay_sec"] = self.get_parameter('max_heartbeat_delay_sec').value
+        self.params["heartbeat_check_period_sec"] = self.get_parameter('heartbeat_check_period_sec').value
         self.params["global_descriptor_publication_period_sec"] = self.get_parameter('global_descriptor_publication_period_sec').value
         self.params["global_descriptor_publication_max_elems_per_msg"] = self.get_parameter('global_descriptor_publication_max_elems_per_msg').value
 

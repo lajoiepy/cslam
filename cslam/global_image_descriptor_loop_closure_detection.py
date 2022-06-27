@@ -73,27 +73,23 @@ class GlobalImageDescriptorLoopClosureDetection(object):
         self.loop_closure_list = []
 
         # Listen for changes in node liveliness
-        self.alive_publisher = self.node.create_publisher(String, '/r' + str(self.robot_id) + '_' + 'alive', 10)
-        self.neighbor_manager = NeighborManager(self.node, self.robot_id, self.nb_robots, self.enable_neighbor_monitoring, self.params['max_alive_delay_sec'])
+        self.heartbeat_publisher = self.node.create_publisher(String, 'heartbeat', 10)
+        self.neighbor_manager = NeighborManager(self.node, self.robot_id, self.nb_robots, self.enable_neighbor_monitoring, self.params['max_heartbeat_delay_sec'])
 
-        self.node.get_logger().info('Create timer=')# TODO: remove
-        self.node.get_logger().info(str(self.params['alive_check_period_sec']))
-        self.alive_timer = self.node.create_timer(self.params['alive_check_period_sec'], self.alive_timer_callback)
+        self.heartbeat_timer = self.node.create_timer(self.params['heartbeat_check_period_sec'], self.heartbeat_timer_callback)
 
         self.global_descriptors_buffer = []
         self.global_descriptors_timer = self.node.create_timer(self.params['global_descriptor_publication_period_sec'], self.global_descriptors_timer_callback)
 
 
-    def alive_timer_callback(self):
-        """Publish alive message periodically
+    def heartbeat_timer_callback(self):
+        """Publish heartbeat message periodically
         """
-        self.node.get_logger().info('Alive ' + str(self.robot_id)) # TODO: remove
         msg = String()
-        msg.data = 'Hello World'
-        self.alive_publisher.publish(msg)
-        self.node.get_logger().info('After Alive ' + str(self.robot_id))
+        msg.data = ''
+        self.heartbeat_publisher.publish(msg)
 
-    def add_keyframe(self, embedding, id):
+    def add_keyframe_to_map(self, embedding, id):
         """ Add keyframe to matching list
 
         Args:
@@ -109,9 +105,6 @@ class GlobalImageDescriptorLoopClosureDetection(object):
         msg.robot_id = self.robot_id
         msg.descriptor = embedding.tolist()
         self.global_descriptors_buffer.append(msg)
-        self.node.get_logger().info('Add gdesc=')
-        self.node.get_logger().info(str(self.robot_id))
-        self.node.get_logger().info(str(id))
 
     def delete_useless_descriptors(self):
         """Deletes global descriptors
@@ -127,18 +120,10 @@ class GlobalImageDescriptorLoopClosureDetection(object):
         """
         if len(self.global_descriptors_buffer) > 0:
             from_kf_id = self.neighbor_manager.select_from_which_kf_to_send(self.global_descriptors_buffer[-1].image_id)
-            self.node.get_logger().info('Test=')
-            self.node.get_logger().info(str(from_kf_id))
-            self.node.get_logger().info(str(self.global_descriptors_buffer[0].image_id))# TODO: remove
-            self.node.get_logger().info(str(self.global_descriptors_buffer[-1].image_id))# TODO: remove
-            self.node.get_logger().info(str(len(self.global_descriptors_buffer)))# TODO: remove
 
             msgs = list_chunks(self.global_descriptors_buffer, from_kf_id - self.global_descriptors_buffer[0].image_id, self.params['global_descriptor_publication_max_elems_per_msg'])
 
-            self.node.get_logger().info('Msgs=')# TODO: remove
             for m in msgs:
-                for n in m:# TODO: remove
-                    self.node.get_logger().info(str(n.image_id))# TODO: remove
                 global_descriptors = GlobalImageDescriptors()
                 global_descriptors.descriptors = m
                 self.global_descriptor_publisher.publish(global_descriptors)
@@ -190,7 +175,7 @@ class GlobalImageDescriptorLoopClosureDetection(object):
                                         desired_encoding='passthrough')
         embedding = self.global_descriptor.compute_embedding(cv_image)
 
-        self.add_keyframe(embedding, msg.id)
+        self.add_keyframe_to_map(embedding, msg.id)
 
     def global_descriptor_callback(self, msg):
         """Callback for descriptors received from other robots.
@@ -226,7 +211,7 @@ class GlobalImageDescriptorLoopClosureDetection(object):
         # TODO: Only one robot per pair should initiate computation
         if msg.success:
             self.node.get_logger().info(
-                'New inter-robot loop closure measurement.')
+                'New inter-robot loop closure measurement: (' + str(msg.robot0_id) + ',' + str(msg.robot0_image_id) + ') -> (' + str(msg.robot1_id) + ',' + str(msg.robot1_image_id) + ')')
             self.loop_closure_list.append(msg)
             # If geo verif succeeds, move from candidate to fixed edge in the graph
             self.lcm.candidate_selector.candidate_edges_to_fixed(

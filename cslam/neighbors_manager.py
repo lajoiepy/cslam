@@ -28,22 +28,19 @@ class NeighborManager():
         """This function finds the range of descriptors to send
         so that we do not loose info
         """
-        self.node.get_logger().info('Select ' + str(self.robot_id) + ' =') # TODO: remove
-        self.node.get_logger().info(str(latest_local_id))       
 
         from_kf_id = latest_local_id
         for i in range(self.nb_robots):
             if i != self.robot_id:
                 if self.neighbors_monitors[i].is_alive():
                     from_kf_id = min(self.neighbors_monitors[i].last_keyframe_sent, from_kf_id)
-                    self.node.get_logger().info("Robot " + str(i) + " | "+str(self.neighbors_monitors[i].last_keyframe_sent))    
-        
+                    
         for i in range(self.nb_robots):
             if i != self.robot_id:
                 if self.neighbors_monitors[i].is_alive():
                     self.neighbors_monitors[i].last_keyframe_sent = latest_local_id
 
-        return from_kf_id
+        return from_kf_id + 1
 
     def useless_descriptors(self, last_kf_id):
         """_summary_

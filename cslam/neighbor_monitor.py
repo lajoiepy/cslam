@@ -10,29 +10,29 @@ class NeighborMonitor():
             id (int): Robot ID
         """
         self.node = node
-        self.id  = id
+        self.robot_id  = id
         self.is_enabled = is_enabled
 
         self.max_delay_sec = Duration(seconds=max_delay_sec)
-        self.alive = False
+        self.heartbeat = False
         self.init_time =  self.node.get_clock().now()
         self.latest_time_stamp = self.init_time
-        self.last_keyframe_received = 0
-        self.last_keyframe_sent = 0
+        self.last_keyframe_received = -1
+        self.last_keyframe_sent = -1
                    
-        self.alive_subscriber = self.node.create_subscription(
-            String, '/r' + str(id) + '_' + 'alive', self.alive_callback, 10)
+        self.heartbeat_subscriber = self.node.create_subscription(
+            String, '/r' + str(id) + '/' + 'heartbeat', self.heartbeat_callback, 10)
 
-    def alive_callback(self, msg):
-        """Callback to indicate that it is alive
+    def heartbeat_callback(self, msg):
+        """Callback to indicate that it is heartbeat
 
         Args:
-            msg (Empty):
+            msg (String):
         """
         self.latest_time_stamp = self.node.get_clock().now()
 
     def is_alive(self):
-        """Check if it recently received a alive signal
+        """Check if it recently received a heartbeat signal
 
         Returns:
             bool: liveliness indicator

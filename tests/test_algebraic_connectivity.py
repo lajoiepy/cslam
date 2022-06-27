@@ -1,7 +1,7 @@
 import unittest
 from cslam.algebraic_connectivity_maximization import AlgebraicConnectivityMaximization, EdgeInterRobot
-from cslam.third_party.mac.utils import Edge
-from cslam.third_party.mac.mac import MAC
+from cslam.mac.utils import Edge
+from cslam.mac.mac import MAC
 import random
 import numpy as np
 from timeit import default_timer as timer

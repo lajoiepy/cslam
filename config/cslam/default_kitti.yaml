@@ -25,8 +25,8 @@
     pnp_min_inliers: 6
     # Other params
     enable_neighbor_monitoring: true
-    max_alive_delay_sec: 5
-    alive_check_period_sec: 1.0
+    max_heartbeat_delay_sec: 5
+    heartbeat_check_period_sec: 1.0
     map_manager_process_period_ms: 100
     global_descriptor_publication_period_sec: 1.0
     global_descriptor_publication_max_elems_per_msg: 10
