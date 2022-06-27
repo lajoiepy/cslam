@@ -27,6 +27,20 @@ PoseGraphManager::PoseGraphManager(std::shared_ptr<rclcpp::Node> &node): node_(n
   default_noise_model_ = gtsam::noiseModel::Diagonal::Sigmas(sigmas);
   pose_graph_ = boost::make_shared<gtsam::NonlinearFactorGraph>();
   current_pose_estimates_ = boost::make_shared<gtsam::Values>();
+
+  // Optimization timer
+  optimization_timer_ = node->create_wall_timer(
+        std::chrono::milliseconds(pose_graph_manager_process_period_ms_), std::bind(&PoseGraphManager::optimization_callback, this));
+
+  // Publisher for optimization result
+  optimization_result_publisher_ =
+      node_->create_publisher<cslam_common_interfaces::msg::OptimizationResult>(
+          "optimization_result", 100);
+
+  // Add prior 
+  // TODO: not for decentralized
+  gtsam::LabeledSymbol first_symbol(GRAPH_LABEL, ROBOT_LABEL(robot_id_), 0);
+  pose_graph_->addPrior(first_symbol, gtsam::Pose3(), default_noise_model_);
 }
 
 void PoseGraphManager::odometry_msg_to_pose3(const nav_msgs::msg::Odometry& odom_msg, gtsam::Pose3& pose){
@@ -71,3 +85,20 @@ void PoseGraphManager::inter_robot_loop_closure_callback(const cslam_loop_detect
       pose_graph_->push_back(factor);
     }
   }
+
+void PoseGraphManager::optimization_callback(){
+  if (!current_pose_estimates_->empty())
+  {
+    gtsam::GncParams<gtsam::LevenbergMarquardtParams> params;
+    gtsam::GncOptimizer<gtsam::GncParams<gtsam::LevenbergMarquardtParams>> optimizer(*pose_graph_, *current_pose_estimates_, params);
+    gtsam::Values result = optimizer.optimize();
+
+    // TODO: print result
+    // TODO: publish a TF
+
+    // Publish result info for monitoring
+    cslam_common_interfaces::msg::OptimizationResult msg;
+    msg.success = true;
+    optimization_result_publisher_->publish(msg);
+  }
+}

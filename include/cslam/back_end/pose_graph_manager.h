@@ -10,8 +10,10 @@
 #include <gtsam/nonlinear/Values.h>
 #include <gtsam/inference/LabeledSymbol.h>
 #include <gtsam/linear/NoiseModel.h>
+#include <gtsam/nonlinear/GncOptimizer.h>
  
 #include <cslam_common_interfaces/msg/keyframe_odom.hpp>
+#include <cslam_common_interfaces/msg/optimization_result.hpp>
 #include <cslam_loop_detection_interfaces/msg/inter_robot_loop_closure.hpp>
 
 #define GRAPH_LABEL 'g'
@@ -58,6 +60,12 @@ public:
   void inter_robot_loop_closure_callback(const cslam_loop_detection_interfaces::msg::
   InterRobotLoopClosure::ConstSharedPtr msg);
 
+  /**
+   * @brief Performs pose graph optimization every X ms (defined in config)
+   * 
+   */
+  void optimization_callback();
+
 private:
 
   // TODO: document
@@ -83,6 +91,10 @@ private:
                                       InterRobotLoopClosure>::SharedPtr
       inter_robot_loop_closure_subscriber_;
 
+  rclcpp::Publisher<cslam_common_interfaces::msg::OptimizationResult>::SharedPtr
+      optimization_result_publisher_;
+
+  rclcpp::TimerBase::SharedPtr optimization_timer_;
 };
 
 #endif

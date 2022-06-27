@@ -209,8 +209,10 @@ class TestAlgebraicConnectivity(unittest.TestCase):
         # Remove edges
         ac.remove_candidate_edges(selection0)
         nb_candidates1 = len(ac.candidate_edges)
-        self.assertEqual(nb_candidates0,
-                         nb_candidates1 + nb_candidates_to_choose)
+        self.assertGreaterEqual(nb_candidates0,
+                         nb_candidates1 + nb_candidates_to_choose - 1)
+        self.assertLessEqual(nb_candidates0,
+                         nb_candidates1 + nb_candidates_to_choose + 1)
 
     def test_remove_candidate1(self):
         """Test that we can remove candidates from consideration
