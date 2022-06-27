@@ -55,7 +55,7 @@ find_package(rtabmap_ros 0.20.18 REQUIRED)
 
 # Optional components
 #find_package(costmap_2d)
-find_package(octomap_msgs)
+#find_package(octomap_msgs)
 #find_package(apriltag_msgs)
 #find_package(find_object_2d)
 #find_package(fiducial_msgs)
@@ -64,7 +64,6 @@ find_package(RTABMap 0.20.18 REQUIRED)
 
 # Find GTSAM
 find_package(GTSAM CONFIG REQUIRED)
-message("GTSAM Libraries: ${GTSAM_LIBRARIES}")
 
 # kinetic issue, rtabmap now requires at least c++11
 include(CheckCXXCompilerFlag)
@@ -103,7 +102,6 @@ include_directories(
   ${PCL_INCLUDE_DIRS}
   ${GTSAM_INCLUDE_DIR}
 )
-link_directories(${GTSAM_LIBRARY_DIRS})
 
 # libraries
 SET(Libraries
@@ -132,7 +130,6 @@ SET(Libraries
    perception_pcl
    RTABMap
    rtabmap_ros
-   #gtsam
 )
 
 find_package(cslam_common_interfaces REQUIRED)
@@ -159,8 +156,9 @@ add_dependencies(pose_graph_manager
 pose_graph_manager
   ${${PROJECT_NAME}_EXPORTED_TARGETS})
 ament_target_dependencies(pose_graph_manager 
-  ${Libraries} 
+  ${Libraries}
   cslam_common_interfaces cslam_loop_detection_interfaces)
+target_link_libraries(pose_graph_manager gtsam)
 set_target_properties(pose_graph_manager 
   PROPERTIES OUTPUT_NAME "pose_graph_manager")
 

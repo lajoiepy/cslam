@@ -3,11 +3,11 @@
 
 #include <rclcpp/rclcpp.hpp>
 
-/*#include <gtsam/geometry/Pose3.h>
+#include <gtsam/geometry/Pose3.h>
 #include <gtsam/inference/Key.h>
 #include <gtsam/slam/BetweenFactor.h>
 #include <gtsam/nonlinear/NonlinearFactorGraph.h>
-#include <gtsam/nonlinear/Values.h>*/
+#include <gtsam/nonlinear/Values.h>
  
 #include <nav_msgs/msg/odometry.hpp>
 
@@ -32,8 +32,8 @@ private:
 
   int pose_graph_manager_process_period_ms_;
 
-  //gtsam::NonlinearFactorGraph::shared_ptr graph_;
-  //gtsam::Values::shared_ptr estimate_;
+  gtsam::NonlinearFactorGraph::shared_ptr graph_;
+  gtsam::Values::shared_ptr estimate_;
 
   rclcpp::Subscription<
       nav_msgs::msg::Odometry>::SharedPtr
