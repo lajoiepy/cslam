@@ -12,6 +12,10 @@
 #include <gtsam/linear/NoiseModel.h>
  
 #include <cslam_common_interfaces/msg/keyframe_odom.hpp>
+#include <cslam_loop_detection_interfaces/msg/inter_robot_loop_closure.hpp>
+
+#define GRAPH_LABEL 'g'
+#define ROBOT_LABEL(id) ('A'+id)
 
 class PoseGraphManager {
 public:
@@ -32,11 +36,27 @@ public:
   void odometry_msg_to_pose3(const nav_msgs::msg::Odometry& odom_msg, gtsam::Pose3& pose);
 
   /**
+   * @brief Converts a transform msg into a gtsam::Pose3
+   * 
+   * @param msg Transform message
+   * @param pose Pose data
+   */
+  void transform_msg_to_pose3(const geometry_msgs::msg::Transform& msg, gtsam::Pose3& pose);
+
+  /**
    * @brief Receives odometry msg + keyframe id
    * 
    * @param msg 
    */
   void odometry_callback(const cslam_common_interfaces::msg::KeyframeOdom::ConstSharedPtr msg);
+
+  /**
+   * @brief Receives inter-robot loop closures
+   * 
+   * @param msg 
+   */
+  void inter_robot_loop_closure_callback(const cslam_loop_detection_interfaces::msg::
+  InterRobotLoopClosure::ConstSharedPtr msg);
 
 private:
 
@@ -44,8 +64,6 @@ private:
   std::shared_ptr<rclcpp::Node> node_;
 
   unsigned int nb_robots_, robot_id_;
-
-  unsigned char graph_label_, robot_label_;
 
   int pose_graph_manager_process_period_ms_;
 
@@ -60,6 +78,10 @@ private:
   rclcpp::Subscription<
       cslam_common_interfaces::msg::KeyframeOdom>::SharedPtr
       odometry_subscriber_;
+
+  rclcpp::Subscription<cslam_loop_detection_interfaces::msg::
+                                      InterRobotLoopClosure>::SharedPtr
+      inter_robot_loop_closure_subscriber_;
 
 };
 
