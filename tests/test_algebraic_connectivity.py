@@ -629,7 +629,7 @@ class TestAlgebraicConnectivity(unittest.TestCase):
         ac.add_match(e2)
         self.assertEqual(len(ac.candidate_edges.values()), 2)
         self.assertAlmostEqual(
-            ac.candidate_edges[(e2.robot0_image_id, e2.robot1_id)].weight, 0.2)
+            ac.candidate_edges[(e2.robot0_id, e2.robot0_image_id, e2.robot1_id, e2.robot1_image_id)].weight, 0.2)
 
 
 if __name__ == "__main__":

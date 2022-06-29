@@ -100,13 +100,13 @@ class AlgebraicConnectivityMaximization(object):
             self.update_nb_poses(e)
 
         for e in candidate_edges:
-            self.candidate_edges[(e.robot0_image_id, e.robot1_id)] = e
+            self.candidate_edges[(e.robot0_id, e.robot0_image_id, e.robot1_id, e.robot1_image_id)] = e
 
     def add_fixed_edge(self, edge):
         """Add an already computed edge to the graph
 
         Args:
-            edge (EdgeInterRobot): inter-robot edge
+            edge (EdgeInterRobot): inter-robot edgegdffg
         """
         self.fixed_edges.append(edge)
         # Update nb of poses and initial edge check
@@ -119,7 +119,7 @@ class AlgebraicConnectivityMaximization(object):
         Args:
             edge (EdgeInterRobot): inter-robot edge
         """
-        self.candidate_edges[(edge.robot0_image_id, edge.robot1_id)] = edge
+        self.candidate_edges[(edge.robot0_id, edge.robot0_image_id, edge.robot1_id, edge.robot1_image_id)] = edge
         # Update nb of poses
         self.update_nb_poses(edge)
 
@@ -418,16 +418,9 @@ class AlgebraicConnectivityMaximization(object):
             return []
 
     def add_match(self, match):
-        """Add match if the weight is 
-            higher than the current best candidate associated 
-            to a local keyframe
+        """Add match
 
         Args:
             match (EdgeInterRobot): potential match
         """
-        key = (match.robot0_image_id, match.robot1_id)
-        if key in self.candidate_edges:
-            if match.weight > self.candidate_edges[key].weight:
-                self.add_candidate_edge(match)
-        else:
-            self.add_candidate_edge(match)
+        self.add_candidate_edge(match)

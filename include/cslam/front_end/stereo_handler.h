@@ -34,9 +34,9 @@
 #include <cslam_common_interfaces/msg/keyframe_rgb.hpp>
 #include <cslam_common_interfaces/msg/keyframe_odom.hpp>
 #include <cslam_loop_detection_interfaces/msg/local_image_descriptors.hpp>
-#include <cslam_loop_detection_interfaces/srv/send_local_image_descriptors.hpp>
 #include <cslam_loop_detection_interfaces/msg/inter_robot_loop_closure.hpp>
 #include <nav_msgs/msg/odometry.hpp>
+#include <std_msgs/msg/uint32.hpp>
 #include <deque>
 #include <functional>
 #include <thread>
@@ -63,18 +63,13 @@ public:
   void process_new_keyframe();
 
   /**
-   * @brief Service callback to compute local descriptors and publishing them.
+   * @brief Service callback to publish local descriptors
    *
-   * @param request Images IDs
-   * @param response Success flag
+   * @param request Image ID
    */
-  void send_local_image_descriptors(
-      const std::shared_ptr<cslam_loop_detection_interfaces::srv::
-                                SendLocalImageDescriptors::Request>
-          request,
-      std::shared_ptr<cslam_loop_detection_interfaces::srv::
-                          SendLocalImageDescriptors::Response>
-          response);
+  void send_local_descriptors_request(
+     const std_msgs::msg::UInt32::ConstSharedPtr
+          request);
 
   /**
    * @brief Message callback to receive descriptors and compute
@@ -155,13 +150,13 @@ private:
   typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::msg::Image, sensor_msgs::msg::Image, sensor_msgs::msg::CameraInfo, sensor_msgs::msg::CameraInfo, nav_msgs::msg::Odometry> SyncPolicy;
   message_filters::Synchronizer<SyncPolicy> * sync_policy_;
 
-  rclcpp::Service<
-      cslam_loop_detection_interfaces::srv::SendLocalImageDescriptors>::
-      SharedPtr send_local_descriptors_srv_;
+  rclcpp::Subscription<
+      std_msgs::msg::UInt32>::
+      SharedPtr send_local_descriptors_subscriber_;
 
-  std::map<int, rclcpp::Publisher<cslam_loop_detection_interfaces::msg::
-                                      LocalImageDescriptors>::SharedPtr>
-      local_descriptors_publishers_;
+  rclcpp::Publisher<cslam_loop_detection_interfaces::msg::
+                                      LocalImageDescriptors>::SharedPtr
+      local_descriptors_publisher_;
 
   rclcpp::Publisher<cslam_common_interfaces::msg::KeyframeRGB>::SharedPtr
       keyframe_data_publisher_;

@@ -26,11 +26,11 @@ StereoHandler::StereoHandler(std::shared_ptr<rclcpp::Node> &node): node_(node){
     sync_policy_->registerCallback(std::bind(&StereoHandler::stereo_callback, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4, std::placeholders::_5));
     
     // Service to extract and publish local image descriptors to another robot
-    send_local_descriptors_srv_ = node_->create_service<
-        cslam_loop_detection_interfaces::srv::SendLocalImageDescriptors>(
-        "send_local_image_descriptors",
-        std::bind(&StereoHandler::send_local_image_descriptors, this,
-                    std::placeholders::_1, std::placeholders::_2));
+    send_local_descriptors_subscriber_ = node_->create_subscription<
+        std_msgs::msg::UInt32>(
+        "send_local_descriptors_request", 100,
+        std::bind(&StereoHandler::send_local_descriptors_request, this,
+                    std::placeholders::_1));
 
     // Parameters
     node_->get_parameter("max_keyframe_queue_size", max_queue_size_);
@@ -49,20 +49,16 @@ StereoHandler::StereoHandler(std::shared_ptr<rclcpp::Node> &node): node_(node){
             "keyframe_odom", 100);
 
     // Publishers to other robots local descriptors subscribers
-    for (unsigned int id = 0; id < nb_robots_; id++) {
-        if (id != robot_id_) {
-        std::string topic = "/r" + std::to_string(id) + "/local_descriptors";
-        local_descriptors_publishers_.insert(
-            {id, node_->create_publisher<
+    std::string topic = "/local_descriptors";
+    local_descriptors_publisher_ =
+        node_->create_publisher<
                     cslam_loop_detection_interfaces::msg::LocalImageDescriptors>(
-                    topic, 100)});
-        }
-    }
+                    topic, 100);
 
     // Subscriber for local descriptors
     local_descriptors_subscriber_ = node->create_subscription<
         cslam_loop_detection_interfaces::msg::LocalImageDescriptors>(
-        "local_descriptors", 100,
+        "/local_descriptors", 100,
         std::bind(&StereoHandler::receive_local_image_descriptors, this,
                     std::placeholders::_1));
 
@@ -317,24 +313,16 @@ void StereoHandler::sensor_data_to_rgbd_msg(const std::shared_ptr<
   rtabmap_ros::rgbdImageToROS(*sensor_data, msg_data, "camera");
 }
 
-void StereoHandler::send_local_image_descriptors(
-    const std::shared_ptr<cslam_loop_detection_interfaces::srv::
-                              SendLocalImageDescriptors::Request>
-        request,
-    std::shared_ptr<cslam_loop_detection_interfaces::srv::
-                        SendLocalImageDescriptors::Response>
-        response) {
+void StereoHandler::send_local_descriptors_request(const std_msgs::msg::UInt32::ConstSharedPtr
+          request) {
   // Fill msg
   cslam_loop_detection_interfaces::msg::LocalImageDescriptors msg;
   sensor_data_to_rgbd_msg(local_descriptors_map_.at(request->image_id), msg.data);
   msg.image_id = request->image_id;
   msg.robot_id = robot_id_;
-  msg.receptor_image_id = request->receptor_image_id;
 
   // Publish local descriptors
-  local_descriptors_publishers_.at(request->receptor_robot_id)->publish(msg);
-
-  response->success = true;
+  local_descriptors_publisher_->publish(msg);
 }
 
 void StereoHandler::local_descriptors_msg_to_sensor_data(const std::shared_ptr<
@@ -361,6 +349,7 @@ void StereoHandler::receive_local_image_descriptors(
     const std::shared_ptr<
         cslam_loop_detection_interfaces::msg::LocalImageDescriptors>
         msg) {
+  // TODO: Check if I need this descriptor
 
   rtabmap::SensorData tmp_to;
   local_descriptors_msg_to_sensor_data(msg, tmp_to);

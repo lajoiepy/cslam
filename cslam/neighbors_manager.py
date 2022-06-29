@@ -24,6 +24,24 @@ class NeighborManager():
                 is_robot_in_range[i] = False
         return is_robot_in_range
 
+    def local_robot_is_broker(self):
+        """This method check if the local robot (that runs this node), is the
+        default broker based on its current neighbors.
+
+        Returns:
+            bool: is the local robot the default broker 
+            among the robots in range
+        """
+        is_broker = True
+        for i in range(self.nb_robots):
+            if i != self.robot_id and self.neighbors_monitors[i].is_alive():
+                # Note: This is an arbitrary condition that selects the 
+                # lowest ID alive as broker. Could be change to any other cond. 
+                # (e.g., selecting the robot with the most computing power)
+                if self.robot_id > i:
+                    is_broker = False
+        return is_broker
+
     def select_from_which_kf_to_send(self, latest_local_id):
         """This function finds the range of descriptors to send
         so that we do not loose info

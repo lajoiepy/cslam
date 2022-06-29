@@ -13,7 +13,7 @@ from cslam.loop_closure_sparse_matching import LoopClosureSparseMatching
 from cslam_common_interfaces.msg import KeyframeRGB
 from cslam_loop_detection_interfaces.msg import GlobalImageDescriptor, GlobalImageDescriptors
 from cslam_loop_detection_interfaces.msg import InterRobotLoopClosure
-from cslam_loop_detection_interfaces.srv import SendLocalImageDescriptors
+from std_msgs.msg import UInt32
 
 import rclpy
 from rclpy.node import Node
@@ -68,8 +68,10 @@ class GlobalImageDescriptorLoopClosureDetection(object):
             InterRobotLoopClosure, 'inter_robot_loop_closure',
             self.receive_inter_robot_loop_closure, 100)
 
-        self.send_local_descriptors_srv = self.node.create_client(
-            SendLocalImageDescriptors, 'send_local_image_descriptors')
+        self.send_local_descriptors_publishers = {}
+        for i in range(self.nb_robots):
+            self.send_local_descriptors_publishers[i] = self.node.create_publisher(
+                UInt32, 'send_local_descriptors_request', 100)
 
         self.loop_closure_list = []
 
@@ -90,15 +92,15 @@ class GlobalImageDescriptorLoopClosureDetection(object):
         msg.data = ''
         self.heartbeat_publisher.publish(msg)
 
-    def add_keyframe_to_map(self, embedding, id):
-        """ Add keyframe to matching list
+    def add_global_descriptor_to_map(self, embedding, id):
+        """ Add global descriptor to matching list
 
         Args:
             embedding (np.array): descriptor
             id (int): keyframe ID
         """
         # Add for matching
-        self.lcm.add_local_keyframe(embedding, id)
+        self.lcm.add_local_global_descriptor(embedding, id)
 
         # Store global descriptor
         msg = GlobalImageDescriptor()
@@ -150,19 +152,16 @@ class GlobalImageDescriptorLoopClosureDetection(object):
         Returns:
             list(int): selected keyframes from other robots to match
         """
-        # Find matches that maximize the algebraic connectivity
-        selection = self.lcm.select_candidates(self.loop_closure_budget, self.neighbor_manager.check_neighbors_in_range())
+        # Check if the robot is the broker
+        if self.neighbor_manager.local_robot_is_broker():
+            # Find matches that maximize the algebraic connectivity
+            selection = self.lcm.select_candidates(self.loop_closure_budget, self.neighbor_manager.check_neighbors_in_range())
 
-        # Extract and publish local descriptors
-        for match in selection:
-            # Call C++ code to send publish local descriptors
-            req = SendLocalImageDescriptors.Request()
-            
-            req.image_id = match.robot0_image_id
-            req.receptor_robot_id = match.robot1_id
-            req.receptor_image_id = match.robot1_image_id
-
-            self.send_local_descriptors_srv.call_async(req)
+            # Extract and publish local descriptors
+            for match in selection:
+                # Call to send publish local descriptors
+                # TODO: Compute vertex cover
+                self.send_local_descriptors_publishers[match.robot0_id].publish(UInt32(match.robot0_image_id))
 
     def receive_keyframe(self, msg):
         """Callback to add a keyframe 
@@ -176,7 +175,7 @@ class GlobalImageDescriptorLoopClosureDetection(object):
                                         desired_encoding='passthrough')
         embedding = self.global_descriptor.compute_embedding(cv_image)
 
-        self.add_keyframe_to_map(embedding, msg.id)
+        self.add_global_descriptor_to_map(embedding, msg.id)
 
     def global_descriptor_callback(self, msg):
         """Callback for descriptors received from other robots.
@@ -187,7 +186,7 @@ class GlobalImageDescriptorLoopClosureDetection(object):
         if msg.descriptors[0].robot_id != self.robot_id:
             unknown_range = self.neighbor_manager.get_unknown_range(msg.descriptors[0].image_id, msg.descriptors[-1].image_id, msg.descriptors[0].robot_id)
             for i in unknown_range:
-                self.lcm.add_other_robot_keyframe(msg.descriptors[i])
+                self.lcm.add_other_robot_global_descriptor(msg.descriptors[i])
 
     def inter_robot_loop_closure_msg_to_edge(self, msg):
         """ Convert a inter-robot loop closure to an edge 

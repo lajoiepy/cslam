@@ -44,7 +44,7 @@ class LoopClosureSparseMatching(object):
         return 1 / (1 + np.exp(
             (distance - self.similarity_loc) / self.similarity_scale))
 
-    def add_local_keyframe(self, embedding, id):
+    def add_local_global_descriptor(self, embedding, id):
         """ Add a local keyframe for matching
 
         Args:
@@ -62,7 +62,7 @@ class LoopClosureSparseMatching(object):
                             EdgeInterRobot(self.robot_id, id, i, kf,
                                            similarity))
 
-    def add_other_robot_keyframe(self, msg):
+    def add_other_robot_global_descriptor(self, msg):
         """ Add keyframe global descriptor info from other robot
 
         Args:
@@ -102,7 +102,7 @@ class LoopClosureSparseMatching(object):
         """Select inter-robot loop closure candidates according to budget
 
         Args:
-            number_of_candidates (int): inter-robot loop closure budget
+            number_of_candidates (int): inter-robot loop closure budget,
             is_neighbor_in_range: dict(int, bool): indicates which other robots are in communication range 
 
         Returns:
