@@ -221,6 +221,8 @@ void StereoHandler::stereo_callback(
                 stereoModel,
                 nb_local_frames_,
                 rtabmap_ros::timestampFromROS(stamp));
+
+        // TODO: keyframe heuristic
             
         received_data_queue_.push_back(std::make_pair(data, odom));
         if (received_data_queue_.size() > max_queue_size_) {
@@ -292,7 +294,6 @@ void StereoHandler::process_new_keyframe(){
     if (!received_data_queue_.empty()) {
         auto sensor_data = received_data_queue_.front();
         received_data_queue_.pop_front();
-        // TODO: keyframe heuristic
 
         if (sensor_data.first->isValid() &&
             local_descriptors_map_.find(sensor_data.first->id()) == local_descriptors_map_.end()) {

@@ -22,6 +22,7 @@ from cslam.neighbors_manager import NeighborManager
 from std_msgs.msg import String
 from cslam.utils.utils import list_chunks
 
+# TODO: Add super class to support other types of descriptors
 class GlobalImageDescriptorLoopClosureDetection(object):
     """ Global Image descriptor matching """
 
@@ -208,7 +209,6 @@ class GlobalImageDescriptorLoopClosureDetection(object):
         Args:
             msg (cslam_loop_detection_interfaces::msg::InterRobotLoopClosure): Inter-robot loop closure
         """
-        # TODO: Only one robot per pair should initiate computation
         if msg.success:
             self.node.get_logger().info(
                 'New inter-robot loop closure measurement: (' + str(msg.robot0_id) + ',' + str(msg.robot0_image_id) + ') -> (' + str(msg.robot1_id) + ',' + str(msg.robot1_image_id) + ')')
@@ -218,7 +218,7 @@ class GlobalImageDescriptorLoopClosureDetection(object):
                 [self.inter_robot_loop_closure_msg_to_edge(msg)])
         else:
             self.node.get_logger().info(
-                'Failed inter-robot loop closure measurement.')
+                'Failed inter-robot loop closure measurement: (' + str(msg.robot0_id) + ',' + str(msg.robot0_image_id) + ') -> (' + str(msg.robot1_id) + ',' + str(msg.robot1_image_id) + ')')
             # If geo verif fails, remove candidate
             self.lcm.candidate_selector.remove_candidate_edges(
                 [self.inter_robot_loop_closure_msg_to_edge(msg)])

@@ -89,6 +89,8 @@ void PoseGraphManager::inter_robot_loop_closure_callback(const cslam_loop_detect
 void PoseGraphManager::optimization_callback(){
   if (!current_pose_estimates_->empty())
   {
+    // TODO: Ask for pose graph
+    // TODO: Compute graph
     gtsam::GncParams<gtsam::LevenbergMarquardtParams> params;
     gtsam::GncOptimizer<gtsam::GncParams<gtsam::LevenbergMarquardtParams>> optimizer(*pose_graph_, *current_pose_estimates_, params);
     gtsam::Values result = optimizer.optimize();
