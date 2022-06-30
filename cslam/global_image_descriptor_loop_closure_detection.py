@@ -12,8 +12,7 @@ from cslam.loop_closure_sparse_matching import LoopClosureSparseMatching
 
 from cslam_common_interfaces.msg import KeyframeRGB
 from cslam_loop_detection_interfaces.msg import GlobalImageDescriptor, GlobalImageDescriptors
-from cslam_loop_detection_interfaces.msg import InterRobotLoopClosure
-from std_msgs.msg import UInt32
+from cslam_loop_detection_interfaces.msg import InterRobotLoopClosure, LocalDescriptorsRequest
 
 import rclpy
 from rclpy.node import Node
@@ -65,13 +64,13 @@ class GlobalImageDescriptorLoopClosureDetection(object):
         self.receive_keyframe_subscriber = self.node.create_subscription(
             KeyframeRGB, 'keyframe_data', self.receive_keyframe, 100)
         self.receive_inter_robot_loop_closure_subscriber = self.node.create_subscription(
-            InterRobotLoopClosure, 'inter_robot_loop_closure',
+            InterRobotLoopClosure, '/inter_robot_loop_closure',
             self.receive_inter_robot_loop_closure, 100)
 
-        self.send_local_descriptors_publishers = {}
+        self.local_descriptors_request_publishers = {}
         for i in range(self.nb_robots):
-            self.send_local_descriptors_publishers[i] = self.node.create_publisher(
-                UInt32, 'send_local_descriptors_request', 100)
+            self.local_descriptors_request_publishers[i] = self.node.create_publisher(
+                LocalDescriptorsRequest, '/r' + str(i) + '/local_descriptors_request', 100)
 
         self.loop_closure_list = []
 
@@ -157,11 +156,41 @@ class GlobalImageDescriptorLoopClosureDetection(object):
             # Find matches that maximize the algebraic connectivity
             selection = self.lcm.select_candidates(self.loop_closure_budget, self.neighbor_manager.check_neighbors_in_range())
 
+            vertices = self.edge_list_to_vertices(selection)
             # Extract and publish local descriptors
-            for match in selection:
+            for key in vertices:
                 # Call to send publish local descriptors
                 # TODO: Compute vertex cover
-                self.send_local_descriptors_publishers[match.robot0_id].publish(UInt32(match.robot0_image_id))
+                msg = LocalDescriptorsRequest()
+                msg.image_id = key[1]
+                msg.matches_robot_id = vertices[key][0]
+                msg.matches_image_id = vertices[key][1]
+                self.local_descriptors_request_publishers[key[0]].publish(msg)
+
+    def edge_list_to_vertices(self, selection):
+        """Extracts the vertices in a list of edges
+
+        Args:
+            selection list(EdgeInterRobot): selection of edges
+
+        Returns:
+            dict((int, int), list(int), list(int)): Vertices indices with their related vertices
+        """
+        vertices = {}
+        for s in selection:
+            key0 = (s.robot0_id, s.robot0_image_id)
+            key1 = (s.robot1_id, s.robot1_image_id)
+            if key0 in vertices:
+                vertices[key0][0].append(s.robot1_id)
+                vertices[key0][1].append(s.robot1_image_id)
+            else:
+                vertices[key0] = [[s.robot1_id], [s.robot1_image_id]]
+            if key1 in vertices:
+                vertices[key1][0].append(s.robot0_id)
+                vertices[key1][1].append(s.robot0_image_id)
+            else:
+                vertices[key1] = [[s.robot0_id], [s.robot0_image_id]]
+        return vertices
 
     def receive_keyframe(self, msg):
         """Callback to add a keyframe 

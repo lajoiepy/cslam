@@ -27,9 +27,9 @@ StereoHandler::StereoHandler(std::shared_ptr<rclcpp::Node> &node): node_(node){
     
     // Service to extract and publish local image descriptors to another robot
     send_local_descriptors_subscriber_ = node_->create_subscription<
-        std_msgs::msg::UInt32>(
-        "send_local_descriptors_request", 100,
-        std::bind(&StereoHandler::send_local_descriptors_request, this,
+        cslam_loop_detection_interfaces::msg::LocalDescriptorsRequest>(
+        "local_descriptors_request", 100,
+        std::bind(&StereoHandler::local_descriptors_request, this,
                     std::placeholders::_1));
 
     // Parameters
@@ -69,14 +69,10 @@ StereoHandler::StereoHandler(std::shared_ptr<rclcpp::Node> &node): node_(node){
     registration_.parseParameters(registration_params);
 
 
-    // Publisher to all robots inter robot loop closure publisher
-    for (unsigned int id = 0; id < nb_robots_; id++) {
-        std::string topic = "/r" + std::to_string(id) + "/inter_robot_loop_closure";
-        inter_robot_loop_closure_publishers_.insert(
-            {id, node_->create_publisher<
-                    cslam_loop_detection_interfaces::msg::InterRobotLoopClosure>(
-                    topic, 100)});
-    }
+    // Publisher for inter robot loop closure to all robots 
+    inter_robot_loop_closure_publisher_ = node_->create_publisher<
+                cslam_loop_detection_interfaces::msg::InterRobotLoopClosure>(
+                "/inter_robot_loop_closure", 100);
 
 	tf_buffer_ = std::make_shared<tf2_ros::Buffer>(node_->get_clock());
 	tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
@@ -313,13 +309,15 @@ void StereoHandler::sensor_data_to_rgbd_msg(const std::shared_ptr<
   rtabmap_ros::rgbdImageToROS(*sensor_data, msg_data, "camera");
 }
 
-void StereoHandler::send_local_descriptors_request(const std_msgs::msg::UInt32::ConstSharedPtr
+void StereoHandler::local_descriptors_request(cslam_loop_detection_interfaces::msg::LocalDescriptorsRequest::ConstSharedPtr
           request) {
   // Fill msg
   cslam_loop_detection_interfaces::msg::LocalImageDescriptors msg;
   sensor_data_to_rgbd_msg(local_descriptors_map_.at(request->image_id), msg.data);
   msg.image_id = request->image_id;
   msg.robot_id = robot_id_;
+  msg.matches_robot_id = request->matches_robot_id;
+  msg.matches_image_id = request->matches_image_id;
 
   // Publish local descriptors
   local_descriptors_publisher_->publish(msg);
@@ -349,39 +347,46 @@ void StereoHandler::receive_local_image_descriptors(
     const std::shared_ptr<
         cslam_loop_detection_interfaces::msg::LocalImageDescriptors>
         msg) {
-  // TODO: Check if I need this descriptor
+  std::deque<int> image_ids;
+  for (unsigned int i = 0; i < msg->matches_robot_id.size(); i++)
+  {
+    if (msg->matches_robot_id[i] == robot_id_){
+        image_ids.push_back(msg->matches_image_id[i]);
+    }
+  }
 
-  rtabmap::SensorData tmp_to;
-  local_descriptors_msg_to_sensor_data(msg, tmp_to);
+  for(auto local_image_id: image_ids)
+  {
+    rtabmap::SensorData tmp_to;
+    local_descriptors_msg_to_sensor_data(msg, tmp_to);
 
-  // Compute transformation
-  //  Registration params
-  rtabmap::RegistrationInfo reg_info;
-  auto tmp_from = local_descriptors_map_.at(msg->receptor_image_id);
-  tmp_from->uncompressData();
-  rtabmap::Transform t = registration_.computeTransformation(
-      *tmp_from, tmp_to, rtabmap::Transform(), &reg_info);
+    // Compute transformation
+    //  Registration params
+    rtabmap::RegistrationInfo reg_info;
+    auto tmp_from = local_descriptors_map_.at(local_image_id);
+    tmp_from->uncompressData();
+    rtabmap::Transform t = registration_.computeTransformation(
+        *tmp_from, tmp_to, rtabmap::Transform(), &reg_info);
 
-  // Store using pairs (robot_id, image_id)
-  cslam_loop_detection_interfaces::msg::InterRobotLoopClosure lc;
-  lc.robot0_id = robot_id_;
-  lc.robot0_image_id = msg->receptor_image_id;
-  lc.robot1_id = msg->robot_id;
-  lc.robot1_image_id = msg->image_id;
-  if (!t.isNull()) {
-    lc.success = true;
-    rtabmap_ros::transformToGeometryMsg(t, lc.transform);
-    inter_robot_loop_closure_publishers_[lc.robot0_id]->publish(lc);
-    inter_robot_loop_closure_publishers_[lc.robot1_id]->publish(lc);
-  } else {
-    RCLCPP_ERROR(
-        node_->get_logger(),
-        "Could not compute transformation between (%d,%d) and (%d,%d): %s",
-        robot_id_, msg->receptor_image_id, msg->robot_id, msg->image_id,
-        reg_info.rejectedMsg.c_str());
-    lc.success = false;
-    inter_robot_loop_closure_publishers_[lc.robot0_id]->publish(lc);
-    inter_robot_loop_closure_publishers_[lc.robot1_id]->publish(lc);
+    // Store using pairs (robot_id, image_id)
+    cslam_loop_detection_interfaces::msg::InterRobotLoopClosure lc;
+    lc.robot0_id = robot_id_;
+    lc.robot0_image_id = local_image_id;
+    lc.robot1_id = msg->robot_id;
+    lc.robot1_image_id = msg->image_id;
+    if (!t.isNull()) {
+        lc.success = true;
+        rtabmap_ros::transformToGeometryMsg(t, lc.transform);
+        inter_robot_loop_closure_publisher_->publish(lc);
+    } else {
+        RCLCPP_ERROR(
+            node_->get_logger(),
+            "Could not compute transformation between (%d,%d) and (%d,%d): %s",
+            robot_id_, local_image_id, msg->robot_id, msg->image_id,
+            reg_info.rejectedMsg.c_str());
+        lc.success = false;
+        inter_robot_loop_closure_publisher_->publish(lc);
+    }
   }
 }
 

@@ -36,7 +36,7 @@
 #include <cslam_loop_detection_interfaces/msg/local_image_descriptors.hpp>
 #include <cslam_loop_detection_interfaces/msg/inter_robot_loop_closure.hpp>
 #include <nav_msgs/msg/odometry.hpp>
-#include <std_msgs/msg/uint32.hpp>
+#include <cslam_loop_detection_interfaces/msg/local_descriptors_request.hpp>
 #include <deque>
 #include <functional>
 #include <thread>
@@ -65,10 +65,10 @@ public:
   /**
    * @brief Service callback to publish local descriptors
    *
-   * @param request Image ID
+   * @param request Image ID to send and matching info
    */
-  void send_local_descriptors_request(
-     const std_msgs::msg::UInt32::ConstSharedPtr
+  void local_descriptors_request(
+     cslam_loop_detection_interfaces::msg::LocalDescriptorsRequest::ConstSharedPtr
           request);
 
   /**
@@ -151,7 +151,7 @@ private:
   message_filters::Synchronizer<SyncPolicy> * sync_policy_;
 
   rclcpp::Subscription<
-      std_msgs::msg::UInt32>::
+      cslam_loop_detection_interfaces::msg::LocalDescriptorsRequest>::
       SharedPtr send_local_descriptors_subscriber_;
 
   rclcpp::Publisher<cslam_loop_detection_interfaces::msg::
@@ -170,9 +170,9 @@ private:
 
   rtabmap::RegistrationVis registration_;
 
-  std::map<int, rclcpp::Publisher<cslam_loop_detection_interfaces::msg::
-                                      InterRobotLoopClosure>::SharedPtr>
-      inter_robot_loop_closure_publishers_;
+  rclcpp::Publisher<cslam_loop_detection_interfaces::msg::
+                                      InterRobotLoopClosure>::SharedPtr
+      inter_robot_loop_closure_publisher_;
   
   std::shared_ptr<tf2_ros::Buffer> tf_buffer_;
   std::shared_ptr<tf2_ros::TransformListener> tf_listener_;

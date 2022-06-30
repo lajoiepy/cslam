@@ -15,7 +15,7 @@ PoseGraphManager::PoseGraphManager(std::shared_ptr<rclcpp::Node> &node): node_(n
   inter_robot_loop_closure_subscriber_ = node->create_subscription<
         cslam_loop_detection_interfaces::msg::
                                       InterRobotLoopClosure>(
-        "inter_robot_loop_closure", 100,
+        "/inter_robot_loop_closure", 100,
         std::bind(&PoseGraphManager::inter_robot_loop_closure_callback, this,
                     std::placeholders::_1));
 
