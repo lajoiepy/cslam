@@ -18,9 +18,16 @@ class Broker(object):
                                 robots involved in the exchange
         """
         self.edges = edges
-        if len(robots_involved) == 2:
+        robots_involved_with_edges = set()
+        for e in self.edges:
+            if e.robot0_id in robots_involved:
+                robots_involved_with_edges.add(e.robot0_id)
+            if e.robot1_id in robots_involved:            
+                robots_involved_with_edges.add(e.robot1_id)
+        robots_involved_with_edges = list(robots_involved_with_edges)
+        if len(robots_involved_with_edges) == 2:
             self.is_bipartite = True
-        elif len(robots_involved) > 2:
+        elif len(robots_involved_with_edges) > 2:
             self.is_bipartite = False
         else:
             raise Exception("Broker: The communication brokerage needs to be between at least 2 robots")
@@ -33,15 +40,15 @@ class Broker(object):
             for vertex in edge_vertices:
                 if vertex not in self.matching_graph:
                     if self.is_bipartite:
-                        if vertex[0] == robots_involved[0]:
+                        if vertex[0] == robots_involved_with_edges[0]:
                             self.matching_graph.add_node(vertex, bipartite=0)
-                        elif vertex[0] == robots_involved[1]:
+                        elif vertex[0] == robots_involved_with_edges[1]:
                             self.matching_graph.add_node(vertex, bipartite=1)
                     else:
-                        if vertex[0] in robots_involved:
+                        if vertex[0] in robots_involved_with_edges:
                             self.matching_graph.add_node(vertex)
             # Add edges
-            if edge_vertices[0][0] in robots_involved and edge_vertices[1][0] in robots_involved:
+            if edge_vertices[0][0] in robots_involved_with_edges and edge_vertices[1][0] in robots_involved_with_edges:
                 self.matching_graph.add_edge(edge_vertices[0], edge_vertices[1])
 
     def brokerage(self, use_vertex_cover):

@@ -1,8 +1,12 @@
 import unittest
 
+import sys #TODO: remove
+import os
+sys.path.append("/home/lajoiepy/Documents/projects/c-slam/c-slam-ws/src/cslam")
+
 from cslam.broker import Broker
 from cslam.algebraic_connectivity_maximization import AlgebraicConnectivityMaximization, EdgeInterRobot
-from tests.test_algebraic_connectivity import build_multi_robot_graph
+from test_algebraic_connectivity import build_multi_robot_graph
 import random
 import numpy as np
 from collections import namedtuple
@@ -61,7 +65,7 @@ def test_broker(unittest_framework, nb_poses, nb_candidate_edges, nb_robots, rob
     # Trivial solution: sending one vertex per edge
     # Upper Bounds:
     unittest_framework.assertLessEqual(len(vertices), nb_candidate_edges)
-    if use_vertex_cover:
+    if use_vertex_cover and nb_robots == 2:
         unittest_framework.assertLessEqual(len(vertices), math.ceil(float(len(initial_vertices))/2))
     # Lower Bounds:
     unittest_framework.assertGreaterEqual(len(vertices), 1)
@@ -128,11 +132,11 @@ class TestBroker(unittest.TestCase):
         """Simple dialog strategy
         """
         # Parameters
-        robot_id = 0
+        robot_id = 1
         nb_poses = 100
-        nb_candidate_edges = 50
-        nb_robots = 2
-        nb_candidates_to_choose = 30
+        nb_candidate_edges = 200
+        nb_robots = 5
+        nb_candidates_to_choose = 100
         use_vertex_cover = False
 
         test_broker(self, nb_poses, nb_candidate_edges, nb_robots, robot_id, nb_candidates_to_choose, use_vertex_cover)
@@ -148,11 +152,11 @@ class TestBroker(unittest.TestCase):
         """Vertex cover strategy
         """
         # Parameters
-        robot_id = 0
+        robot_id = 2
         nb_poses = 100
-        nb_candidate_edges = 50
-        nb_robots = 2
-        nb_candidates_to_choose = 30
+        nb_candidate_edges = 200
+        nb_robots = 5
+        nb_candidates_to_choose = 100
         use_vertex_cover = True
 
         test_broker(self, nb_poses, nb_candidate_edges, nb_robots, robot_id, nb_candidates_to_choose, use_vertex_cover)
