@@ -9,6 +9,7 @@ import numpy as np
 
 from cslam.netvlad import NetVLAD
 from cslam.loop_closure_sparse_matching import LoopClosureSparseMatching
+from cslam.broker import Broker
 
 from cslam_common_interfaces.msg import KeyframeRGB
 from cslam_loop_detection_interfaces.msg import GlobalImageDescriptor, GlobalImageDescriptors
@@ -154,43 +155,25 @@ class GlobalImageDescriptorLoopClosureDetection(object):
         # Check if the robot is the broker
         if self.neighbor_manager.local_robot_is_broker():
             # Find matches that maximize the algebraic connectivity
-            selection = self.lcm.select_candidates(self.loop_closure_budget, self.neighbor_manager.check_neighbors_in_range())
+            neighbors_is_in_range, neighbors_in_range_list = self.neighbor_manager.check_neighbors_in_range()
+            selection = self.lcm.select_candidates(self.loop_closure_budget, neighbors_is_in_range)
 
-            vertices = self.edge_list_to_vertices(selection)
             # Extract and publish local descriptors
-            for key in vertices:
-                # Call to send publish local descriptors
-                # TODO: Compute vertex cover
-                msg = LocalDescriptorsRequest()
-                msg.image_id = key[1]
-                msg.matches_robot_id = vertices[key][0]
-                msg.matches_image_id = vertices[key][1]
-                self.local_descriptors_request_publishers[key[0]].publish(msg)
-
-    def edge_list_to_vertices(self, selection):
-        """Extracts the vertices in a list of edges
-
-        Args:
-            selection list(EdgeInterRobot): selection of edges
-
-        Returns:
-            dict((int, int), list(int), list(int)): Vertices indices with their related vertices
-        """
-        vertices = {}
-        for s in selection:
-            key0 = (s.robot0_id, s.robot0_image_id)
-            key1 = (s.robot1_id, s.robot1_image_id)
-            if key0 in vertices:
-                vertices[key0][0].append(s.robot1_id)
-                vertices[key0][1].append(s.robot1_image_id)
-            else:
-                vertices[key0] = [[s.robot1_id], [s.robot1_image_id]]
-            if key1 in vertices:
-                vertices[key1][0].append(s.robot0_id)
-                vertices[key1][1].append(s.robot0_image_id)
-            else:
-                vertices[key1] = [[s.robot0_id], [s.robot0_image_id]]
-        return vertices
+            broker = Broker(selection, neighbors_in_range_list)
+            components = broker.brokerage(True)
+            self.node.get_logger().info("Selection:")
+            self.node.get_logger().info(str(selection))
+            self.node.get_logger().info("Components:")
+            self.node.get_logger().info(str(components))
+            for vertices in components: # TODO: Add param
+                for key in vertices:
+                    # Call to send publish local descriptors
+                    # TODO: Compute vertex cover
+                    msg = LocalDescriptorsRequest()
+                    msg.image_id = key[1]
+                    msg.matches_robot_id = vertices[key][0]
+                    msg.matches_image_id = vertices[key][1]
+                    self.local_descriptors_request_publishers[key[0]].publish(msg)
 
     def receive_keyframe(self, msg):
         """Callback to add a keyframe 

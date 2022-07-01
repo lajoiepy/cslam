@@ -199,6 +199,7 @@ find_package(ament_cmake_pytest REQUIRED)
 set(_cslam_python_tests
       tests/test_algebraic_connectivity.py
       tests/test_sparse_matching.py
+      tests/test_broker.py
   )
 foreach(_test_path ${_cslam_python_tests})
   get_filename_component(_test_name ${_test_path} NAME_WE)

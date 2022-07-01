@@ -54,12 +54,15 @@ def build_multi_robot_graph(nb_poses, nb_candidate_edges, nb_robots):
     candidate_edges = {}
     i = 0
     while len(candidate_edges.values()) < nb_candidate_edges:
-        edge = EdgeInterRobot(random.choice(range(nb_robots)),
+        robot0_id = random.choice(range(nb_robots))
+        robot1_id = random.choice(list(set(range(nb_robots))-set([robot0_id])))
+        edge = EdgeInterRobot(robot0_id,
                               random.choice(range(nb_poses)),
-                              random.choice(range(nb_robots)),
+                              robot1_id,
                               random.choice(range(nb_poses)), fixed_weight)
         candidate_edges[(edge.robot0_image_id, edge.robot1_id)] = edge
         i = i + 1
+        
     return fixed_edges_list, list(candidate_edges.values())
 
 
