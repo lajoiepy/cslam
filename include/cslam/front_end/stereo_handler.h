@@ -43,7 +43,9 @@
 
 #include <memory>
 
-#include "cslam/front_end/msg_conversion.h"
+#include "cslam/front_end/sensor_msg_conversion.h"
+
+namespace cslam {
 
 class StereoHandler {
 public:
@@ -179,4 +181,5 @@ private:
 
   std::string base_frame_id_;
 };
+}
 #endif

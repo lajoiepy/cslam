@@ -25,8 +25,8 @@ ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef MSGCONVERSION_H_
-#define MSGCONVERSION_H_
+#ifndef SENSORMSGCONVERSION_H_
+#define SENSORMSGCONVERSION_H_
 
 #include "rclcpp/time.hpp"
 #include "tf2_ros/buffer.h"
@@ -293,4 +293,4 @@ inline int sizeOfPointField(int datatype)
 }
 }
 
-#endif /* MSGCONVERSION_H_ */
+#endif /* SENSORMSGCONVERSION_H_ */

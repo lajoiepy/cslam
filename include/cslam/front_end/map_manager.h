@@ -7,6 +7,7 @@
 
 #include "cslam/front_end/stereo_handler.h"
 
+namespace cslam {
 /**
  * @brief Loop Closure Detection Management
  * - Receives keyframes from RTAB-map
@@ -49,5 +50,5 @@ private:
 
 // List possible data types for C++ linker
 template class MapManager<StereoHandler>;
-
+}
 #endif

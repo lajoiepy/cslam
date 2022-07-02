@@ -37,6 +37,15 @@ PoseGraphManager::PoseGraphManager(std::shared_ptr<rclcpp::Node> &node): node_(n
       node_->create_publisher<cslam_common_interfaces::msg::OptimizationResult>(
           "optimization_result", 100);
 
+  // Initialize inter-robot loop closures measurements
+  for (unsigned int i = 0; i < nb_robots_; i++)
+  {
+    for (unsigned int j = i + 1; j < nb_robots_; j++)
+    {
+      inter_robot_loop_closures_.insert(std::pair{std::pair{i, j}, std::vector<gtsam::BetweenFactor<gtsam::Pose3>>()});
+    }
+  }
+  
   // Add prior 
   // TODO: not for decentralized
   gtsam::LabeledSymbol first_symbol(GRAPH_LABEL, ROBOT_LABEL(robot_id_), 0);
@@ -78,12 +87,14 @@ void PoseGraphManager::inter_robot_loop_closure_callback(const cslam_loop_detect
       gtsam::Pose3 measurement;
       transform_msg_to_pose3(msg->transform, measurement);
 
-      gtsam::LabeledSymbol symbol_from(GRAPH_LABEL, ROBOT_LABEL(msg->robot0_id), msg->robot0_image_id);
-      gtsam::LabeledSymbol symbol_to(GRAPH_LABEL, ROBOT_LABEL(msg->robot1_id), msg->robot1_image_id);
+      unsigned char robot0_c = ROBOT_LABEL(msg->robot0_id);
+      gtsam::LabeledSymbol symbol_from(GRAPH_LABEL, robot0_c, msg->robot0_image_id);
+      unsigned char robot1_c = ROBOT_LABEL(msg->robot1_id);
+      gtsam::LabeledSymbol symbol_to(GRAPH_LABEL, robot1_c, msg->robot1_image_id);
 
       gtsam::BetweenFactor<gtsam::Pose3> factor(symbol_from, symbol_to, measurement, default_noise_model_);
-      //TODO: Make sure the value key exists
-      //pose_graph_->push_back(factor);
+      
+      inter_robot_loop_closures_[std::min(robot0_c, robot1_c), std::max(robot0_c, robot1_c)].emplace_back(factor);
     }
   }
 

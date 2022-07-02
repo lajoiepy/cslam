@@ -19,6 +19,8 @@
 #define GRAPH_LABEL 'g'
 #define ROBOT_LABEL(id) ('A'+id)
 
+namespace cslam {
+  
 class PoseGraphManager {
 public:
   /**
@@ -83,6 +85,8 @@ private:
   gtsam::Pose3 latest_local_pose_;
   gtsam::LabeledSymbol latest_local_symbol_;
 
+  std::map<std::pair<unsigned char, unsigned char>, std::vector<gtsam::BetweenFactor<gtsam::Pose3>>> inter_robot_loop_closures_;
+
   rclcpp::Subscription<
       cslam_common_interfaces::msg::KeyframeOdom>::SharedPtr
       odometry_subscriber_;
@@ -96,5 +100,5 @@ private:
 
   rclcpp::TimerBase::SharedPtr optimization_timer_;
 };
-
+}
 #endif
