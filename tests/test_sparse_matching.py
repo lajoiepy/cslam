@@ -1,4 +1,5 @@
 import unittest
+
 from cslam.loop_closure_sparse_matching import LoopClosureSparseMatching
 import random
 import numpy as np

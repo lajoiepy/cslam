@@ -82,7 +82,8 @@ void PoseGraphManager::inter_robot_loop_closure_callback(const cslam_loop_detect
       gtsam::LabeledSymbol symbol_to(GRAPH_LABEL, ROBOT_LABEL(msg->robot1_id), msg->robot1_image_id);
 
       gtsam::BetweenFactor<gtsam::Pose3> factor(symbol_from, symbol_to, measurement, default_noise_model_);
-      pose_graph_->push_back(factor);
+      //TODO: Make sure the value key exists
+      //pose_graph_->push_back(factor);
     }
   }
 
@@ -91,7 +92,7 @@ void PoseGraphManager::optimization_callback(){
   {
     // TODO: Ask for pose graph
     // TODO: Compute graph
-    gtsam::GncParams<gtsam::LevenbergMarquardtParams> params;
+    /*gtsam::GncParams<gtsam::LevenbergMarquardtParams> params;
     gtsam::GncOptimizer<gtsam::GncParams<gtsam::LevenbergMarquardtParams>> optimizer(*pose_graph_, *current_pose_estimates_, params);
     gtsam::Values result = optimizer.optimize();
 
@@ -101,6 +102,6 @@ void PoseGraphManager::optimization_callback(){
     // Publish result info for monitoring
     cslam_common_interfaces::msg::OptimizationResult msg;
     msg.success = true;
-    optimization_result_publisher_->publish(msg);
+    optimization_result_publisher_->publish(msg);*/
   }
 }

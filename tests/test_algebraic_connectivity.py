@@ -1,4 +1,5 @@
 import unittest
+
 from cslam.algebraic_connectivity_maximization import AlgebraicConnectivityMaximization, EdgeInterRobot
 from cslam.mac.utils import Edge
 from cslam.mac.mac import MAC

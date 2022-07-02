@@ -98,19 +98,20 @@ class LoopClosureSparseMatching(object):
             return kf, kfs
         return None, None
 
-    def select_candidates(self, number_of_candidates, is_neighbor_in_range):
+    def select_candidates(self, number_of_candidates, is_neighbor_in_range, greedy_initialization=True):
         """Select inter-robot loop closure candidates according to budget
 
         Args:
             number_of_candidates (int): inter-robot loop closure budget,
             is_neighbor_in_range: dict(int, bool): indicates which other robots are in communication range 
+            greedy_initialization: bool: use greedy initialization for selection
 
         Returns:
             list(EdgeInterRobot): selected edges
         """
         if len(self.candidate_selector.candidate_edges
-               ) >= number_of_candidates:
+               ) > number_of_candidates:
             return self.candidate_selector.select_candidates(
-                number_of_candidates, is_neighbor_in_range)
+                number_of_candidates, is_neighbor_in_range, greedy_initialization)
         else:
-            return []
+            return list(self.candidate_selector.candidate_edges.values()) 

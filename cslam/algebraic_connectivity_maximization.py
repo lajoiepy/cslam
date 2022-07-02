@@ -155,7 +155,8 @@ class AlgebraicConnectivityMaximization(object):
             edges (list(Edge)): candidate_edges
         """
         weights = [e.weight for e in edges]
-        w_init = np.zeros(len(weights))
+        nb_edges = len(weights)
+        w_init = np.zeros(nb_edges)
         indices = np.argpartition(
             weights, -nb_candidates_to_choose)[-nb_candidates_to_choose:]
         w_init[indices] = 1.0

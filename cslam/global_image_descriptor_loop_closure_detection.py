@@ -152,28 +152,47 @@ class GlobalImageDescriptorLoopClosureDetection(object):
         Returns:
             list(int): selected keyframes from other robots to match
         """
+        neighbors_is_in_range, neighbors_in_range_list = self.neighbor_manager.check_neighbors_in_range()
         # Check if the robot is the broker
-        if self.neighbor_manager.local_robot_is_broker():
+        if len(neighbors_in_range_list) > 0 and self.neighbor_manager.local_robot_is_broker():
             # Find matches that maximize the algebraic connectivity
-            neighbors_is_in_range, neighbors_in_range_list = self.neighbor_manager.check_neighbors_in_range()
             selection = self.lcm.select_candidates(self.loop_closure_budget, neighbors_is_in_range)
 
             # Extract and publish local descriptors
+            vertices_info = self.edge_list_to_vertices(selection)
             broker = Broker(selection, neighbors_in_range_list)
-            components = broker.brokerage(True)
-            self.node.get_logger().info("Selection:")
-            self.node.get_logger().info(str(selection))
-            self.node.get_logger().info("Components:")
-            self.node.get_logger().info(str(components))
-            for vertices in components: # TODO: Add param
-                for key in vertices:
+            for selected_vertices_set in broker.brokerage(True): # TODO: Add param
+                for v in selected_vertices_set:
                     # Call to send publish local descriptors
                     # TODO: Compute vertex cover
                     msg = LocalDescriptorsRequest()
-                    msg.image_id = key[1]
-                    msg.matches_robot_id = vertices[key][0]
-                    msg.matches_image_id = vertices[key][1]
-                    self.local_descriptors_request_publishers[key[0]].publish(msg)
+                    msg.image_id = v[1]
+                    msg.matches_robot_id = vertices_info[v][0]
+                    msg.matches_image_id = vertices_info[v][1]
+                    self.local_descriptors_request_publishers[v[0]].publish(msg)
+
+    def edge_list_to_vertices(self, selection):
+        """Extracts the vertices in a list of edges
+        Args:
+            selection list(EdgeInterRobot): selection of edges
+        Returns:
+            dict((int, int), list(int), list(int)): Vertices indices with their related vertices
+        """
+        vertices = {}
+        for s in selection:
+            key0 = (s.robot0_id, s.robot0_image_id)
+            key1 = (s.robot1_id, s.robot1_image_id)
+            if key0 in vertices:
+                vertices[key0][0].append(s.robot1_id)
+                vertices[key0][1].append(s.robot1_image_id)
+            else:
+                vertices[key0] = [[s.robot1_id], [s.robot1_image_id]]
+            if key1 in vertices:
+                vertices[key1][0].append(s.robot0_id)
+                vertices[key1][1].append(s.robot0_image_id)
+            else:
+                vertices[key1] = [[s.robot0_id], [s.robot0_image_id]]
+        return vertices
 
     def receive_keyframe(self, msg):
         """Callback to add a keyframe 
