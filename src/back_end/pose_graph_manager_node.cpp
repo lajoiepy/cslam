@@ -1,5 +1,7 @@
 #include "cslam/back_end/pose_graph_manager.h"
 
+using namespace cslam;
+
 /**
  * @brief Node to manage the pose graph data
  *

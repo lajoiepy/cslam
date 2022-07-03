@@ -16,8 +16,7 @@
 #include <cslam_common_interfaces/msg/optimization_result.hpp>
 #include <cslam_loop_detection_interfaces/msg/inter_robot_loop_closure.hpp>
 
-#define GRAPH_LABEL 'g'
-#define ROBOT_LABEL(id) ('A'+id)
+#include "cslam/back_end/gtsam_msg_conversion.h"
 
 namespace cslam {
   
@@ -30,22 +29,6 @@ public:
    */
   PoseGraphManager(std::shared_ptr<rclcpp::Node> &node);
   ~PoseGraphManager(){};
-
-  /**
-   * @brief Converts odometry message to gtsam::Pose3
-   * 
-   * @param odom_msg Odometry message
-   * @param pose Pose data
-   */
-  void odometry_msg_to_pose3(const nav_msgs::msg::Odometry& odom_msg, gtsam::Pose3& pose);
-
-  /**
-   * @brief Converts a transform msg into a gtsam::Pose3
-   * 
-   * @param msg Transform message
-   * @param pose Pose data
-   */
-  void transform_msg_to_pose3(const geometry_msgs::msg::Transform& msg, gtsam::Pose3& pose);
 
   /**
    * @brief Receives odometry msg + keyframe id

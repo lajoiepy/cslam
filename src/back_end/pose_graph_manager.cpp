@@ -1,5 +1,7 @@
 #include "cslam/back_end/pose_graph_manager.h"
 
+using namespace cslam;
+
 PoseGraphManager::PoseGraphManager(std::shared_ptr<rclcpp::Node> &node): node_(node) {
 
   node_->get_parameter("nb_robots", nb_robots_);
@@ -42,7 +44,7 @@ PoseGraphManager::PoseGraphManager(std::shared_ptr<rclcpp::Node> &node): node_(n
   {
     for (unsigned int j = i + 1; j < nb_robots_; j++)
     {
-      inter_robot_loop_closures_.insert(std::pair{std::pair{i, j}, std::vector<gtsam::BetweenFactor<gtsam::Pose3>>()});
+      inter_robot_loop_closures_.insert({{i, j}, std::vector<gtsam::BetweenFactor<gtsam::Pose3>>()});
     }
   }
   
@@ -52,20 +54,9 @@ PoseGraphManager::PoseGraphManager(std::shared_ptr<rclcpp::Node> &node): node_(n
   pose_graph_->addPrior(first_symbol, gtsam::Pose3(), default_noise_model_);
 }
 
-void PoseGraphManager::odometry_msg_to_pose3(const nav_msgs::msg::Odometry& odom_msg, gtsam::Pose3& pose){
-  gtsam::Rot3 rotation(odom_msg.pose.pose.orientation.w, odom_msg.pose.pose.orientation.x, odom_msg.pose.pose.orientation.y, odom_msg.pose.pose.orientation.z);
-  pose = gtsam::Pose3(rotation, {odom_msg.pose.pose.position.x, odom_msg.pose.pose.position.y, odom_msg.pose.pose.position.z});
-}
-
-void PoseGraphManager::transform_msg_to_pose3(const geometry_msgs::msg::Transform& msg, gtsam::Pose3& pose){
-  gtsam::Rot3 rotation(msg.rotation.w, msg.rotation.x, msg.rotation.y, msg.rotation.z);
-  pose = gtsam::Pose3(rotation, {msg.translation.x, msg.translation.y, msg.translation.z});
-}
-
 void PoseGraphManager::odometry_callback(const cslam_common_interfaces::msg::KeyframeOdom::ConstSharedPtr msg) {
 
-  gtsam::Pose3 current_estimate;
-  odometry_msg_to_pose3(msg->odom, current_estimate);
+  gtsam::Pose3 current_estimate = odometry_msg_to_pose3(msg->odom);
   gtsam::LabeledSymbol symbol(GRAPH_LABEL, ROBOT_LABEL(robot_id_), msg->id);
   current_pose_estimates_->insert(symbol, current_estimate);
 
@@ -84,8 +75,7 @@ void PoseGraphManager::odometry_callback(const cslam_common_interfaces::msg::Key
 void PoseGraphManager::inter_robot_loop_closure_callback(const cslam_loop_detection_interfaces::msg::
   InterRobotLoopClosure::ConstSharedPtr msg) {
     if (msg->success){
-      gtsam::Pose3 measurement;
-      transform_msg_to_pose3(msg->transform, measurement);
+      gtsam::Pose3 measurement = transform_msg_to_pose3(msg->transform);
 
       unsigned char robot0_c = ROBOT_LABEL(msg->robot0_id);
       gtsam::LabeledSymbol symbol_from(GRAPH_LABEL, robot0_c, msg->robot0_image_id);
@@ -94,7 +84,7 @@ void PoseGraphManager::inter_robot_loop_closure_callback(const cslam_loop_detect
 
       gtsam::BetweenFactor<gtsam::Pose3> factor(symbol_from, symbol_to, measurement, default_noise_model_);
       
-      inter_robot_loop_closures_[std::min(robot0_c, robot1_c), std::max(robot0_c, robot1_c)].emplace_back(factor);
+      inter_robot_loop_closures_[{std::min(robot0_c, robot1_c), std::max(robot0_c, robot1_c)}].emplace_back(factor);
     }
   }
 

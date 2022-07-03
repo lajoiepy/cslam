@@ -2,6 +2,7 @@
 #include "cslam/front_end/sensor_msg_conversion.h"
 
 using namespace rtabmap;
+using namespace cslam;
 
 StereoHandler::StereoHandler(std::shared_ptr<rclcpp::Node> &node): node_(node){
     node->declare_parameter<std::string>("left_image_topic", "left/image_rect");

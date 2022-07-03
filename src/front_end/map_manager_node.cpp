@@ -1,5 +1,7 @@
 #include "cslam/front_end/map_manager.h"
 
+using namespace cslam;
+
 /**
  * @brief Node to manage the sensor data and registration
  *

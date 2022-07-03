@@ -1,6 +1,8 @@
 #include "cslam/front_end/map_manager.h"
 #include "cslam/front_end/stereo_handler.h"
 
+using namespace cslam;
+
 template <class DataHandlerType>
 MapManager<DataHandlerType>::MapManager(std::shared_ptr<rclcpp::Node> &node): node_(node),
   local_data_handler_(node) {
