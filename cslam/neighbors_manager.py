@@ -117,6 +117,7 @@ class NeighborManager():
             msg (String): Empty
         """
         is_robot_in_range, robots_in_range_list = self.check_neighbors_in_range()
+        robots_in_range_list.remove(self.robot_id)
         msg = RobotIds()
         msg.ids = robots_in_range_list
         self.neighbors_publisher.publish(msg)

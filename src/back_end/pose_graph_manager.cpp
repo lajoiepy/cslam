@@ -75,12 +75,12 @@ PoseGraphManager::PoseGraphManager(std::shared_ptr<rclcpp::Node> &node): node_(n
   for (unsigned int i = 0; i < nb_robots_; i++)
   {
     get_pose_graph_publishers_.insert({i,
-      node->create_publisher<std_msgs::msg::String>("/r" + std::to_string(i) + "/get_pose_graph", 100)});
+      node->create_publisher<cslam_common_interfaces::msg::RobotIds>("/r" + std::to_string(i) + "/get_pose_graph", 100)});
     received_pose_graphs_.insert({i, false});
   }
 
   get_pose_graph_subscriber_ = node->create_subscription<
-        std_msgs::msg::String>(
+        cslam_common_interfaces::msg::RobotIds>(
         "get_pose_graph", 100,
         std::bind(&PoseGraphManager::get_pose_graph_callback, this,
                     std::placeholders::_1));
@@ -98,10 +98,7 @@ PoseGraphManager::PoseGraphManager(std::shared_ptr<rclcpp::Node> &node): node_(n
   optimizer_state_ = OptimizerState::IDLE;
   is_waiting_ = false;
 
-  // Add prior 
-  // TODO: not for decentralized
-  //gtsam::LabeledSymbol first_symbol(GRAPH_LABEL, ROBOT_LABEL(robot_id_), 0);
-  //pose_graph_->addPrior(first_symbol, gtsam::Pose3(), default_noise_model_);
+  RCLCPP_INFO(node_->get_logger(), "Initialization done.");
 }
 
 void PoseGraphManager::reinitialize_received_pose_graphs(){
@@ -110,11 +107,12 @@ void PoseGraphManager::reinitialize_received_pose_graphs(){
     received_pose_graphs_[i] = false;
   }
   other_robots_graph_and_estimates_.clear();
+  received_pose_graphs_connectivity_.clear();
 }
 
 bool PoseGraphManager::check_received_pose_graphs(){
   bool received_all = true;
-  for (auto id : current_robot_ids_.ids)
+  for (auto id : current_neighbors_ids_.ids)
   {
     received_all &= received_pose_graphs_[id];
   }
@@ -149,26 +147,53 @@ void PoseGraphManager::inter_robot_loop_closure_callback(const cslam_loop_detect
       unsigned char robot1_c = ROBOT_LABEL(msg->robot1_id);
       gtsam::LabeledSymbol symbol_to(GRAPH_LABEL, robot1_c, msg->robot1_image_id);
 
-      gtsam::BetweenFactor<gtsam::Pose3> factor(symbol_from, symbol_to, measurement, default_noise_model_);
+      gtsam::BetweenFactor<gtsam::Pose3> factor = gtsam::BetweenFactor<gtsam::Pose3>(symbol_from, symbol_to, measurement, default_noise_model_);
       
-      inter_robot_loop_closures_[{std::min(robot0_c, robot1_c), std::max(robot0_c, robot1_c)}].emplace_back(factor);
+      inter_robot_loop_closures_[{std::min(msg->robot0_id, msg->robot1_id), std::max(msg->robot0_id, msg->robot1_id)}].push_back(factor);
     }
   }
 
 void PoseGraphManager::current_neighbors_callback(const cslam_common_interfaces::msg::
                                       RobotIds::ConstSharedPtr msg)
 {
-  current_robot_ids_ = *msg;
+  current_neighbors_ids_ = *msg;
   optimizer_state_ = OptimizerState::POSEGRAPH_COLLECTION;
   end_waiting();
 }
 
-void PoseGraphManager::get_pose_graph_callback(const std_msgs::msg::String::ConstSharedPtr msg)
+void PoseGraphManager::get_pose_graph_callback(const cslam_common_interfaces::msg::
+                                      RobotIds::ConstSharedPtr msg)
 {
   cslam_common_interfaces::msg::PoseGraph out_msg;
   out_msg.robot_id = robot_id_;
   out_msg.values = gtsam_values_to_msg(current_pose_estimates_);
-  out_msg.edges = gtsam_factors_to_msg(pose_graph_);
+  auto graph = boost::make_shared<gtsam::NonlinearFactorGraph>();
+  graph->push_back(pose_graph_->begin(), pose_graph_->end());
+
+  std::set<unsigned int> connected_robots;
+
+  for (unsigned int i = 0; i < msg->ids.size(); i++)
+  {
+    for (unsigned int j = i+1; j < msg->ids.size(); j++)
+    {
+      unsigned int min_robot_id = std::min(msg->ids[i], msg->ids[j]);
+      unsigned int max_robot_id = std::max(msg->ids[i], msg->ids[j]);
+      if (inter_robot_loop_closures_[{min_robot_id, max_robot_id}].size() > 0)
+      {
+          connected_robots.insert(max_robot_id);
+          if (min_robot_id == robot_id_)
+          {
+            graph->push_back(inter_robot_loop_closures_[{min_robot_id, max_robot_id}].begin(), inter_robot_loop_closures_[{min_robot_id, max_robot_id}].end());
+          }
+      }
+    }
+  }
+
+  out_msg.edges = gtsam_factors_to_msg(graph);
+  for (auto id : connected_robots)
+  {
+    out_msg.connected_robots.ids.push_back(id);
+  }
   pose_graph_publisher_->publish(out_msg);
 }
 
@@ -177,11 +202,50 @@ void PoseGraphManager::pose_graph_callback(const cslam_common_interfaces::msg::
 {
   other_robots_graph_and_estimates_.insert({msg->robot_id, {edges_msg_to_gtsam(msg->edges), values_msg_to_gtsam(msg->values)}});
   received_pose_graphs_[msg->robot_id] = true;
+  received_pose_graphs_connectivity_.insert({msg->robot_id, msg->connected_robots.ids});
   if (check_received_pose_graphs())
   {
     end_waiting();
     optimizer_state_ = OptimizerState::OPTIMIZATION;
   }
+}
+
+std::map<unsigned int, bool> PoseGraphManager::connected_robot_pose_graph()
+{
+  std::map<unsigned int, bool> is_robot_connected;
+  is_robot_connected.insert({robot_id_, true});
+  for (auto id : current_neighbors_ids_.ids) {
+    is_robot_connected.insert({id, false});
+  }
+
+  // Breadth First Search 
+  bool *visited = new bool[current_neighbors_ids_.ids.size()];
+  for (unsigned int i = 0; i < current_neighbors_ids_.ids.size(); i++)
+      visited[i] = false;
+
+  std::list<unsigned int> queue;
+
+  unsigned int current_id = robot_id_;
+  visited[current_id] = true;
+  queue.push_back(current_id);
+
+  while (!queue.empty())
+  {
+      current_id = queue.front();
+      queue.pop_front();
+
+      for (auto id : received_pose_graphs_connectivity_[current_id])
+      {
+          is_robot_connected[id] = true;
+
+          if (!visited[id])
+          {
+              visited[id] = true;
+              queue.push_back(id);
+          }
+      }
+  }
+  return is_robot_connected;
 }
 
 void PoseGraphManager::resquest_current_neighbors(){
@@ -215,21 +279,81 @@ void PoseGraphManager::optimization_callback(){
   }
 }
 
+std::pair<gtsam::NonlinearFactorGraph::shared_ptr, gtsam::Values::shared_ptr> PoseGraphManager::aggregate_pose_graphs(){
+  // Check connectivity
+  auto is_pose_graph_connected = connected_robot_pose_graph();
+  // Aggregate graphs
+  auto graph = boost::make_shared<gtsam::NonlinearFactorGraph>();
+  auto estimates = boost::make_shared<gtsam::Values>();
+  // Local graph
+  graph->push_back(pose_graph_->begin(), pose_graph_->end());
+  auto included_robots_ids = current_neighbors_ids_;
+  included_robots_ids.ids.push_back(robot_id_);
+  for (unsigned int i = 0; i < included_robots_ids.ids.size(); i++)
+  {
+    for (unsigned int j = i + 1; j < included_robots_ids.ids.size(); j++)
+    {
+      if (is_pose_graph_connected[included_robots_ids.ids[i]] && is_pose_graph_connected[included_robots_ids.ids[j]])
+      {
+        unsigned int min_id = std::min(included_robots_ids.ids[i], included_robots_ids.ids[j]);
+        unsigned int max_id = std::max(included_robots_ids.ids[i], included_robots_ids.ids[j]);
+        for (const auto &factor: inter_robot_loop_closures_[{min_id, max_id}])
+        {
+          graph->push_back(factor);
+        }
+      }
+    }
+  }
+  estimates->insert(*current_pose_estimates_);
+  // Add other robots graphs
+  for (auto id : current_neighbors_ids_.ids)
+  { 
+    if (is_pose_graph_connected[id])
+    {
+      estimates->insert(*other_robots_graph_and_estimates_[id].second);
+    }
+  }
+  for (auto id : current_neighbors_ids_.ids)
+  {
+    for (const auto &factor_: *other_robots_graph_and_estimates_[id].first)
+    {
+      auto factor = boost::dynamic_pointer_cast<gtsam::BetweenFactor<gtsam::Pose3>>(factor_);
+      unsigned int robot0_id = ROBOT_ID(gtsam::LabeledSymbol(factor->key1()).label());
+      unsigned int robot1_id = ROBOT_ID(gtsam::LabeledSymbol(factor->key2()).label());
+      if (is_pose_graph_connected[robot0_id] && is_pose_graph_connected[robot1_id])
+      {
+        graph->push_back(factor);
+      }
+    }
+  }
+  return {graph, estimates};
+}
+
 void PoseGraphManager::perform_optimization(){
-    // TODO: Aggregate graphs
+  
+  // Build global pose graph
+  auto graph_and_estimates = aggregate_pose_graphs();
 
-    // TODO: Compute graph
-    /*gtsam::GncParams<gtsam::LevenbergMarquardtParams> params;
-    gtsam::GncOptimizer<gtsam::GncParams<gtsam::LevenbergMarquardtParams>> optimizer(*pose_graph_, *current_pose_estimates_, params);
-    gtsam::Values result = optimizer.optimize();
+  // Add prior 
+  gtsam::LabeledSymbol first_symbol(GRAPH_LABEL, ROBOT_LABEL(robot_id_), 0);
+  graph_and_estimates.first->addPrior(first_symbol, gtsam::Pose3(), default_noise_model_);
 
-    // TODO: print result
-    // TODO: publish a TF
+  // // Optimize graph
+  gtsam::GncParams<gtsam::LevenbergMarquardtParams> params;
+  gtsam::GncOptimizer<gtsam::GncParams<gtsam::LevenbergMarquardtParams>> optimizer(*graph_and_estimates.first, *graph_and_estimates.second, params);
+  gtsam::Values result = optimizer.optimize();
 
-    // Publish result info for monitoring
-    cslam_common_interfaces::msg::OptimizationResult msg;
-    msg.success = true;
-    optimization_result_publisher_->publish(msg);*/
+  // // TODO: Share results
+
+  // // TODO: print result
+  // // TODO: publish a TF
+
+  // // Publish result info for monitoring
+  cslam_common_interfaces::msg::OptimizationResult msg;
+  msg.success = true;
+  msg.factors = gtsam_factors_to_msg(graph_and_estimates.first);// TODO: Do not fill, unless debugging mode
+  msg.estimates = gtsam_values_to_msg(result);// TODO: Do not fill, unless debugging mode
+  optimization_result_publisher_->publish(msg); // TODO: publish on debug mode
 }
 
 void PoseGraphManager::optimization_loop_callback(){
@@ -237,11 +361,13 @@ void PoseGraphManager::optimization_loop_callback(){
   {
     if (optimizer_state_ == OptimizerState::POSEGRAPH_COLLECTION) // TODO: Document
     {
-      if (current_robot_ids_.ids.size() > 0)
+      if (current_neighbors_ids_.ids.size() > 0)
       {
-        for (auto id : current_robot_ids_.ids)
+        for (auto id : current_neighbors_ids_.ids)
         {
-          get_pose_graph_publishers_[id]->publish(std_msgs::msg::String());
+          auto current_robots_ids = current_neighbors_ids_;
+          current_robots_ids.ids.push_back(robot_id_);
+          get_pose_graph_publishers_[id]->publish(current_robots_ids);
         }
         start_waiting();
       }

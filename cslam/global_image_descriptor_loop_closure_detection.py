@@ -73,8 +73,6 @@ class GlobalImageDescriptorLoopClosureDetection(object):
             self.local_descriptors_request_publishers[i] = self.node.create_publisher(
                 LocalDescriptorsRequest, '/r' + str(i) + '/local_descriptors_request', 100)
 
-        self.loop_closure_list = []
-
         # Listen for changes in node liveliness
         self.heartbeat_publisher = self.node.create_publisher(String, 'heartbeat', 10)
         self.neighbor_manager = NeighborManager(self.node, self.robot_id, self.nb_robots, self.enable_neighbor_monitoring, self.params['max_heartbeat_delay_sec'])
@@ -242,7 +240,6 @@ class GlobalImageDescriptorLoopClosureDetection(object):
         if msg.success:
             self.node.get_logger().info(
                 'New inter-robot loop closure measurement: (' + str(msg.robot0_id) + ',' + str(msg.robot0_image_id) + ') -> (' + str(msg.robot1_id) + ',' + str(msg.robot1_image_id) + ')')
-            self.loop_closure_list.append(msg)
             # If geo verif succeeds, move from candidate to fixed edge in the graph
             self.lcm.candidate_selector.candidate_edges_to_fixed(
                 [self.inter_robot_loop_closure_msg_to_edge(msg)])

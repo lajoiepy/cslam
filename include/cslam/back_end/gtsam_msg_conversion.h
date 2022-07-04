@@ -19,6 +19,7 @@
 
 #define GRAPH_LABEL 'g'
 #define ROBOT_LABEL(id) ('A'+id)
+#define ROBOT_ID(ch) ((unsigned int)(ch - 'A'))
 
 namespace cslam {
 
@@ -44,6 +45,10 @@ geometry_msgs::msg::Pose gtsam_pose_to_msg(const gtsam::Pose3& pose);
 std::vector<cslam_common_interfaces::msg::PoseGraphValue> gtsam_values_to_msg(const gtsam::Values::shared_ptr values);
 
 std::vector<cslam_common_interfaces::msg::PoseGraphEdge> gtsam_factors_to_msg(const gtsam::NonlinearFactorGraph::shared_ptr factors);
+
+std::vector<cslam_common_interfaces::msg::PoseGraphValue> gtsam_values_to_msg(const gtsam::Values& values);
+
+std::vector<cslam_common_interfaces::msg::PoseGraphEdge> gtsam_factors_to_msg(const gtsam::NonlinearFactorGraph& factors);
 
 gtsam::Pose3 pose_msg_to_gtsam(const geometry_msgs::msg::Pose& pose);
 

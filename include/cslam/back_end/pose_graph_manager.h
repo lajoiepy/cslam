@@ -19,6 +19,7 @@
 #include <cslam_loop_detection_interfaces/msg/inter_robot_loop_closure.hpp>
 
 #include <std_msgs/msg/string.hpp>
+#include <list>
 
 #include "cslam/back_end/gtsam_msg_conversion.h"
 
@@ -64,7 +65,8 @@ public:
    * 
    * @param msg 
    */
-  void get_pose_graph_callback(const std_msgs::msg::String::ConstSharedPtr msg);
+  void get_pose_graph_callback(const cslam_common_interfaces::msg::
+                                      RobotIds::ConstSharedPtr msg);
 
   /**
    * @brief Receives pose graph
@@ -128,6 +130,18 @@ public:
    */
   void end_waiting();
 
+  /**
+   * @brief Breadth First Seach to check connectivity
+   * 
+   */
+  std::map<unsigned int, bool> connected_robot_pose_graph();
+
+  /**
+   * @brief Put all connected pose graphs into one
+   * 
+   */
+  std::pair<gtsam::NonlinearFactorGraph::shared_ptr, gtsam::Values::shared_ptr> aggregate_pose_graphs();
+
 private:
 
   // TODO: document
@@ -148,7 +162,7 @@ private:
   gtsam::Pose3 latest_local_pose_;
   gtsam::LabeledSymbol latest_local_symbol_;
 
-  std::map<std::pair<unsigned char, unsigned char>, std::vector<gtsam::BetweenFactor<gtsam::Pose3>>> inter_robot_loop_closures_;
+  std::map<std::pair<unsigned int, unsigned int>, std::vector<gtsam::BetweenFactor<gtsam::Pose3>>> inter_robot_loop_closures_;
 
   rclcpp::Subscription<
       cslam_common_interfaces::msg::KeyframeOdom>::SharedPtr
@@ -167,17 +181,19 @@ private:
 
   rclcpp::Subscription<cslam_common_interfaces::msg::RobotIds>::SharedPtr current_neighbors_subscriber_;
 
-  std::map<unsigned int, rclcpp::Publisher<std_msgs::msg::String>::SharedPtr> get_pose_graph_publishers_;
+  std::map<unsigned int, rclcpp::Publisher<cslam_common_interfaces::msg::RobotIds>::SharedPtr> get_pose_graph_publishers_;
 
   std::map<unsigned int, bool> received_pose_graphs_;
 
-  rclcpp::Subscription<std_msgs::msg::String>::SharedPtr get_pose_graph_subscriber_;
+  std::map<unsigned int, std::vector<unsigned int>> received_pose_graphs_connectivity_;
+
+  rclcpp::Subscription<cslam_common_interfaces::msg::RobotIds>::SharedPtr get_pose_graph_subscriber_;
 
   rclcpp::Subscription<cslam_common_interfaces::msg::PoseGraph>::SharedPtr pose_graph_subscriber_;
 
   rclcpp::Publisher<cslam_common_interfaces::msg::PoseGraph>::SharedPtr pose_graph_publisher_;
 
-  cslam_common_interfaces::msg::RobotIds current_robot_ids_;
+  cslam_common_interfaces::msg::RobotIds current_neighbors_ids_;
 
   OptimizerState optimizer_state_;
 
