@@ -1,4 +1,6 @@
 from cslam.neighbor_monitor import NeighborMonitor
+from cslam_common_interfaces.msg import RobotIds
+from std_msgs.msg import String
 
 class NeighborManager():
     def __init__(self, node, robot_id, nb_robots, is_enabled,  max_delay_sec):
@@ -9,6 +11,11 @@ class NeighborManager():
         for id in range(self.nb_robots):
             if id != self.robot_id:
                 self.neighbors_monitors[id] = NeighborMonitor(self.node, id, is_enabled, max_delay_sec)
+        
+        self.subscriber = self.node.create_subscription(
+            String, 'get_current_neighbors', self.get_current_neighbors_callback, 100) 
+        self.neighbors_publisher = self.node.create_publisher(
+            RobotIds, 'current_neighbors', 100)
 
     def check_neighbors_in_range(self):
         """Check which neighbors are in range
@@ -103,6 +110,15 @@ class NeighborManager():
         self.update_received_kf_id(other_robot_id, max(self.neighbors_monitors[other_robot_id].last_keyframe_received, end_id))
         return list_index_range
 
-        
+    def get_current_neighbors_callback(self, msg):
+        """Publish the current neighbors in range
+
+        Args:
+            msg (String): Empty
+        """
+        is_robot_in_range, robots_in_range_list = self.check_neighbors_in_range()
+        msg = RobotIds()
+        msg.ids = robots_in_range_list
+        self.neighbors_publisher.publish(msg)
         
        

@@ -18,6 +18,9 @@ int main(int argc, char **argv) {
   node->declare_parameter<int>("nb_robots", 1);
   node->declare_parameter<int>("robot_id", 0);
   node->declare_parameter<int>("pose_graph_manager_process_period_ms", 1000);
+  node->declare_parameter<int>("pose_graph_optimization_loop_period_ms", 100);
+  node->declare_parameter<int>("max_waiting_time_sec", 100);
+
 
   PoseGraphManager manager(node);
 
