@@ -42,10 +42,22 @@ PoseGraphManager::PoseGraphManager(std::shared_ptr<rclcpp::Node> &node): node_(n
   optimization_loop_timer_ = node_->create_wall_timer(
         std::chrono::milliseconds(pose_graph_optimization_loop_period_ms_), std::bind(&PoseGraphManager::optimization_loop_callback, this));
 
-  // Publisher for optimization result
-  optimization_result_publisher_ =
+  // Publishers for optimization result
+  debug_optimization_result_publisher_ =
       node_->create_publisher<cslam_common_interfaces::msg::OptimizationResult>(
-          "optimization_result", 100);
+          "debug_optimization_result", 100);
+
+  for (unsigned int i = 0; i < nb_robots_; i++)
+  {
+    optimized_estimates_publishers_.insert({i,
+      node->create_publisher<cslam_common_interfaces::msg::OptimizationResult>("/r" + std::to_string(i) + "/optimized_estimates", 100)});
+  }
+
+  optimized_estimates_subscriber_ = node->create_subscription<
+        cslam_common_interfaces::msg::OptimizationResult>(
+        "optimized_estimates", 100,
+        std::bind(&PoseGraphManager::optimized_estimates_callback, this,
+                    std::placeholders::_1));
           
   optimizer_state_publisher_ =
       node_->create_publisher<cslam_common_interfaces::msg::OptimizerState>(
@@ -329,6 +341,25 @@ std::pair<gtsam::NonlinearFactorGraph::shared_ptr, gtsam::Values::shared_ptr> Po
   return {graph, estimates};
 }
 
+void PoseGraphManager::optimized_estimates_callback(const cslam_common_interfaces::msg::OptimizationResult::ConstSharedPtr msg)
+{
+  auto optimized_estimates = values_msg_to_gtsam(msg->estimates);
+  current_pose_estimates_->update(*optimized_estimates);
+}
+
+void PoseGraphManager::share_optimized_estimates(const gtsam::Values& estimates){
+  // TODO: TF + alignment
+  auto included_robots_ids = current_neighbors_ids_;
+  included_robots_ids.ids.push_back(robot_id_);
+  for (unsigned int i = 0; i < included_robots_ids.ids.size(); i++)
+  {
+    cslam_common_interfaces::msg::OptimizationResult msg;
+    msg.success = true;
+    msg.estimates = gtsam_values_to_msg(estimates.filter(gtsam::LabeledSymbol::LabelTest(ROBOT_LABEL(included_robots_ids.ids[i]))));
+    optimized_estimates_publishers_[included_robots_ids.ids[i]]->publish(msg); 
+  }
+}
+
 void PoseGraphManager::perform_optimization(){
   
   // Build global pose graph
@@ -343,17 +374,15 @@ void PoseGraphManager::perform_optimization(){
   gtsam::GncOptimizer<gtsam::GncParams<gtsam::LevenbergMarquardtParams>> optimizer(*graph_and_estimates.first, *graph_and_estimates.second, params);
   gtsam::Values result = optimizer.optimize();
 
-  // // TODO: Share results
-
-  // // TODO: print result
-  // // TODO: publish a TF
+  // Share results
+  share_optimized_estimates(result);
 
   // // Publish result info for monitoring
   cslam_common_interfaces::msg::OptimizationResult msg;
   msg.success = true;
   msg.factors = gtsam_factors_to_msg(graph_and_estimates.first);// TODO: Do not fill, unless debugging mode
   msg.estimates = gtsam_values_to_msg(result);// TODO: Do not fill, unless debugging mode
-  optimization_result_publisher_->publish(msg); // TODO: publish on debug mode
+  debug_optimization_result_publisher_->publish(msg); // TODO: publish on debug mode
 }
 
 void PoseGraphManager::optimization_loop_callback(){

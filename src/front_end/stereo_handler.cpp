@@ -1,5 +1,5 @@
 #include "cslam/front_end/stereo_handler.h"
-#include "cslam/front_end/sensor_msg_conversion.h"
+#include "cslam/front_end/sensor_msg_utils.h"
 
 using namespace rtabmap;
 using namespace cslam;

@@ -139,7 +139,7 @@ add_executable(map_manager
   src/front_end/map_manager.cpp 
   src/front_end/map_manager_node.cpp 
   src/front_end/stereo_handler.cpp 
-  src/front_end/sensor_msg_conversion.cpp)
+  src/front_end/sensor_msg_utils.cpp)
 add_dependencies(map_manager  
   map_manager
   ${${PROJECT_NAME}_EXPORTED_TARGETS})
@@ -152,7 +152,7 @@ set_target_properties(map_manager
 add_executable(pose_graph_manager 
   src/back_end/pose_graph_manager.cpp
   src/back_end/pose_graph_manager_node.cpp
-  src/back_end/gtsam_msg_conversion.cpp)
+  src/back_end/gtsam_utils.cpp)
 add_dependencies(pose_graph_manager  
 pose_graph_manager
   ${${PROJECT_NAME}_EXPORTED_TARGETS})

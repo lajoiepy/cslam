@@ -21,7 +21,7 @@
 #include <std_msgs/msg/string.hpp>
 #include <list>
 
-#include "cslam/back_end/gtsam_msg_conversion.h"
+#include "cslam/back_end/gtsam_utils.h"
 
 namespace cslam {
 
@@ -75,6 +75,13 @@ public:
    */
   void pose_graph_callback(const cslam_common_interfaces::msg::
                                       PoseGraph::ConstSharedPtr msg);
+
+  /**
+   * @brief Receives estimates from the optimizer
+   * 
+   * @param msg 
+   */
+  void optimized_estimates_callback(const cslam_common_interfaces::msg::OptimizationResult::ConstSharedPtr msg);
 
   /**
    * @brief Starts pose graph optimization process every X ms (defined in config)
@@ -142,6 +149,12 @@ public:
    */
   std::pair<gtsam::NonlinearFactorGraph::shared_ptr, gtsam::Values::shared_ptr> aggregate_pose_graphs();
 
+  /**
+   * @brief Shares optimizes estimates with the robots concerned
+   * 
+   */
+  void share_optimized_estimates(const gtsam::Values& estimates);
+
 private:
 
   // TODO: document
@@ -173,7 +186,13 @@ private:
       inter_robot_loop_closure_subscriber_;
 
   rclcpp::Publisher<cslam_common_interfaces::msg::OptimizationResult>::SharedPtr
-      optimization_result_publisher_;
+      debug_optimization_result_publisher_;
+
+  rclcpp::Subscription<cslam_common_interfaces::msg::OptimizationResult>::SharedPtr
+      optimized_estimates_subscriber_;
+
+  std::map<unsigned int, rclcpp::Publisher<cslam_common_interfaces::msg::OptimizationResult>::SharedPtr>
+      optimized_estimates_publishers_;
 
   rclcpp::TimerBase::SharedPtr optimization_timer_, optimization_loop_timer_;
 

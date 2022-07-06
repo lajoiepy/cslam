@@ -43,7 +43,7 @@
 
 #include <memory>
 
-#include "cslam/front_end/sensor_msg_conversion.h"
+#include "cslam/front_end/sensor_msg_utils.h"
 
 namespace cslam {
 
