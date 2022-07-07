@@ -16,6 +16,22 @@ geometry_msgs::msg::Pose gtsam_pose_to_msg(const gtsam::Pose3& pose)
     return msg;
 }
 
+geometry_msgs::msg::Transform gtsam_pose_to_transform_msg(const gtsam::Pose3& pose)
+{
+  geometry_msgs::msg::Transform msg;
+  msg.translation.x = pose.x();
+  msg.translation.y = pose.y();
+  msg.translation.z = pose.z();
+
+  auto rotation = pose.rotation().quaternion();
+  msg.rotation.w = rotation[0];
+  msg.rotation.x = rotation[1];
+  msg.rotation.y = rotation[2];
+  msg.rotation.z = rotation[3];
+
+  return msg;
+}
+
 std::vector<cslam_common_interfaces::msg::PoseGraphValue> gtsam_values_to_msg(const gtsam::Values& values)
 {
     std::vector<cslam_common_interfaces::msg::PoseGraphValue> poses;

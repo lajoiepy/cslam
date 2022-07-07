@@ -8,6 +8,7 @@ PoseGraphManager::PoseGraphManager(std::shared_ptr<rclcpp::Node> &node): node_(n
   node_->get_parameter("robot_id", robot_id_);
   node_->get_parameter("pose_graph_manager_process_period_ms", pose_graph_manager_process_period_ms_);
   node_->get_parameter("pose_graph_optimization_loop_period_ms", pose_graph_optimization_loop_period_ms_);
+  node_->get_parameter("heartbeat_period_sec", heartbeat_period_sec_);
 
   int max_waiting_param;
   node_->get_parameter("max_waiting_time_sec", max_waiting_param);
@@ -51,6 +52,7 @@ PoseGraphManager::PoseGraphManager(std::shared_ptr<rclcpp::Node> &node): node_(n
   {
     optimized_estimates_publishers_.insert({i,
       node->create_publisher<cslam_common_interfaces::msg::OptimizationResult>("/r" + std::to_string(i) + "/optimized_estimates", 100)});
+    reference_frame_per_robot_.insert({i, geometry_msgs::msg::TransformStamped()});
   }
 
   optimized_estimates_subscriber_ = node->create_subscription<
@@ -77,8 +79,7 @@ PoseGraphManager::PoseGraphManager(std::shared_ptr<rclcpp::Node> &node): node_(n
     node->create_publisher<std_msgs::msg::String>("get_current_neighbors", 100);
 
   current_neighbors_subscriber_ = node->create_subscription<
-        cslam_common_interfaces::msg::
-                                      RobotIds>(
+        cslam_common_interfaces::msg::RobotIdsAndOrigin>(
         "current_neighbors", 100,
         std::bind(&PoseGraphManager::current_neighbors_callback, this,
                     std::placeholders::_1));
@@ -110,6 +111,23 @@ PoseGraphManager::PoseGraphManager(std::shared_ptr<rclcpp::Node> &node): node_(n
   optimizer_state_ = OptimizerState::IDLE;
   is_waiting_ = false;
 
+  // Initialize the transform broadcaster
+  tf_broadcaster_ =
+      std::make_unique<tf2_ros::TransformBroadcaster>(*node_);
+
+  tf_broadcaster_timer_ = node_->create_wall_timer(
+        std::chrono::milliseconds(pose_graph_optimization_loop_period_ms_), std::bind(&PoseGraphManager::broadcast_tf_callback, this));
+
+  heartbeat_publisher_ = node_->create_publisher<std_msgs::msg::UInt32>(
+          "heartbeat", 10);
+  heartbeat_timer_ = node_->create_wall_timer(
+        std::chrono::seconds(heartbeat_period_sec_), std::bind(&PoseGraphManager::heartbeat_timer_callback, this)); 
+
+  reference_frame_per_robot_publisher_ = node_->create_publisher<cslam_common_interfaces::msg::ReferenceFrames>(
+          "reference_frames", rclcpp::QoS(1).transient_local());
+
+  origin_robot_id_ = robot_id_;
+
   RCLCPP_INFO(node_->get_logger(), "Initialization done.");
 }
 
@@ -124,7 +142,7 @@ void PoseGraphManager::reinitialize_received_pose_graphs(){
 
 bool PoseGraphManager::check_received_pose_graphs(){
   bool received_all = true;
-  for (auto id : current_neighbors_ids_.ids)
+  for (auto id : current_neighbors_ids_.robots.ids)
   {
     received_all &= received_pose_graphs_[id];
   }
@@ -166,11 +184,29 @@ void PoseGraphManager::inter_robot_loop_closure_callback(const cslam_loop_detect
   }
 
 void PoseGraphManager::current_neighbors_callback(const cslam_common_interfaces::msg::
-                                      RobotIds::ConstSharedPtr msg)
+                                      RobotIdsAndOrigin::ConstSharedPtr msg)
 {
   current_neighbors_ids_ = *msg;
-  optimizer_state_ = OptimizerState::POSEGRAPH_COLLECTION;
   end_waiting();
+  if (is_optimizer()){
+    optimizer_state_ = OptimizerState::POSEGRAPH_COLLECTION;
+  }
+}
+
+bool PoseGraphManager::is_optimizer(){
+  // Here we could implement a different priority check
+  bool is_optimizer = true;
+  for (unsigned int i = 0; i < current_neighbors_ids_.origins.ids.size(); i++)
+  {
+    if (origin_robot_id_ > current_neighbors_ids_.origins.ids[i]){
+      is_optimizer &= false;
+    }
+    else if (origin_robot_id_ == current_neighbors_ids_.origins.ids[i] && 
+            robot_id_ > current_neighbors_ids_.robots.ids[i]){
+      is_optimizer &= false;
+    }
+  }
+  return is_optimizer;
 }
 
 void PoseGraphManager::get_pose_graph_callback(const cslam_common_interfaces::msg::
@@ -226,13 +262,13 @@ std::map<unsigned int, bool> PoseGraphManager::connected_robot_pose_graph()
 {
   std::map<unsigned int, bool> is_robot_connected;
   is_robot_connected.insert({robot_id_, true});
-  for (auto id : current_neighbors_ids_.ids) {
+  for (auto id : current_neighbors_ids_.robots.ids) {
     is_robot_connected.insert({id, false});
   }
 
   // Breadth First Search 
-  bool *visited = new bool[current_neighbors_ids_.ids.size()];
-  for (unsigned int i = 0; i < current_neighbors_ids_.ids.size(); i++)
+  bool *visited = new bool[current_neighbors_ids_.robots.ids.size()];
+  for (unsigned int i = 0; i < current_neighbors_ids_.robots.ids.size(); i++)
       visited[i] = false;
 
   std::list<unsigned int> queue;
@@ -300,15 +336,15 @@ std::pair<gtsam::NonlinearFactorGraph::shared_ptr, gtsam::Values::shared_ptr> Po
   // Local graph
   graph->push_back(pose_graph_->begin(), pose_graph_->end());
   auto included_robots_ids = current_neighbors_ids_;
-  included_robots_ids.ids.push_back(robot_id_);
-  for (unsigned int i = 0; i < included_robots_ids.ids.size(); i++)
+  included_robots_ids.robots.ids.push_back(robot_id_);
+  for (unsigned int i = 0; i < included_robots_ids.robots.ids.size(); i++)
   {
-    for (unsigned int j = i + 1; j < included_robots_ids.ids.size(); j++)
+    for (unsigned int j = i + 1; j < included_robots_ids.robots.ids.size(); j++)
     {
-      if (is_pose_graph_connected[included_robots_ids.ids[i]] && is_pose_graph_connected[included_robots_ids.ids[j]])
+      if (is_pose_graph_connected[included_robots_ids.robots.ids[i]] && is_pose_graph_connected[included_robots_ids.robots.ids[j]])
       {
-        unsigned int min_id = std::min(included_robots_ids.ids[i], included_robots_ids.ids[j]);
-        unsigned int max_id = std::max(included_robots_ids.ids[i], included_robots_ids.ids[j]);
+        unsigned int min_id = std::min(included_robots_ids.robots.ids[i], included_robots_ids.robots.ids[j]);
+        unsigned int max_id = std::max(included_robots_ids.robots.ids[i], included_robots_ids.robots.ids[j]);
         for (const auto &factor: inter_robot_loop_closures_[{min_id, max_id}])
         {
           graph->push_back(factor);
@@ -318,14 +354,14 @@ std::pair<gtsam::NonlinearFactorGraph::shared_ptr, gtsam::Values::shared_ptr> Po
   }
   estimates->insert(*current_pose_estimates_);
   // Add other robots graphs
-  for (auto id : current_neighbors_ids_.ids)
+  for (auto id : current_neighbors_ids_.robots.ids)
   { 
     if (is_pose_graph_connected[id])
     {
       estimates->insert(*other_robots_graph_and_estimates_[id].second);
     }
   }
-  for (auto id : current_neighbors_ids_.ids)
+  for (auto id : current_neighbors_ids_.robots.ids)
   {
     for (const auto &factor_: *other_robots_graph_and_estimates_[id].first)
     {
@@ -345,19 +381,62 @@ void PoseGraphManager::optimized_estimates_callback(const cslam_common_interface
 {
   auto optimized_estimates = values_msg_to_gtsam(msg->estimates);
   current_pose_estimates_->update(*optimized_estimates);
+  origin_robot_id_ = msg->origin_robot_id;
+  gtsam::LabeledSymbol first_symbol(GRAPH_LABEL, ROBOT_LABEL(robot_id_), 0);
+  update_transform_to_origin(current_pose_estimates_->at<gtsam::Pose3>(first_symbol));
 }
 
 void PoseGraphManager::share_optimized_estimates(const gtsam::Values& estimates){
-  // TODO: TF + alignment
   auto included_robots_ids = current_neighbors_ids_;
-  included_robots_ids.ids.push_back(robot_id_);
-  for (unsigned int i = 0; i < included_robots_ids.ids.size(); i++)
+  included_robots_ids.robots.ids.push_back(robot_id_);
+  for (unsigned int i = 0; i < included_robots_ids.robots.ids.size(); i++)
   {
     cslam_common_interfaces::msg::OptimizationResult msg;
     msg.success = true;
-    msg.estimates = gtsam_values_to_msg(estimates.filter(gtsam::LabeledSymbol::LabelTest(ROBOT_LABEL(included_robots_ids.ids[i]))));
-    optimized_estimates_publishers_[included_robots_ids.ids[i]]->publish(msg); 
+    msg.origin_robot_id = origin_robot_id_;
+    msg.estimates = gtsam_values_to_msg(estimates.filter(gtsam::LabeledSymbol::LabelTest(ROBOT_LABEL(included_robots_ids.robots.ids[i]))));
+    optimized_estimates_publishers_[included_robots_ids.robots.ids[i]]->publish(msg); 
   }
+}
+
+void PoseGraphManager::heartbeat_timer_callback(){
+    std_msgs::msg::UInt32 msg;
+    msg.data = origin_robot_id_;
+    heartbeat_publisher_->publish(msg);
+}
+
+void PoseGraphManager::update_transform_to_origin(const gtsam::Pose3& pose){
+  rclcpp::Time now = node_->get_clock()->now();
+  origin_to_first_pose_.header.stamp = now;
+  origin_to_first_pose_.header.frame_id = "robot_" + std::to_string(origin_robot_id_);
+  origin_to_first_pose_.child_frame_id = "robot_" + std::to_string(robot_id_);
+
+  origin_to_first_pose_.transform = gtsam_pose_to_transform_msg(pose);
+
+  // Update the reference frame
+  // This is the key info for many tasks since it allows conversions from 
+  // one robot reference frame to another.
+  for (auto i : current_neighbors_ids_.robots.ids)
+  {
+    reference_frame_per_robot_[i] = origin_to_first_pose_;
+  }
+  cslam_common_interfaces::msg::ReferenceFrames msg;
+  for (const auto& ref: reference_frame_per_robot_){
+    msg.robots.ids.push_back(ref.first);
+    msg.reference_frames.push_back(ref.second);
+  }
+  reference_frame_per_robot_publisher_->publish(msg);
+}
+
+void PoseGraphManager::broadcast_tf_callback(){
+  rclcpp::Time now = node_->get_clock()->now();
+  origin_to_first_pose_.header.stamp = now;
+
+  //
+
+  // Useful for visualization. 
+  // For tasks purposes use reference_frame_per_robot_ instead
+  tf_broadcaster_->sendTransform(origin_to_first_pose_);
 }
 
 void PoseGraphManager::perform_optimization(){
@@ -367,7 +446,7 @@ void PoseGraphManager::perform_optimization(){
 
   // Add prior 
   gtsam::LabeledSymbol first_symbol(GRAPH_LABEL, ROBOT_LABEL(robot_id_), 0);
-  graph_and_estimates.first->addPrior(first_symbol, gtsam::Pose3(), default_noise_model_);
+  graph_and_estimates.first->addPrior(first_symbol, current_pose_estimates_->at<gtsam::Pose3>(first_symbol), default_noise_model_);
 
   // // Optimize graph
   gtsam::GncParams<gtsam::LevenbergMarquardtParams> params;
@@ -390,13 +469,13 @@ void PoseGraphManager::optimization_loop_callback(){
   {
     if (optimizer_state_ == OptimizerState::POSEGRAPH_COLLECTION) // TODO: Document
     {
-      if (current_neighbors_ids_.ids.size() > 0)
+      if (current_neighbors_ids_.robots.ids.size() > 0)
       {
-        for (auto id : current_neighbors_ids_.ids)
+        for (auto id : current_neighbors_ids_.robots.ids)
         {
           auto current_robots_ids = current_neighbors_ids_;
-          current_robots_ids.ids.push_back(robot_id_);
-          get_pose_graph_publishers_[id]->publish(current_robots_ids);
+          current_robots_ids.robots.ids.push_back(robot_id_);
+          get_pose_graph_publishers_[id]->publish(current_robots_ids.robots);
         }
         start_waiting();
       }

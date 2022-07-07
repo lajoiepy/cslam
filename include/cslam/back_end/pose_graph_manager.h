@@ -14,11 +14,17 @@
  
 #include <cslam_common_interfaces/msg/keyframe_odom.hpp>
 #include <cslam_common_interfaces/msg/optimization_result.hpp>
-#include <cslam_common_interfaces/msg/robot_ids.hpp>
+#include <cslam_common_interfaces/msg/robot_ids_and_origin.hpp>
 #include <cslam_common_interfaces/msg/optimizer_state.hpp>
+#include <cslam_common_interfaces/msg/reference_frames.hpp>
 #include <cslam_loop_detection_interfaces/msg/inter_robot_loop_closure.hpp>
 
+#include <std_msgs/msg/u_int32.hpp>
 #include <std_msgs/msg/string.hpp>
+#include <geometry_msgs/msg/transform_stamped.hpp>
+
+#include <tf2_ros/transform_broadcaster.h>
+
 #include <list>
 
 #include "cslam/back_end/gtsam_utils.h"
@@ -57,8 +63,7 @@ public:
    * 
    * @param msg 
    */
-  void current_neighbors_callback(const cslam_common_interfaces::msg::
-                                      RobotIds::ConstSharedPtr msg);
+  void current_neighbors_callback(const cslam_common_interfaces::msg::RobotIdsAndOrigin::ConstSharedPtr msg);
 
   /**
    * @brief Receives request for pose graph
@@ -94,6 +99,18 @@ public:
    * 
    */
   void optimization_loop_callback();
+
+  /**
+   * @brief Update transform to origin
+   * 
+   */
+  void update_transform_to_origin(const gtsam::Pose3& pose);
+
+  /**
+   * @brief Broadcast tf to current origin point
+   * 
+   */
+  void broadcast_tf_callback();
 
   /**
    * @brief Performs pose graph optimization
@@ -155,6 +172,21 @@ public:
    */
   void share_optimized_estimates(const gtsam::Values& estimates);
 
+  /**
+   * @brief Publish heartbeat message periodically
+   * 
+   */
+  void heartbeat_timer_callback();
+
+  /**
+   * @brief Check if the local robot is the optimizer according to the specified priority rule
+   *  Default priority rule: lowest ID
+   * 
+   * @return true 
+   * @return false 
+   */
+  bool is_optimizer();
+
 private:
 
   // TODO: document
@@ -198,7 +230,7 @@ private:
 
   rclcpp::Publisher<std_msgs::msg::String>::SharedPtr get_current_neighbors_publisher_;
 
-  rclcpp::Subscription<cslam_common_interfaces::msg::RobotIds>::SharedPtr current_neighbors_subscriber_;
+  rclcpp::Subscription<cslam_common_interfaces::msg::RobotIdsAndOrigin>::SharedPtr current_neighbors_subscriber_;
 
   std::map<unsigned int, rclcpp::Publisher<cslam_common_interfaces::msg::RobotIds>::SharedPtr> get_pose_graph_publishers_;
 
@@ -212,7 +244,7 @@ private:
 
   rclcpp::Publisher<cslam_common_interfaces::msg::PoseGraph>::SharedPtr pose_graph_publisher_;
 
-  cslam_common_interfaces::msg::RobotIds current_neighbors_ids_;
+  cslam_common_interfaces::msg::RobotIdsAndOrigin current_neighbors_ids_;
 
   OptimizerState optimizer_state_;
 
@@ -222,6 +254,20 @@ private:
 
   rclcpp::Time start_waiting_time_;
   rclcpp::Duration max_waiting_time_sec_;
+
+  unsigned int origin_robot_id_;
+  unsigned int heartbeat_period_sec_;
+  rclcpp::Publisher<std_msgs::msg::UInt32>::SharedPtr heartbeat_publisher_;
+
+  std::unique_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster_;
+
+  rclcpp::TimerBase::SharedPtr heartbeat_timer_, tf_broadcaster_timer_;
+
+  geometry_msgs::msg::TransformStamped origin_to_first_pose_;
+
+  std::map<unsigned int, geometry_msgs::msg::TransformStamped> reference_frame_per_robot_;
+  rclcpp::Publisher<cslam_common_interfaces::msg::ReferenceFrames>::SharedPtr reference_frame_per_robot_publisher_;
+
 };
 }
 #endif

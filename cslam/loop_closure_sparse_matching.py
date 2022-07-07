@@ -1,5 +1,5 @@
 import numpy as np
-from cslam.nearest_neighbors_matching import NearestNeighborsMatching
+from cslam.nn_matching import NearestNeighborsMatching
 from cslam.algebraic_connectivity_maximization import AlgebraicConnectivityMaximization, EdgeInterRobot
 
 

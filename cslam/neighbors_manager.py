@@ -1,5 +1,5 @@
 from cslam.neighbor_monitor import NeighborMonitor
-from cslam_common_interfaces.msg import RobotIds
+from cslam_common_interfaces.msg import RobotIdsAndOrigin
 from std_msgs.msg import String
 
 class NeighborManager():
@@ -118,8 +118,11 @@ class NeighborManager():
         """
         is_robot_in_range, robots_in_range_list = self.check_neighbors_in_range()
         robots_in_range_list.remove(self.robot_id)
-        msg = RobotIds()
-        msg.ids = robots_in_range_list
+        msg = RobotIdsAndOrigin()
+        msg.robots.ids = robots_in_range_list
+        for i in robots_in_range_list:
+            msg.origins.ids.append(self.neighbors_monitors[i].origin_robot_id)
+
         self.neighbors_publisher.publish(msg)
         
        

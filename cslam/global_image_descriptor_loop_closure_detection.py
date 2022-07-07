@@ -19,7 +19,6 @@ import rclpy
 from rclpy.node import Node
 
 from cslam.neighbors_manager import NeighborManager
-from std_msgs.msg import String
 from cslam.utils.utils import list_chunks
 
 # TODO: Add super class to support other types of descriptors
@@ -74,21 +73,11 @@ class GlobalImageDescriptorLoopClosureDetection(object):
                 LocalDescriptorsRequest, '/r' + str(i) + '/local_descriptors_request', 100)
 
         # Listen for changes in node liveliness
-        self.heartbeat_publisher = self.node.create_publisher(String, 'heartbeat', 10)
         self.neighbor_manager = NeighborManager(self.node, self.robot_id, self.nb_robots, self.enable_neighbor_monitoring, self.params['max_heartbeat_delay_sec'])
-
-        self.heartbeat_timer = self.node.create_timer(self.params['heartbeat_check_period_sec'], self.heartbeat_timer_callback)
 
         self.global_descriptors_buffer = []
         self.global_descriptors_timer = self.node.create_timer(self.params['global_descriptor_publication_period_sec'], self.global_descriptors_timer_callback)
 
-
-    def heartbeat_timer_callback(self):
-        """Publish heartbeat message periodically
-        """
-        msg = String()
-        msg.data = ''
-        self.heartbeat_publisher.publish(msg)
 
     def add_global_descriptor_to_map(self, embedding, id):
         """ Add global descriptor to matching list
