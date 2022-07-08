@@ -28,7 +28,7 @@ class NeighborMonitor():
             self.heartbeat_callback, 10)
 
     def heartbeat_callback(self, msg):
-        """Callback to indicate that it is heartbeat
+        """Callback to indicate that it is alive
 
         Args:
             msg (UInt32):

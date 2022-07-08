@@ -322,7 +322,8 @@ bool PoseGraphManager::check_waiting_timeout() {
 }
 
 void PoseGraphManager::optimization_callback() {
-  if (optimizer_state_ == OptimizerState::IDLE) {
+  if (optimizer_state_ == OptimizerState::IDLE &&
+      current_pose_estimates_->size() > 0) {
     reinitialize_received_pose_graphs();
     resquest_current_neighbors();
     start_waiting();
@@ -384,12 +385,15 @@ PoseGraphManager::aggregate_pose_graphs() {
 void PoseGraphManager::optimized_estimates_callback(
     const cslam_common_interfaces::msg::OptimizationResult::ConstSharedPtr
         msg) {
-  auto optimized_estimates = values_msg_to_gtsam(msg->estimates);
-  current_pose_estimates_->update(*optimized_estimates);
-  origin_robot_id_ = msg->origin_robot_id;
-  gtsam::LabeledSymbol first_symbol(GRAPH_LABEL, ROBOT_LABEL(robot_id_), 0);
-  update_transform_to_origin(
+  if (current_pose_estimates_->size() > 0)
+  {
+    auto optimized_estimates = values_msg_to_gtsam(msg->estimates);
+    current_pose_estimates_->update(*optimized_estimates);
+    origin_robot_id_ = msg->origin_robot_id;
+    gtsam::LabeledSymbol first_symbol(GRAPH_LABEL, ROBOT_LABEL(robot_id_), 0);
+    update_transform_to_origin(
       current_pose_estimates_->at<gtsam::Pose3>(first_symbol));
+  }  
 }
 
 void PoseGraphManager::share_optimized_estimates(
@@ -440,12 +444,12 @@ void PoseGraphManager::update_transform_to_origin(const gtsam::Pose3 &pose) {
 void PoseGraphManager::broadcast_tf_callback() {
   rclcpp::Time now = node_->get_clock()->now();
   origin_to_first_pose_.header.stamp = now;
-
-  //
-
   // Useful for visualization.
   // For tasks purposes use reference_frame_per_robot_ instead
-  tf_broadcaster_->sendTransform(origin_to_first_pose_);
+  if (origin_to_first_pose_.header.frame_id !=
+      origin_to_first_pose_.child_frame_id) {
+    tf_broadcaster_->sendTransform(origin_to_first_pose_);
+  }
 }
 
 void PoseGraphManager::perform_optimization() {
@@ -498,7 +502,6 @@ void PoseGraphManager::optimization_loop_callback() {
     } else if (optimizer_state_ == OptimizerState::OPTIMIZATION) {
       // Call optimization
       perform_optimization();
-      // TODO: Send updates
       optimizer_state_ = OptimizerState::IDLE;
     } else if (optimizer_state_ == OptimizerState::WAITING) {
       check_waiting_timeout();
