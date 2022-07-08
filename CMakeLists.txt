@@ -70,11 +70,6 @@ include(CheckCXXCompilerFlag)
 CHECK_CXX_COMPILER_FLAG("-std=c++14" COMPILER_SUPPORTS_CXX14)
 set(CMAKE_CXX_STANDARD 14)
 
-#######################################
-## Declare ROS messages and services ##
-#######################################
-
-#find_package(Boost REQUIRED COMPONENTS system) # dependencies from PCL
 find_package(PCL 1.7 
             REQUIRED QUIET COMPONENTS 
             common 

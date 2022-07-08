@@ -26,6 +26,7 @@
 #include <tf2_ros/transform_broadcaster.h>
 
 #include <list>
+#include <gtsam/slam/dataset.h>
 
 #include "cslam/back_end/gtsam_utils.h"
 
@@ -92,6 +93,15 @@ public:
    */
   void optimized_estimates_callback(
       const cslam_common_interfaces::msg::OptimizationResult::ConstSharedPtr
+          msg);
+
+  /**
+   * @brief Prints current estimates
+   *
+   * @param msg
+   */
+  void print_current_estimates_callback(
+      const std_msgs::msg::String::ConstSharedPtr
           msg);
 
   /**
@@ -261,6 +271,9 @@ private:
 
   rclcpp::Subscription<cslam_common_interfaces::msg::PoseGraph>::SharedPtr
       pose_graph_subscriber_;
+
+  rclcpp::Subscription<std_msgs::msg::String>::SharedPtr
+      print_current_estimates_subscriber_;
 
   rclcpp::Publisher<cslam_common_interfaces::msg::PoseGraph>::SharedPtr
       pose_graph_publisher_;

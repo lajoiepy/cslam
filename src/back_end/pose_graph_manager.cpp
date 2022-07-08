@@ -29,6 +29,12 @@ PoseGraphManager::PoseGraphManager(std::shared_ptr<rclcpp::Node> &node)
       std::bind(&PoseGraphManager::inter_robot_loop_closure_callback, this,
                 std::placeholders::_1));
 
+  print_current_estimates_subscriber_ =
+      node->create_subscription<std_msgs::msg::String>(
+          "print_current_estimates", 100,
+          std::bind(&PoseGraphManager::print_current_estimates_callback, this,
+                    std::placeholders::_1));
+
   rotation_default_noise_std_ = 0.01;
   translation_default_noise_std_ = 0.1;
   Eigen::VectorXd sigmas(6);
@@ -162,6 +168,7 @@ void PoseGraphManager::odometry_callback(
 
   gtsam::Pose3 current_estimate = odometry_msg_to_pose3(msg->odom);
   gtsam::LabeledSymbol symbol(GRAPH_LABEL, ROBOT_LABEL(robot_id_), msg->id);
+
   current_pose_estimates_->insert(symbol, current_estimate);
 
   if (latest_local_symbol_ != gtsam::LabeledSymbol()) {
@@ -196,6 +203,11 @@ void PoseGraphManager::inter_robot_loop_closure_callback(
                                 std::max(msg->robot0_id, msg->robot1_id)}]
         .push_back(factor);
   }
+}
+
+void PoseGraphManager::print_current_estimates_callback(
+    const std_msgs::msg::String::ConstSharedPtr msg) {
+  gtsam::writeG2o(*pose_graph_, *current_pose_estimates_, msg->data);
 }
 
 void PoseGraphManager::current_neighbors_callback(
@@ -385,15 +397,14 @@ PoseGraphManager::aggregate_pose_graphs() {
 void PoseGraphManager::optimized_estimates_callback(
     const cslam_common_interfaces::msg::OptimizationResult::ConstSharedPtr
         msg) {
-  if (current_pose_estimates_->size() > 0)
-  {
+  if (current_pose_estimates_->size() > 0) {
     auto optimized_estimates = values_msg_to_gtsam(msg->estimates);
     current_pose_estimates_->update(*optimized_estimates);
     origin_robot_id_ = msg->origin_robot_id;
     gtsam::LabeledSymbol first_symbol(GRAPH_LABEL, ROBOT_LABEL(robot_id_), 0);
     update_transform_to_origin(
-      current_pose_estimates_->at<gtsam::Pose3>(first_symbol));
-  }  
+        current_pose_estimates_->at<gtsam::Pose3>(first_symbol));
+  }
 }
 
 void PoseGraphManager::share_optimized_estimates(
