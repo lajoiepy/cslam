@@ -89,7 +89,8 @@ class LoopClosureSparseMatching(object):
             return None
 
         for kf, d in zip(kfs, ds):
-            if abs(kf - id) < self.params['intra_loop_min_inbetween_keyframes']:
+            if abs(kf -
+                   id) < self.params['intra_loop_min_inbetween_keyframes']:
                 continue
 
             if d > self.params['similarity_threshold']:
@@ -98,7 +99,10 @@ class LoopClosureSparseMatching(object):
             return kf, kfs
         return None, None
 
-    def select_candidates(self, number_of_candidates, is_neighbor_in_range, greedy_initialization=True):
+    def select_candidates(self,
+                          number_of_candidates,
+                          is_neighbor_in_range,
+                          greedy_initialization=True):
         """Select inter-robot loop closure candidates according to budget
 
         Args:
@@ -109,9 +113,9 @@ class LoopClosureSparseMatching(object):
         Returns:
             list(EdgeInterRobot): selected edges
         """
-        if len(self.candidate_selector.candidate_edges
-               ) > number_of_candidates:
+        if len(self.candidate_selector.candidate_edges) > number_of_candidates:
             return self.candidate_selector.select_candidates(
-                number_of_candidates, is_neighbor_in_range, greedy_initialization)
+                number_of_candidates, is_neighbor_in_range,
+                greedy_initialization)
         else:
-            return list(self.candidate_selector.candidate_edges.values()) 
+            return list(self.candidate_selector.candidate_edges.values())

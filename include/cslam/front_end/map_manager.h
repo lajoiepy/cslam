@@ -14,11 +14,11 @@ namespace cslam {
  * - Generate keypoints from frames
  * - Sends/Receives keypoints from other robot frames
  * - Computes geometric verification
- * 
- * @tparam DataHandlerType Depends on the type of input data (stereo, rgbd, etc.)
+ *
+ * @tparam DataHandlerType Depends on the type of input data (stereo, rgbd,
+ * etc.)
  */
-template <class DataHandlerType>
-class MapManager {
+template <class DataHandlerType> class MapManager {
 public:
   /**
    * @brief Initialization of parameters and ROS 2 objects
@@ -35,7 +35,6 @@ public:
   void process_new_keyframes();
 
 private:
-
   // TODO: document
   std::shared_ptr<rclcpp::Node> node_;
 
@@ -50,5 +49,5 @@ private:
 
 // List possible data types for C++ linker
 template class MapManager<StereoHandler>;
-}
+} // namespace cslam
 #endif

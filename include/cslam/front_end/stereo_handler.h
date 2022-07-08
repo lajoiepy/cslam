@@ -31,14 +31,14 @@
 #include <cv_bridge/cv_bridge.h>
 
 #include <chrono>
-#include <cslam_common_interfaces/msg/keyframe_rgb.hpp>
 #include <cslam_common_interfaces/msg/keyframe_odom.hpp>
-#include <cslam_loop_detection_interfaces/msg/local_image_descriptors.hpp>
+#include <cslam_common_interfaces/msg/keyframe_rgb.hpp>
 #include <cslam_loop_detection_interfaces/msg/inter_robot_loop_closure.hpp>
-#include <nav_msgs/msg/odometry.hpp>
 #include <cslam_loop_detection_interfaces/msg/local_descriptors_request.hpp>
+#include <cslam_loop_detection_interfaces/msg/local_image_descriptors.hpp>
 #include <deque>
 #include <functional>
+#include <nav_msgs/msg/odometry.hpp>
 #include <thread>
 
 #include <memory>
@@ -49,7 +49,6 @@ namespace cslam {
 
 class StereoHandler {
 public:
-
   /**
    * @brief Initialization of parameters and ROS 2 objects
    *
@@ -60,7 +59,7 @@ public:
 
   /**
    * @brief Processes Latest received image
-   * 
+   *
    */
   void process_new_keyframe();
 
@@ -70,8 +69,8 @@ public:
    * @param request Image ID to send and matching info
    */
   void local_descriptors_request(
-     cslam_loop_detection_interfaces::msg::LocalDescriptorsRequest::ConstSharedPtr
-          request);
+      cslam_loop_detection_interfaces::msg::LocalDescriptorsRequest::
+          ConstSharedPtr request);
 
   /**
    * @brief Message callback to receive descriptors and compute
@@ -85,30 +84,33 @@ public:
 
   /**
    * @brief Computes local 3D descriptors from frame data and store them
-   * 
+   *
    * @param frame_data Full frame data
    */
-  void compute_local_descriptors(std::shared_ptr<rtabmap::SensorData>& frame_data);
+  void
+  compute_local_descriptors(std::shared_ptr<rtabmap::SensorData> &frame_data);
 
   /**
    * @brief converts descriptors to sensore data
-   * 
+   *
    * @param msg local descriptors
-   * @return rtabmap::SensorData& 
+   * @return rtabmap::SensorData&
    */
-  void local_descriptors_msg_to_sensor_data(const std::shared_ptr<
-        cslam_loop_detection_interfaces::msg::LocalImageDescriptors>
-        msg, rtabmap::SensorData& sensor_data);
+  void local_descriptors_msg_to_sensor_data(
+      const std::shared_ptr<
+          cslam_loop_detection_interfaces::msg::LocalImageDescriptors>
+          msg,
+      rtabmap::SensorData &sensor_data);
 
   /**
    * @brief converts sensor data to descriptor msg
-   * 
+   *
    * @param sensor_data local descriptors
-   * @param msg_data rtabmap_ros::msg::RGBDImage& 
+   * @param msg_data rtabmap_ros::msg::RGBDImage&
    */
-  void sensor_data_to_rgbd_msg(const std::shared_ptr<
-        rtabmap::SensorData>
-        sensor_data, rtabmap_ros::msg::RGBDImage& msg_data);
+  void sensor_data_to_rgbd_msg(
+      const std::shared_ptr<rtabmap::SensorData> sensor_data,
+      rtabmap_ros::msg::RGBDImage &msg_data);
 
   /**
    * @brief Function to send the image to the python node
@@ -117,47 +119,56 @@ public:
    * @param data keyframe data
    * @param id keyframe id
    */
-  void send_keyframe(const rtabmap::SensorData &data,  const nav_msgs::msg::Odometry::ConstSharedPtr odom, const int id);
+  void send_keyframe(const rtabmap::SensorData &data,
+                     const nav_msgs::msg::Odometry::ConstSharedPtr odom,
+                     const int id);
 
   /**
    * @brief Callback receiving sync data from camera
-   * 
-   * @param imageRectLeft 
-   * @param imageRectRight 
-   * @param cameraInfoLeft 
-   * @param cameraInfoRight 
-   * @param odom 
+   *
+   * @param imageRectLeft
+   * @param imageRectRight
+   * @param cameraInfoLeft
+   * @param cameraInfoRight
+   * @param odom
    */
   void stereo_callback(
-			const sensor_msgs::msg::Image::ConstSharedPtr imageRectLeft,
-			const sensor_msgs::msg::Image::ConstSharedPtr imageRectRight,
-			const sensor_msgs::msg::CameraInfo::ConstSharedPtr cameraInfoLeft,
-			const sensor_msgs::msg::CameraInfo::ConstSharedPtr cameraInfoRight,
-            const nav_msgs::msg::Odometry::ConstSharedPtr odom);
+      const sensor_msgs::msg::Image::ConstSharedPtr imageRectLeft,
+      const sensor_msgs::msg::Image::ConstSharedPtr imageRectRight,
+      const sensor_msgs::msg::CameraInfo::ConstSharedPtr cameraInfoLeft,
+      const sensor_msgs::msg::CameraInfo::ConstSharedPtr cameraInfoRight,
+      const nav_msgs::msg::Odometry::ConstSharedPtr odom);
 
 private:
   // TODO: document
-  std::deque<std::pair<std::shared_ptr<rtabmap::SensorData>, nav_msgs::msg::Odometry::ConstSharedPtr>> received_data_queue_;
+  std::deque<std::pair<std::shared_ptr<rtabmap::SensorData>,
+                       nav_msgs::msg::Odometry::ConstSharedPtr>>
+      received_data_queue_;
   std::map<int, std::shared_ptr<rtabmap::SensorData>> local_descriptors_map_;
 
   std::shared_ptr<rclcpp::Node> node_;
 
-  unsigned int min_inliers_, nb_robots_, robot_id_, max_queue_size_, nb_local_frames_;
+  unsigned int min_inliers_, nb_robots_, robot_id_, max_queue_size_,
+      nb_local_frames_;
 
   image_transport::SubscriberFilter image_rect_left_;
   image_transport::SubscriberFilter image_rect_right_;
   message_filters::Subscriber<sensor_msgs::msg::CameraInfo> camera_info_left_;
   message_filters::Subscriber<sensor_msgs::msg::CameraInfo> camera_info_right_;
-  message_filters::Subscriber<nav_msgs::msg::Odometry>  odometry_;
-  typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::msg::Image, sensor_msgs::msg::Image, sensor_msgs::msg::CameraInfo, sensor_msgs::msg::CameraInfo, nav_msgs::msg::Odometry> SyncPolicy;
-  message_filters::Synchronizer<SyncPolicy> * sync_policy_;
+  message_filters::Subscriber<nav_msgs::msg::Odometry> odometry_;
+  typedef message_filters::sync_policies::ApproximateTime<
+      sensor_msgs::msg::Image, sensor_msgs::msg::Image,
+      sensor_msgs::msg::CameraInfo, sensor_msgs::msg::CameraInfo,
+      nav_msgs::msg::Odometry>
+      SyncPolicy;
+  message_filters::Synchronizer<SyncPolicy> *sync_policy_;
 
   rclcpp::Subscription<
-      cslam_loop_detection_interfaces::msg::LocalDescriptorsRequest>::
-      SharedPtr send_local_descriptors_subscriber_;
+      cslam_loop_detection_interfaces::msg::LocalDescriptorsRequest>::SharedPtr
+      send_local_descriptors_subscriber_;
 
-  rclcpp::Publisher<cslam_loop_detection_interfaces::msg::
-                                      LocalImageDescriptors>::SharedPtr
+  rclcpp::Publisher<
+      cslam_loop_detection_interfaces::msg::LocalImageDescriptors>::SharedPtr
       local_descriptors_publisher_;
 
   rclcpp::Publisher<cslam_common_interfaces::msg::KeyframeRGB>::SharedPtr
@@ -172,14 +183,14 @@ private:
 
   rtabmap::RegistrationVis registration_;
 
-  rclcpp::Publisher<cslam_loop_detection_interfaces::msg::
-                                      InterRobotLoopClosure>::SharedPtr
+  rclcpp::Publisher<
+      cslam_loop_detection_interfaces::msg::InterRobotLoopClosure>::SharedPtr
       inter_robot_loop_closure_publisher_;
-  
+
   std::shared_ptr<tf2_ros::Buffer> tf_buffer_;
   std::shared_ptr<tf2_ros::TransformListener> tf_listener_;
 
   std::string base_frame_id_;
 };
-}
+} // namespace cslam
 #endif

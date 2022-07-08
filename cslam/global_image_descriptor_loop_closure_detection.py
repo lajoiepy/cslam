@@ -21,6 +21,7 @@ from rclpy.node import Node
 from cslam.neighbors_manager import NeighborManager
 from cslam.utils.utils import list_chunks
 
+
 # TODO: Add super class to support other types of descriptors
 class GlobalImageDescriptorLoopClosureDetection(object):
     """ Global Image descriptor matching """
@@ -36,7 +37,8 @@ class GlobalImageDescriptorLoopClosureDetection(object):
         self.node = node
         self.robot_id = self.params['robot_id']
         self.nb_robots = self.params['nb_robots']
-        self.enable_neighbor_monitoring = self.params['enable_neighbor_monitoring']
+        self.enable_neighbor_monitoring = self.params[
+            'enable_neighbor_monitoring']
 
         self.lcm = LoopClosureSparseMatching(params)
         self.loop_closure_budget = self.params["loop_closure_budget"]
@@ -57,7 +59,8 @@ class GlobalImageDescriptorLoopClosureDetection(object):
         self.params['global_descriptor_topic'] = self.node.get_parameter(
             'global_descriptor_topic').value
         self.global_descriptor_publisher = self.node.create_publisher(
-            GlobalImageDescriptors, self.params['global_descriptor_topic'], 100)
+            GlobalImageDescriptors, self.params['global_descriptor_topic'],
+            100)
         self.global_descriptor_subscriber = self.node.create_subscription(
             GlobalImageDescriptors, self.params['global_descriptor_topic'],
             self.global_descriptor_callback, 100)
@@ -69,15 +72,21 @@ class GlobalImageDescriptorLoopClosureDetection(object):
 
         self.local_descriptors_request_publishers = {}
         for i in range(self.nb_robots):
-            self.local_descriptors_request_publishers[i] = self.node.create_publisher(
-                LocalDescriptorsRequest, '/r' + str(i) + '/local_descriptors_request', 100)
+            self.local_descriptors_request_publishers[
+                i] = self.node.create_publisher(
+                    LocalDescriptorsRequest,
+                    '/r' + str(i) + '/local_descriptors_request', 100)
 
         # Listen for changes in node liveliness
-        self.neighbor_manager = NeighborManager(self.node, self.robot_id, self.nb_robots, self.enable_neighbor_monitoring, self.params['max_heartbeat_delay_sec'])
+        self.neighbor_manager = NeighborManager(
+            self.node, self.robot_id, self.nb_robots,
+            self.enable_neighbor_monitoring,
+            self.params['max_heartbeat_delay_sec'])
 
         self.global_descriptors_buffer = []
-        self.global_descriptors_timer = self.node.create_timer(self.params['global_descriptor_publication_period_sec'], self.global_descriptors_timer_callback)
-
+        self.global_descriptors_timer = self.node.create_timer(
+            self.params['global_descriptor_publication_period_sec'],
+            self.global_descriptors_timer_callback)
 
     def add_global_descriptor_to_map(self, embedding, id):
         """ Add global descriptor to matching list
@@ -101,23 +110,31 @@ class GlobalImageDescriptorLoopClosureDetection(object):
            because all other robots have already received 
            some descriptors
         """
-        from_kf_id = self.neighbor_manager.useless_descriptors(self.global_descriptors_buffer[-1].image_id)
+        from_kf_id = self.neighbor_manager.useless_descriptors(
+            self.global_descriptors_buffer[-1].image_id)
         if from_kf_id >= self.global_descriptors_buffer[0].image_id:
-            self.global_descriptors_buffer = [e for e in self.global_descriptors_buffer if e.image_id > from_kf_id]
+            self.global_descriptors_buffer = [
+                e for e in self.global_descriptors_buffer
+                if e.image_id > from_kf_id
+            ]
 
     def global_descriptors_timer_callback(self):
         """Publish global descriptors message periodically
         """
         if len(self.global_descriptors_buffer) > 0:
-            from_kf_id = self.neighbor_manager.select_from_which_kf_to_send(self.global_descriptors_buffer[-1].image_id)
+            from_kf_id = self.neighbor_manager.select_from_which_kf_to_send(
+                self.global_descriptors_buffer[-1].image_id)
 
-            msgs = list_chunks(self.global_descriptors_buffer, from_kf_id - self.global_descriptors_buffer[0].image_id, self.params['global_descriptor_publication_max_elems_per_msg'])
+            msgs = list_chunks(
+                self.global_descriptors_buffer,
+                from_kf_id - self.global_descriptors_buffer[0].image_id,
+                self.params['global_descriptor_publication_max_elems_per_msg'])
 
             for m in msgs:
                 global_descriptors = GlobalImageDescriptors()
                 global_descriptors.descriptors = m
                 self.global_descriptor_publisher.publish(global_descriptors)
-            
+
             self.delete_useless_descriptors()
 
     def detect_intra(self, embedding, id):
@@ -139,16 +156,20 @@ class GlobalImageDescriptorLoopClosureDetection(object):
         Returns:
             list(int): selected keyframes from other robots to match
         """
-        neighbors_is_in_range, neighbors_in_range_list = self.neighbor_manager.check_neighbors_in_range()
+        neighbors_is_in_range, neighbors_in_range_list = self.neighbor_manager.check_neighbors_in_range(
+        )
         # Check if the robot is the broker
-        if len(neighbors_in_range_list) > 0 and self.neighbor_manager.local_robot_is_broker():
+        if len(neighbors_in_range_list
+               ) > 0 and self.neighbor_manager.local_robot_is_broker():
             # Find matches that maximize the algebraic connectivity
-            selection = self.lcm.select_candidates(self.loop_closure_budget, neighbors_is_in_range)
+            selection = self.lcm.select_candidates(self.loop_closure_budget,
+                                                   neighbors_is_in_range)
 
             # Extract and publish local descriptors
             vertices_info = self.edge_list_to_vertices(selection)
             broker = Broker(selection, neighbors_in_range_list)
-            for selected_vertices_set in broker.brokerage(True): # TODO: Add param
+            for selected_vertices_set in broker.brokerage(
+                    True):  # TODO: Add param
                 for v in selected_vertices_set:
                     # Call to send publish local descriptors
                     # TODO: Compute vertex cover
@@ -156,7 +177,8 @@ class GlobalImageDescriptorLoopClosureDetection(object):
                     msg.image_id = v[1]
                     msg.matches_robot_id = vertices_info[v][0]
                     msg.matches_image_id = vertices_info[v][1]
-                    self.local_descriptors_request_publishers[v[0]].publish(msg)
+                    self.local_descriptors_request_publishers[v[0]].publish(
+                        msg)
 
     def edge_list_to_vertices(self, selection):
         """Extracts the vertices in a list of edges
@@ -202,7 +224,9 @@ class GlobalImageDescriptorLoopClosureDetection(object):
             msg (cslam_loop_detection_interfaces::msg::GlobalImageDescriptors): descriptors
         """
         if msg.descriptors[0].robot_id != self.robot_id:
-            unknown_range = self.neighbor_manager.get_unknown_range(msg.descriptors[0].image_id, msg.descriptors[-1].image_id, msg.descriptors[0].robot_id)
+            unknown_range = self.neighbor_manager.get_unknown_range(
+                msg.descriptors[0].image_id, msg.descriptors[-1].image_id,
+                msg.descriptors[0].robot_id)
             for i in unknown_range:
                 self.lcm.add_other_robot_global_descriptor(msg.descriptors[i])
 
@@ -228,13 +252,19 @@ class GlobalImageDescriptorLoopClosureDetection(object):
         """
         if msg.success:
             self.node.get_logger().info(
-                'New inter-robot loop closure measurement: (' + str(msg.robot0_id) + ',' + str(msg.robot0_image_id) + ') -> (' + str(msg.robot1_id) + ',' + str(msg.robot1_image_id) + ')')
+                'New inter-robot loop closure measurement: (' +
+                str(msg.robot0_id) + ',' + str(msg.robot0_image_id) +
+                ') -> (' + str(msg.robot1_id) + ',' +
+                str(msg.robot1_image_id) + ')')
             # If geo verif succeeds, move from candidate to fixed edge in the graph
             self.lcm.candidate_selector.candidate_edges_to_fixed(
                 [self.inter_robot_loop_closure_msg_to_edge(msg)])
         else:
             self.node.get_logger().info(
-                'Failed inter-robot loop closure measurement: (' + str(msg.robot0_id) + ',' + str(msg.robot0_image_id) + ') -> (' + str(msg.robot1_id) + ',' + str(msg.robot1_image_id) + ')')
+                'Failed inter-robot loop closure measurement: (' +
+                str(msg.robot0_id) + ',' + str(msg.robot0_image_id) +
+                ') -> (' + str(msg.robot1_id) + ',' +
+                str(msg.robot1_image_id) + ')')
             # If geo verif fails, remove candidate
             self.lcm.candidate_selector.remove_candidate_edges(
                 [self.inter_robot_loop_closure_msg_to_edge(msg)])

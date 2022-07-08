@@ -100,7 +100,8 @@ class AlgebraicConnectivityMaximization(object):
             self.update_nb_poses(e)
 
         for e in candidate_edges:
-            self.candidate_edges[(e.robot0_id, e.robot0_image_id, e.robot1_id, e.robot1_image_id)] = e
+            self.candidate_edges[(e.robot0_id, e.robot0_image_id, e.robot1_id,
+                                  e.robot1_image_id)] = e
 
     def add_fixed_edge(self, edge):
         """Add an already computed edge to the graph
@@ -119,7 +120,8 @@ class AlgebraicConnectivityMaximization(object):
         Args:
             edge (EdgeInterRobot): inter-robot edge
         """
-        self.candidate_edges[(edge.robot0_id, edge.robot0_image_id, edge.robot1_id, edge.robot1_image_id)] = edge
+        self.candidate_edges[(edge.robot0_id, edge.robot0_image_id,
+                              edge.robot1_id, edge.robot1_image_id)] = edge
         # Update nb of poses
         self.update_nb_poses(edge)
 
@@ -378,7 +380,8 @@ class AlgebraicConnectivityMaximization(object):
             list(EdgeInterRobot): selected edges
         """
         # Check connectivity
-        is_robot_included = self.check_graph_disconnections(is_other_robot_considered)
+        is_robot_included = self.check_graph_disconnections(
+            is_other_robot_considered)
 
         # Rekey multi-robot edges to single graph
         self.compute_offsets(is_robot_included)
@@ -414,7 +417,8 @@ class AlgebraicConnectivityMaximization(object):
                 for i in np.nonzero(result.astype(int))[0]
             ]
             # Return selected multi-robot edges
-            return self.recover_inter_robot_edges(selected_edges, is_robot_included)
+            return self.recover_inter_robot_edges(selected_edges,
+                                                  is_robot_included)
         else:
             return []
 
@@ -424,7 +428,8 @@ class AlgebraicConnectivityMaximization(object):
         Args:
             match (EdgeInterRobot): potential match
         """
-        key = (match.robot0_id, match.robot0_image_id, match.robot1_id, match.robot1_image_id)
+        key = (match.robot0_id, match.robot0_image_id, match.robot1_id,
+               match.robot1_image_id)
         if key in self.candidate_edges:
             if match.weight > self.candidate_edges[key].weight:
                 self.add_candidate_edge(match)

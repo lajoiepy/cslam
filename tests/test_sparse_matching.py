@@ -170,5 +170,6 @@ class TestSparseMatching(unittest.TestCase):
         selection = lcsm.select_candidates(nb_candidates, is_robot_considered)
         self.assertEqual(len(selection), nb_candidates)
 
+
 if __name__ == "__main__":
     unittest.main()

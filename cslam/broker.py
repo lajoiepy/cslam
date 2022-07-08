@@ -4,11 +4,12 @@ import numpy as np
 from networkx.algorithms import bipartite
 import networkx as nx
 
+
 class Broker(object):
     """The broker decides which vertices in the matching 
     graph are to be shared between the robots.
     """
-    
+
     def __init__(self, edges, robots_involved):
         """Initialize the broker
 
@@ -22,7 +23,7 @@ class Broker(object):
         for e in self.edges:
             if e.robot0_id in robots_involved:
                 robots_involved_with_edges.add(e.robot0_id)
-            if e.robot1_id in robots_involved:            
+            if e.robot1_id in robots_involved:
                 robots_involved_with_edges.add(e.robot1_id)
         robots_involved_with_edges = list(robots_involved_with_edges)
         self.is_multi_robot_graph = len(robots_involved_with_edges) >= 2
@@ -33,26 +34,34 @@ class Broker(object):
             elif len(robots_involved_with_edges) > 2:
                 self.is_bipartite = False
             else:
-                raise Exception("Broker: The communication brokerage needs to be between at least 2 robots")
+                raise Exception(
+                    "Broker: The communication brokerage needs to be between at least 2 robots"
+                )
 
             # Build graph
             self.matching_graph = nx.Graph()
             for e in self.edges:
-                edge_vertices = [(e.robot0_id, e.robot0_image_id), (e.robot1_id, e.robot1_image_id)]
+                edge_vertices = [(e.robot0_id, e.robot0_image_id),
+                                 (e.robot1_id, e.robot1_image_id)]
                 # Add vertices (required for bipartite)
                 for vertex in edge_vertices:
                     if vertex not in self.matching_graph:
                         if self.is_bipartite:
                             if vertex[0] == robots_involved_with_edges[0]:
-                                self.matching_graph.add_node(vertex, bipartite=0)
+                                self.matching_graph.add_node(vertex,
+                                                             bipartite=0)
                             elif vertex[0] == robots_involved_with_edges[1]:
-                                self.matching_graph.add_node(vertex, bipartite=1)
+                                self.matching_graph.add_node(vertex,
+                                                             bipartite=1)
                         else:
                             if vertex[0] in robots_involved_with_edges:
                                 self.matching_graph.add_node(vertex)
                 # Add edges
-                if edge_vertices[0][0] in robots_involved_with_edges and edge_vertices[1][0] in robots_involved_with_edges:
-                    self.matching_graph.add_edge(edge_vertices[0], edge_vertices[1])
+                if edge_vertices[0][
+                        0] in robots_involved_with_edges and edge_vertices[1][
+                            0] in robots_involved_with_edges:
+                    self.matching_graph.add_edge(edge_vertices[0],
+                                                 edge_vertices[1])
 
     def brokerage(self, use_vertex_cover):
         """Return the broker selection of vertices to send.
@@ -84,14 +93,20 @@ class Broker(object):
         """
         vertex_covers = []
         # Divide into components
-        matching_subgraphs = [self.matching_graph.subgraph(c).copy() for c in nx.connected_components(self.matching_graph)]
+        matching_subgraphs = [
+            self.matching_graph.subgraph(c).copy()
+            for c in nx.connected_components(self.matching_graph)
+        ]
         # Compute min cover on connected components
         for graph in matching_subgraphs:
             if self.is_bipartite:
                 matching = nx.bipartite.maximum_matching(graph)
-                vertex_covers.append(nx.bipartite.to_vertex_cover(graph, matching))
+                vertex_covers.append(
+                    nx.bipartite.to_vertex_cover(graph, matching))
             else:
-                vertex_covers.append(nx.algorithms.approximation.vertex_cover.min_weighted_vertex_cover(graph))
+                vertex_covers.append(
+                    nx.algorithms.approximation.vertex_cover.
+                    min_weighted_vertex_cover(graph))
         return vertex_covers
 
     def simple_dialog(self):
@@ -104,8 +119,10 @@ class Broker(object):
         """
         vertices_dialog = set()
         for e in self.edges:
-            edge_vertices = [(e.robot0_id, e.robot0_image_id), (e.robot1_id, e.robot1_image_id)]
-            if edge_vertices[0] not in vertices_dialog and edge_vertices[1] not in vertices_dialog:
+            edge_vertices = [(e.robot0_id, e.robot0_image_id),
+                             (e.robot1_id, e.robot1_image_id)]
+            if edge_vertices[0] not in vertices_dialog and edge_vertices[
+                    1] not in vertices_dialog:
                 rand_idx = np.random.randint(2)
                 vertices_dialog.add(edge_vertices[rand_idx])
 

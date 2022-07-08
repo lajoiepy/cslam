@@ -4,238 +4,290 @@
 using namespace rtabmap;
 using namespace cslam;
 
-StereoHandler::StereoHandler(std::shared_ptr<rclcpp::Node> &node): node_(node){
-    node->declare_parameter<std::string>("left_image_topic", "left/image_rect");
-    node->declare_parameter<std::string>("right_image_topic", "right/image_rect");
-    node->declare_parameter<std::string>("left_camera_info_topic", "left/camera_info");
-    node->declare_parameter<std::string>("right_camera_info_topic", "right/camera_info");
-    node->declare_parameter<std::string>("odom_topic", "odom");
-    node_->get_parameter("max_keyframe_queue_size", max_queue_size_);
+StereoHandler::StereoHandler(std::shared_ptr<rclcpp::Node> &node)
+    : node_(node) {
+  node->declare_parameter<std::string>("left_image_topic", "left/image_rect");
+  node->declare_parameter<std::string>("right_image_topic", "right/image_rect");
+  node->declare_parameter<std::string>("left_camera_info_topic",
+                                       "left/camera_info");
+  node->declare_parameter<std::string>("right_camera_info_topic",
+                                       "right/camera_info");
+  node->declare_parameter<std::string>("odom_topic", "odom");
+  node_->get_parameter("max_keyframe_queue_size", max_queue_size_);
 
-    nb_local_frames_ = 0;
-    base_frame_id_ = "camera_link"; // TODO: add param
+  nb_local_frames_ = 0;
+  base_frame_id_ = "camera_link"; // TODO: add param
 
-    // Subscriber for stereo images
-    int queue_size = 10; // TODO: param
-    image_rect_left_.subscribe(node_.get(), node_->get_parameter("left_image_topic").as_string(), "raw", rclcpp::QoS(queue_size).reliability((rmw_qos_reliability_policy_t)2).get_rmw_qos_profile());
-    image_rect_right_.subscribe(node_.get(), node_->get_parameter("right_image_topic").as_string(), "raw", rclcpp::QoS(queue_size).reliability((rmw_qos_reliability_policy_t)2).get_rmw_qos_profile());
-    camera_info_left_.subscribe(node_.get(), node_->get_parameter("left_camera_info_topic").as_string(), rclcpp::QoS(queue_size).reliability((rmw_qos_reliability_policy_t)2).get_rmw_qos_profile());
-    camera_info_right_.subscribe(node_.get(), node_->get_parameter("right_camera_info_topic").as_string(), rclcpp::QoS(queue_size).reliability((rmw_qos_reliability_policy_t)2).get_rmw_qos_profile());
-    odometry_.subscribe(node_.get(), node_->get_parameter("odom_topic").as_string(), rclcpp::QoS(queue_size).reliability((rmw_qos_reliability_policy_t)2).get_rmw_qos_profile());
+  // Subscriber for stereo images
+  int queue_size = 10; // TODO: param
+  image_rect_left_.subscribe(
+      node_.get(), node_->get_parameter("left_image_topic").as_string(), "raw",
+      rclcpp::QoS(queue_size)
+          .reliability((rmw_qos_reliability_policy_t)2)
+          .get_rmw_qos_profile());
+  image_rect_right_.subscribe(
+      node_.get(), node_->get_parameter("right_image_topic").as_string(), "raw",
+      rclcpp::QoS(queue_size)
+          .reliability((rmw_qos_reliability_policy_t)2)
+          .get_rmw_qos_profile());
+  camera_info_left_.subscribe(
+      node_.get(), node_->get_parameter("left_camera_info_topic").as_string(),
+      rclcpp::QoS(queue_size)
+          .reliability((rmw_qos_reliability_policy_t)2)
+          .get_rmw_qos_profile());
+  camera_info_right_.subscribe(
+      node_.get(), node_->get_parameter("right_camera_info_topic").as_string(),
+      rclcpp::QoS(queue_size)
+          .reliability((rmw_qos_reliability_policy_t)2)
+          .get_rmw_qos_profile());
+  odometry_.subscribe(node_.get(),
+                      node_->get_parameter("odom_topic").as_string(),
+                      rclcpp::QoS(queue_size)
+                          .reliability((rmw_qos_reliability_policy_t)2)
+                          .get_rmw_qos_profile());
 
-    sync_policy_ = new message_filters::Synchronizer<SyncPolicy>(SyncPolicy(queue_size), image_rect_left_, image_rect_right_, camera_info_left_, camera_info_right_, odometry_);
-    sync_policy_->registerCallback(std::bind(&StereoHandler::stereo_callback, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4, std::placeholders::_5));
-    
-    // Service to extract and publish local image descriptors to another robot
-    send_local_descriptors_subscriber_ = node_->create_subscription<
-        cslam_loop_detection_interfaces::msg::LocalDescriptorsRequest>(
-        "local_descriptors_request", 100,
-        std::bind(&StereoHandler::local_descriptors_request, this,
-                    std::placeholders::_1));
+  sync_policy_ = new message_filters::Synchronizer<SyncPolicy>(
+      SyncPolicy(queue_size), image_rect_left_, image_rect_right_,
+      camera_info_left_, camera_info_right_, odometry_);
+  sync_policy_->registerCallback(
+      std::bind(&StereoHandler::stereo_callback, this, std::placeholders::_1,
+                std::placeholders::_2, std::placeholders::_3,
+                std::placeholders::_4, std::placeholders::_5));
 
-    // Parameters
-    node_->get_parameter("max_keyframe_queue_size", max_queue_size_);
-    node_->get_parameter("pnp_min_inliers", min_inliers_);
-    node_->get_parameter("nb_robots", nb_robots_);
-    node_->get_parameter("robot_id", robot_id_);
+  // Service to extract and publish local image descriptors to another robot
+  send_local_descriptors_subscriber_ = node_->create_subscription<
+      cslam_loop_detection_interfaces::msg::LocalDescriptorsRequest>(
+      "local_descriptors_request", 100,
+      std::bind(&StereoHandler::local_descriptors_request, this,
+                std::placeholders::_1));
 
-    // Publisher for global descriptors
-    keyframe_data_publisher_ =
-        node_->create_publisher<cslam_common_interfaces::msg::KeyframeRGB>(
-            "keyframe_data", 100);
+  // Parameters
+  node_->get_parameter("max_keyframe_queue_size", max_queue_size_);
+  node_->get_parameter("pnp_min_inliers", min_inliers_);
+  node_->get_parameter("nb_robots", nb_robots_);
+  node_->get_parameter("robot_id", robot_id_);
 
-    // Publisher for odometry with ID
-    keyframe_odom_publisher_ =
-        node_->create_publisher<cslam_common_interfaces::msg::KeyframeOdom>(
-            "keyframe_odom", 100);
+  // Publisher for global descriptors
+  keyframe_data_publisher_ =
+      node_->create_publisher<cslam_common_interfaces::msg::KeyframeRGB>(
+          "keyframe_data", 100);
 
-    // Publishers to other robots local descriptors subscribers
-    std::string topic = "/local_descriptors";
-    local_descriptors_publisher_ =
-        node_->create_publisher<
-                    cslam_loop_detection_interfaces::msg::LocalImageDescriptors>(
-                    topic, 100);
+  // Publisher for odometry with ID
+  keyframe_odom_publisher_ =
+      node_->create_publisher<cslam_common_interfaces::msg::KeyframeOdom>(
+          "keyframe_odom", 100);
 
-    // Subscriber for local descriptors
-    local_descriptors_subscriber_ = node->create_subscription<
-        cslam_loop_detection_interfaces::msg::LocalImageDescriptors>(
-        "/local_descriptors", 100,
-        std::bind(&StereoHandler::receive_local_image_descriptors, this,
-                    std::placeholders::_1));
+  // Publishers to other robots local descriptors subscribers
+  std::string topic = "/local_descriptors";
+  local_descriptors_publisher_ = node_->create_publisher<
+      cslam_loop_detection_interfaces::msg::LocalImageDescriptors>(topic, 100);
 
-    // Registration settings
-    rtabmap::ParametersMap registration_params;
-    registration_params.insert(rtabmap::ParametersPair(
-        rtabmap::Parameters::kVisMinInliers(), std::to_string(min_inliers_)));
-    registration_.parseParameters(registration_params);
+  // Subscriber for local descriptors
+  local_descriptors_subscriber_ = node->create_subscription<
+      cslam_loop_detection_interfaces::msg::LocalImageDescriptors>(
+      "/local_descriptors", 100,
+      std::bind(&StereoHandler::receive_local_image_descriptors, this,
+                std::placeholders::_1));
 
+  // Registration settings
+  rtabmap::ParametersMap registration_params;
+  registration_params.insert(rtabmap::ParametersPair(
+      rtabmap::Parameters::kVisMinInliers(), std::to_string(min_inliers_)));
+  registration_.parseParameters(registration_params);
 
-    // Publisher for inter robot loop closure to all robots 
-    inter_robot_loop_closure_publisher_ = node_->create_publisher<
-                cslam_loop_detection_interfaces::msg::InterRobotLoopClosure>(
-                "/inter_robot_loop_closure", 100);
+  // Publisher for inter robot loop closure to all robots
+  inter_robot_loop_closure_publisher_ = node_->create_publisher<
+      cslam_loop_detection_interfaces::msg::InterRobotLoopClosure>(
+      "/inter_robot_loop_closure", 100);
 
-	tf_buffer_ = std::make_shared<tf2_ros::Buffer>(node_->get_clock());
-	tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
+  tf_buffer_ = std::make_shared<tf2_ros::Buffer>(node_->get_clock());
+  tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
 }
 
 void StereoHandler::stereo_callback(
-		const sensor_msgs::msg::Image::ConstSharedPtr imageRectLeft,
-		const sensor_msgs::msg::Image::ConstSharedPtr imageRectRight,
-		const sensor_msgs::msg::CameraInfo::ConstSharedPtr cameraInfoLeft,
-		const sensor_msgs::msg::CameraInfo::ConstSharedPtr cameraInfoRight,
-        const nav_msgs::msg::Odometry::ConstSharedPtr odom)
-{
-    if(!(imageRectLeft->encoding.compare(sensor_msgs::image_encodings::TYPE_8UC1) ==0 ||
-            imageRectLeft->encoding.compare(sensor_msgs::image_encodings::MONO8) ==0 ||
-            imageRectLeft->encoding.compare(sensor_msgs::image_encodings::MONO16) ==0 ||
-            imageRectLeft->encoding.compare(sensor_msgs::image_encodings::BGR8) == 0 ||
-            imageRectLeft->encoding.compare(sensor_msgs::image_encodings::RGB8) == 0 ||
-            imageRectLeft->encoding.compare(sensor_msgs::image_encodings::BGRA8) == 0 ||
-            imageRectLeft->encoding.compare(sensor_msgs::image_encodings::RGBA8) == 0) ||
-        !(imageRectRight->encoding.compare(sensor_msgs::image_encodings::TYPE_8UC1) ==0 ||
-            imageRectRight->encoding.compare(sensor_msgs::image_encodings::MONO8) ==0 ||
-            imageRectRight->encoding.compare(sensor_msgs::image_encodings::MONO16) ==0 ||
-            imageRectRight->encoding.compare(sensor_msgs::image_encodings::BGR8) == 0 ||
-            imageRectRight->encoding.compare(sensor_msgs::image_encodings::RGB8) == 0 ||
-            imageRectRight->encoding.compare(sensor_msgs::image_encodings::BGRA8) == 0 ||
-            imageRectRight->encoding.compare(sensor_msgs::image_encodings::RGBA8) == 0))
-    {
-        RCLCPP_ERROR(node_->get_logger(), "Input type must be image=mono8,mono16,rgb8,bgr8,rgba8,bgra8 (mono8 recommended), received types are %s (left) and %s (right)",
-                imageRectLeft->encoding.c_str(), imageRectRight->encoding.c_str());
+    const sensor_msgs::msg::Image::ConstSharedPtr imageRectLeft,
+    const sensor_msgs::msg::Image::ConstSharedPtr imageRectRight,
+    const sensor_msgs::msg::CameraInfo::ConstSharedPtr cameraInfoLeft,
+    const sensor_msgs::msg::CameraInfo::ConstSharedPtr cameraInfoRight,
+    const nav_msgs::msg::Odometry::ConstSharedPtr odom) {
+  if (!(imageRectLeft->encoding.compare(
+            sensor_msgs::image_encodings::TYPE_8UC1) == 0 ||
+        imageRectLeft->encoding.compare(sensor_msgs::image_encodings::MONO8) ==
+            0 ||
+        imageRectLeft->encoding.compare(sensor_msgs::image_encodings::MONO16) ==
+            0 ||
+        imageRectLeft->encoding.compare(sensor_msgs::image_encodings::BGR8) ==
+            0 ||
+        imageRectLeft->encoding.compare(sensor_msgs::image_encodings::RGB8) ==
+            0 ||
+        imageRectLeft->encoding.compare(sensor_msgs::image_encodings::BGRA8) ==
+            0 ||
+        imageRectLeft->encoding.compare(sensor_msgs::image_encodings::RGBA8) ==
+            0) ||
+      !(imageRectRight->encoding.compare(
+            sensor_msgs::image_encodings::TYPE_8UC1) == 0 ||
+        imageRectRight->encoding.compare(sensor_msgs::image_encodings::MONO8) ==
+            0 ||
+        imageRectRight->encoding.compare(
+            sensor_msgs::image_encodings::MONO16) == 0 ||
+        imageRectRight->encoding.compare(sensor_msgs::image_encodings::BGR8) ==
+            0 ||
+        imageRectRight->encoding.compare(sensor_msgs::image_encodings::RGB8) ==
+            0 ||
+        imageRectRight->encoding.compare(sensor_msgs::image_encodings::BGRA8) ==
+            0 ||
+        imageRectRight->encoding.compare(sensor_msgs::image_encodings::RGBA8) ==
+            0)) {
+    RCLCPP_ERROR(
+        node_->get_logger(),
+        "Input type must be image=mono8,mono16,rgb8,bgr8,rgba8,bgra8 (mono8 "
+        "recommended), received types are %s (left) and %s (right)",
+        imageRectLeft->encoding.c_str(), imageRectRight->encoding.c_str());
+    return;
+  }
+
+  rclcpp::Time stamp =
+      rtabmap_ros::timestampFromROS(imageRectLeft->header.stamp) >
+              rtabmap_ros::timestampFromROS(imageRectRight->header.stamp)
+          ? imageRectLeft->header.stamp
+          : imageRectRight->header.stamp;
+
+  Transform localTransform = rtabmap_ros::getTransform(
+      base_frame_id_, imageRectLeft->header.frame_id, stamp, *tf_buffer_, 0.1);
+  if (localTransform.isNull()) {
+    return;
+  }
+
+  if (imageRectLeft->data.size() && imageRectRight->data.size()) {
+    bool alreadyRectified = true;
+    rtabmap::Transform stereoTransform;
+    if (!alreadyRectified) {
+      stereoTransform = rtabmap_ros::getTransform(
+          cameraInfoRight->header.frame_id, cameraInfoLeft->header.frame_id,
+          cameraInfoLeft->header.stamp, *tf_buffer_, 0.1);
+      if (stereoTransform.isNull()) {
+        RCLCPP_ERROR(node_->get_logger(),
+                     "Parameter %s is false but we cannot get TF between the "
+                     "two cameras! (between frames %s and %s)",
+                     Parameters::kRtabmapImagesAlreadyRectified().c_str(),
+                     cameraInfoRight->header.frame_id.c_str(),
+                     cameraInfoLeft->header.frame_id.c_str());
         return;
-    }
-
-    rclcpp::Time stamp = rtabmap_ros::timestampFromROS(imageRectLeft->header.stamp)>rtabmap_ros::timestampFromROS(imageRectRight->header.stamp)?imageRectLeft->header.stamp:imageRectRight->header.stamp;
-
-    Transform localTransform = rtabmap_ros::getTransform(base_frame_id_, imageRectLeft->header.frame_id, stamp, *tf_buffer_, 0.1);
-    if(localTransform.isNull())
-    {
+      } else if (stereoTransform.isIdentity()) {
+        RCLCPP_ERROR(node_->get_logger(),
+                     "Parameter %s is false but we cannot get a valid TF "
+                     "between the two cameras! "
+                     "Identity transform returned between left and right "
+                     "cameras. Verify that if TF between "
+                     "the cameras is valid: \"rosrun tf tf_echo %s %s\".",
+                     Parameters::kRtabmapImagesAlreadyRectified().c_str(),
+                     cameraInfoRight->header.frame_id.c_str(),
+                     cameraInfoLeft->header.frame_id.c_str());
         return;
+      }
     }
 
-    if(imageRectLeft->data.size() && imageRectRight->data.size())
-    {
-        bool alreadyRectified = true;
-        rtabmap::Transform stereoTransform;
-        if(!alreadyRectified)
-        {
-            stereoTransform = rtabmap_ros::getTransform(
-                    cameraInfoRight->header.frame_id,
-                    cameraInfoLeft->header.frame_id,
-                    cameraInfoLeft->header.stamp,
-                    *tf_buffer_,
-                    0.1);
-            if(stereoTransform.isNull())
-            {
-                RCLCPP_ERROR(node_->get_logger(), "Parameter %s is false but we cannot get TF between the two cameras! (between frames %s and %s)",
-                        Parameters::kRtabmapImagesAlreadyRectified().c_str(),
-                        cameraInfoRight->header.frame_id.c_str(),
-                        cameraInfoLeft->header.frame_id.c_str());
-                return;
-            }
-            else if(stereoTransform.isIdentity())
-            {
-                RCLCPP_ERROR(node_->get_logger(), "Parameter %s is false but we cannot get a valid TF between the two cameras! "
-                        "Identity transform returned between left and right cameras. Verify that if TF between "
-                        "the cameras is valid: \"rosrun tf tf_echo %s %s\".",
-                        Parameters::kRtabmapImagesAlreadyRectified().c_str(),
-                        cameraInfoRight->header.frame_id.c_str(),
-                        cameraInfoLeft->header.frame_id.c_str());
-                return;
-            }
+    rtabmap::StereoCameraModel stereoModel =
+        rtabmap_ros::stereoCameraModelFromROS(*cameraInfoLeft, *cameraInfoRight,
+                                              localTransform, stereoTransform);
+
+    if (stereoModel.baseline() == 0 && alreadyRectified) {
+      stereoTransform = rtabmap_ros::getTransform(
+          cameraInfoLeft->header.frame_id, cameraInfoRight->header.frame_id,
+          cameraInfoLeft->header.stamp, *tf_buffer_, 0.1);
+
+      if (!stereoTransform.isNull() && stereoTransform.x() > 0) {
+        static bool warned = false;
+        if (!warned) {
+          RCLCPP_WARN(
+              node_->get_logger(),
+              "Right camera info doesn't have Tx set but we are assuming that "
+              "stereo images are already rectified (see %s parameter). While "
+              "not "
+              "recommended, we used TF to get the baseline (%s->%s = %fm) for "
+              "convenience (e.g., D400 ir stereo issue). It is preferred to "
+              "feed "
+              "a valid right camera info if stereo images are already "
+              "rectified. This message is only printed once...",
+              rtabmap::Parameters::kRtabmapImagesAlreadyRectified().c_str(),
+              cameraInfoRight->header.frame_id.c_str(),
+              cameraInfoLeft->header.frame_id.c_str(), stereoTransform.x());
+          warned = true;
         }
-
-        rtabmap::StereoCameraModel stereoModel = rtabmap_ros::stereoCameraModelFromROS(*cameraInfoLeft, *cameraInfoRight, localTransform, stereoTransform);
-
-        if(stereoModel.baseline() == 0 && alreadyRectified)
-        {
-            stereoTransform = rtabmap_ros::getTransform(
-                    cameraInfoLeft->header.frame_id,
-                    cameraInfoRight->header.frame_id,
-                    cameraInfoLeft->header.stamp,
-                    *tf_buffer_,
-                    0.1);
-
-            if(!stereoTransform.isNull() && stereoTransform.x()>0)
-            {
-                static bool warned = false;
-                if(!warned)
-                {
-                    RCLCPP_WARN(node_->get_logger(), "Right camera info doesn't have Tx set but we are assuming that stereo images are already rectified (see %s parameter). While not "
-                            "recommended, we used TF to get the baseline (%s->%s = %fm) for convenience (e.g., D400 ir stereo issue). It is preferred to feed "
-                            "a valid right camera info if stereo images are already rectified. This message is only printed once...",
-                            rtabmap::Parameters::kRtabmapImagesAlreadyRectified().c_str(),
-                            cameraInfoRight->header.frame_id.c_str(), cameraInfoLeft->header.frame_id.c_str(), stereoTransform.x());
-                    warned = true;
-                }
-                stereoModel = rtabmap::StereoCameraModel(
-                        stereoModel.left().fx(),
-                        stereoModel.left().fy(),
-                        stereoModel.left().cx(),
-                        stereoModel.left().cy(),
-                        stereoTransform.x(),
-                        stereoModel.localTransform(),
-                        stereoModel.left().imageSize());
-            }
-        }
-
-        if(alreadyRectified && stereoModel.baseline() <= 0)
-        {
-            RCLCPP_ERROR(node_->get_logger(), "The stereo baseline (%f) should be positive (baseline=-Tx/fx). We assume a horizontal left/right stereo "
-                        "setup where the Tx (or P(0,3)) is negative in the right camera info msg.", stereoModel.baseline());
-            return;
-        }
-
-        if(stereoModel.baseline() > 10.0)
-        {
-            static bool shown = false;
-            if(!shown)
-            {
-                RCLCPP_WARN(node_->get_logger(), "Detected baseline (%f m) is quite large! Is your "
-                            "right camera_info P(0,3) correctly set? Note that "
-                            "baseline=-P(0,3)/P(0,0). This warning is printed only once.",
-                            stereoModel.baseline());
-                shown = true;
-            }
-        }
-
-        cv_bridge::CvImagePtr ptrImageLeft = cv_bridge::toCvCopy(imageRectLeft,
-                imageRectLeft->encoding.compare(sensor_msgs::image_encodings::TYPE_8UC1)==0 ||
-                imageRectLeft->encoding.compare(sensor_msgs::image_encodings::MONO8)==0?"":
-                    imageRectLeft->encoding.compare(sensor_msgs::image_encodings::MONO16)!=0?"bgr8":"mono8");
-        cv_bridge::CvImagePtr ptrImageRight = cv_bridge::toCvCopy(imageRectRight,
-                imageRectRight->encoding.compare(sensor_msgs::image_encodings::TYPE_8UC1)==0 ||
-                imageRectRight->encoding.compare(sensor_msgs::image_encodings::MONO8)==0?"":"mono8");
-        
-        auto data = std::make_shared<rtabmap::SensorData>(
-                ptrImageLeft->image,
-                ptrImageRight->image,
-                stereoModel,
-                nb_local_frames_,
-                rtabmap_ros::timestampFromROS(stamp));
-
-        // TODO: keyframe heuristic
-            
-        received_data_queue_.push_back(std::make_pair(data, odom));
-        if (received_data_queue_.size() > max_queue_size_) {
-            // Remove the oldest keyframes if we exceed the maximum size
-            received_data_queue_.pop_front();
-            RCLCPP_WARN(
-                node_->get_logger(),
-                "Maximum queue size (%d) exceeded, the oldest element was removed.",
-                max_queue_size_);
-        }
-
-        nb_local_frames_++;
+        stereoModel = rtabmap::StereoCameraModel(
+            stereoModel.left().fx(), stereoModel.left().fy(),
+            stereoModel.left().cx(), stereoModel.left().cy(),
+            stereoTransform.x(), stereoModel.localTransform(),
+            stereoModel.left().imageSize());
+      }
     }
-    else
-    {
-        RCLCPP_WARN(node_->get_logger(), "Odom: input images empty?!?");
+
+    if (alreadyRectified && stereoModel.baseline() <= 0) {
+      RCLCPP_ERROR(
+          node_->get_logger(),
+          "The stereo baseline (%f) should be positive (baseline=-Tx/fx). We "
+          "assume a horizontal left/right stereo "
+          "setup where the Tx (or P(0,3)) is negative in the right camera info "
+          "msg.",
+          stereoModel.baseline());
+      return;
     }
+
+    if (stereoModel.baseline() > 10.0) {
+      static bool shown = false;
+      if (!shown) {
+        RCLCPP_WARN(
+            node_->get_logger(),
+            "Detected baseline (%f m) is quite large! Is your "
+            "right camera_info P(0,3) correctly set? Note that "
+            "baseline=-P(0,3)/P(0,0). This warning is printed only once.",
+            stereoModel.baseline());
+        shown = true;
+      }
+    }
+
+    cv_bridge::CvImagePtr ptrImageLeft = cv_bridge::toCvCopy(
+        imageRectLeft, imageRectLeft->encoding.compare(
+                           sensor_msgs::image_encodings::TYPE_8UC1) == 0 ||
+                               imageRectLeft->encoding.compare(
+                                   sensor_msgs::image_encodings::MONO8) == 0
+                           ? ""
+                       : imageRectLeft->encoding.compare(
+                             sensor_msgs::image_encodings::MONO16) != 0
+                           ? "bgr8"
+                           : "mono8");
+    cv_bridge::CvImagePtr ptrImageRight = cv_bridge::toCvCopy(
+        imageRectRight, imageRectRight->encoding.compare(
+                            sensor_msgs::image_encodings::TYPE_8UC1) == 0 ||
+                                imageRectRight->encoding.compare(
+                                    sensor_msgs::image_encodings::MONO8) == 0
+                            ? ""
+                            : "mono8");
+
+    auto data = std::make_shared<rtabmap::SensorData>(
+        ptrImageLeft->image, ptrImageRight->image, stereoModel,
+        nb_local_frames_, rtabmap_ros::timestampFromROS(stamp));
+
+    // TODO: keyframe heuristic
+
+    received_data_queue_.push_back(std::make_pair(data, odom));
+    if (received_data_queue_.size() > max_queue_size_) {
+      // Remove the oldest keyframes if we exceed the maximum size
+      received_data_queue_.pop_front();
+      RCLCPP_WARN(
+          node_->get_logger(),
+          "Maximum queue size (%d) exceeded, the oldest element was removed.",
+          max_queue_size_);
+    }
+
+    nb_local_frames_++;
+  } else {
+    RCLCPP_WARN(node_->get_logger(), "Odom: input images empty?!?");
+  }
 }
 
-void StereoHandler::compute_local_descriptors(std::shared_ptr<rtabmap::SensorData>& frame_data){
+void StereoHandler::compute_local_descriptors(
+    std::shared_ptr<rtabmap::SensorData> &frame_data) {
   // Extract local descriptors
   frame_data->uncompressData();
   std::vector<cv::KeyPoint> kpts_from;
@@ -278,43 +330,46 @@ void StereoHandler::compute_local_descriptors(std::shared_ptr<rtabmap::SensorDat
   // Clear costly data
   frame_data->clearCompressedData();
   frame_data->clearRawData();
-  
+
   // Store descriptors
   local_descriptors_map_.insert({frame_data->id(), frame_data});
 }
 
-void StereoHandler::process_new_keyframe(){
-    if (!received_data_queue_.empty()) {
-        auto sensor_data = received_data_queue_.front();
-        received_data_queue_.pop_front();
+void StereoHandler::process_new_keyframe() {
+  if (!received_data_queue_.empty()) {
+    auto sensor_data = received_data_queue_.front();
+    received_data_queue_.pop_front();
 
-        if (sensor_data.first->isValid() &&
-            local_descriptors_map_.find(sensor_data.first->id()) == local_descriptors_map_.end()) {
-            cv::Mat rgb;
-            // rtabmap::LaserScan scan;
-            sensor_data.first->uncompressDataConst(&rgb, 0);
-            // pcl::PointCloud<pcl::PointXYZ>::Ptr cloud =
-            // rtabmap::util3d::laserScanToPointCloud(scan, scan.localTransform());
-            // Send keyframe for loop detection
-            send_keyframe(rgb, sensor_data.second, sensor_data.first->id());
+    if (sensor_data.first->isValid() &&
+        local_descriptors_map_.find(sensor_data.first->id()) ==
+            local_descriptors_map_.end()) {
+      cv::Mat rgb;
+      // rtabmap::LaserScan scan;
+      sensor_data.first->uncompressDataConst(&rgb, 0);
+      // pcl::PointCloud<pcl::PointXYZ>::Ptr cloud =
+      // rtabmap::util3d::laserScanToPointCloud(scan, scan.localTransform());
+      // Send keyframe for loop detection
+      send_keyframe(rgb, sensor_data.second, sensor_data.first->id());
 
-            compute_local_descriptors(sensor_data.first);
-        }
+      compute_local_descriptors(sensor_data.first);
     }
+  }
 }
 
-void StereoHandler::sensor_data_to_rgbd_msg(const std::shared_ptr<
-        rtabmap::SensorData>
-        sensor_data, rtabmap_ros::msg::RGBDImage& msg_data) {
+void StereoHandler::sensor_data_to_rgbd_msg(
+    const std::shared_ptr<rtabmap::SensorData> sensor_data,
+    rtabmap_ros::msg::RGBDImage &msg_data) {
   rtabmap_ros::msg::RGBDImage data;
   rtabmap_ros::rgbdImageToROS(*sensor_data, msg_data, "camera");
 }
 
-void StereoHandler::local_descriptors_request(cslam_loop_detection_interfaces::msg::LocalDescriptorsRequest::ConstSharedPtr
-          request) {
+void StereoHandler::local_descriptors_request(
+    cslam_loop_detection_interfaces::msg::LocalDescriptorsRequest::
+        ConstSharedPtr request) {
   // Fill msg
   cslam_loop_detection_interfaces::msg::LocalImageDescriptors msg;
-  sensor_data_to_rgbd_msg(local_descriptors_map_.at(request->image_id), msg.data);
+  sensor_data_to_rgbd_msg(local_descriptors_map_.at(request->image_id),
+                          msg.data);
   msg.image_id = request->image_id;
   msg.robot_id = robot_id_;
   msg.matches_robot_id = request->matches_robot_id;
@@ -324,9 +379,11 @@ void StereoHandler::local_descriptors_request(cslam_loop_detection_interfaces::m
   local_descriptors_publisher_->publish(msg);
 }
 
-void StereoHandler::local_descriptors_msg_to_sensor_data(const std::shared_ptr<
+void StereoHandler::local_descriptors_msg_to_sensor_data(
+    const std::shared_ptr<
         cslam_loop_detection_interfaces::msg::LocalImageDescriptors>
-        msg, rtabmap::SensorData& sensor_data)   {
+        msg,
+    rtabmap::SensorData &sensor_data) {
   // Fill descriptors
   rtabmap::StereoCameraModel stereo_model =
       rtabmap_ros::stereoCameraModelFromROS(msg->data.rgb_camera_info,
@@ -341,7 +398,7 @@ void StereoHandler::local_descriptors_msg_to_sensor_data(const std::shared_ptr<
   std::vector<cv::Point3f> kpts3D;
   rtabmap_ros::points3fFromROS(msg->data.points, kpts3D);
   auto descriptors = rtabmap::uncompressData(msg->data.descriptors);
-  sensor_data.setFeatures(kpts, kpts3D, descriptors);    
+  sensor_data.setFeatures(kpts, kpts3D, descriptors);
 }
 
 void StereoHandler::receive_local_image_descriptors(
@@ -349,15 +406,13 @@ void StereoHandler::receive_local_image_descriptors(
         cslam_loop_detection_interfaces::msg::LocalImageDescriptors>
         msg) {
   std::deque<int> image_ids;
-  for (unsigned int i = 0; i < msg->matches_robot_id.size(); i++)
-  {
-    if (msg->matches_robot_id[i] == robot_id_){
-        image_ids.push_back(msg->matches_image_id[i]);
+  for (unsigned int i = 0; i < msg->matches_robot_id.size(); i++) {
+    if (msg->matches_robot_id[i] == robot_id_) {
+      image_ids.push_back(msg->matches_image_id[i]);
     }
   }
 
-  for(auto local_image_id: image_ids)
-  {
+  for (auto local_image_id : image_ids) {
     rtabmap::SensorData tmp_to;
     local_descriptors_msg_to_sensor_data(msg, tmp_to);
 
@@ -376,24 +431,24 @@ void StereoHandler::receive_local_image_descriptors(
     lc.robot1_id = msg->robot_id;
     lc.robot1_image_id = msg->image_id;
     if (!t.isNull()) {
-        lc.success = true;
-        rtabmap_ros::transformToGeometryMsg(t, lc.transform);
-        inter_robot_loop_closure_publisher_->publish(lc);
+      lc.success = true;
+      rtabmap_ros::transformToGeometryMsg(t, lc.transform);
+      inter_robot_loop_closure_publisher_->publish(lc);
     } else {
-        RCLCPP_ERROR(
-            node_->get_logger(),
-            "Could not compute transformation between (%d,%d) and (%d,%d): %s",
-            robot_id_, local_image_id, msg->robot_id, msg->image_id,
-            reg_info.rejectedMsg.c_str());
-        lc.success = false;
-        inter_robot_loop_closure_publisher_->publish(lc);
+      RCLCPP_ERROR(
+          node_->get_logger(),
+          "Could not compute transformation between (%d,%d) and (%d,%d): %s",
+          robot_id_, local_image_id, msg->robot_id, msg->image_id,
+          reg_info.rejectedMsg.c_str());
+      lc.success = false;
+      inter_robot_loop_closure_publisher_->publish(lc);
     }
   }
 }
 
-void StereoHandler::send_keyframe(const rtabmap::SensorData &data,
-                                  const nav_msgs::msg::Odometry::ConstSharedPtr odom,
-                                  const int id) {
+void StereoHandler::send_keyframe(
+    const rtabmap::SensorData &data,
+    const nav_msgs::msg::Odometry::ConstSharedPtr odom, const int id) {
   // Image message
   std_msgs::msg::Header header;
   header.stamp = node_->now();
@@ -409,5 +464,4 @@ void StereoHandler::send_keyframe(const rtabmap::SensorData &data,
   odom_msg.id = id;
   odom_msg.odom = *odom;
   keyframe_odom_publisher_->publish(odom_msg);
-
 }

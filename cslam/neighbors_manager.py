@@ -2,20 +2,24 @@ from cslam.neighbor_monitor import NeighborMonitor
 from cslam_common_interfaces.msg import RobotIdsAndOrigin
 from std_msgs.msg import String
 
+
 class NeighborManager():
-    def __init__(self, node, robot_id, nb_robots, is_enabled,  max_delay_sec):
+
+    def __init__(self, node, robot_id, nb_robots, is_enabled, max_delay_sec):
         self.node = node
         self.robot_id = robot_id
         self.nb_robots = nb_robots
         self.neighbors_monitors = {}
         for id in range(self.nb_robots):
             if id != self.robot_id:
-                self.neighbors_monitors[id] = NeighborMonitor(self.node, id, is_enabled, max_delay_sec)
-        
+                self.neighbors_monitors[id] = NeighborMonitor(
+                    self.node, id, is_enabled, max_delay_sec)
+
         self.subscriber = self.node.create_subscription(
-            String, 'get_current_neighbors', self.get_current_neighbors_callback, 100) 
+            String, 'get_current_neighbors',
+            self.get_current_neighbors_callback, 100)
         self.neighbors_publisher = self.node.create_publisher(
-            RobotIds, 'current_neighbors', 100)
+            RobotIdsAndOrigin, 'current_neighbors', 100)
 
     def check_neighbors_in_range(self):
         """Check which neighbors are in range
@@ -45,8 +49,8 @@ class NeighborManager():
         is_broker = True
         for i in range(self.nb_robots):
             if i != self.robot_id and self.neighbors_monitors[i].is_alive():
-                # Note: This is an arbitrary condition that selects the 
-                # lowest ID alive as broker. Could be change to any other cond. 
+                # Note: This is an arbitrary condition that selects the
+                # lowest ID alive as broker. Could be change to any other cond.
                 # (e.g., selecting the robot with the most computing power)
                 if self.robot_id > i:
                     is_broker = False
@@ -61,12 +65,15 @@ class NeighborManager():
         for i in range(self.nb_robots):
             if i != self.robot_id:
                 if self.neighbors_monitors[i].is_alive():
-                    from_kf_id = min(self.neighbors_monitors[i].last_keyframe_sent, from_kf_id)
-                    
+                    from_kf_id = min(
+                        self.neighbors_monitors[i].last_keyframe_sent,
+                        from_kf_id)
+
         for i in range(self.nb_robots):
             if i != self.robot_id:
                 if self.neighbors_monitors[i].is_alive():
-                    self.neighbors_monitors[i].last_keyframe_sent = latest_local_id
+                    self.neighbors_monitors[
+                        i].last_keyframe_sent = latest_local_id
 
         return from_kf_id + 1
 
@@ -79,7 +86,8 @@ class NeighborManager():
         from_kf_id = last_kf_id
         for i in range(self.nb_robots):
             if i != self.robot_id:
-                from_kf_id = min(self.neighbors_monitors[i].last_keyframe_sent, from_kf_id)
+                from_kf_id = min(self.neighbors_monitors[i].last_keyframe_sent,
+                                 from_kf_id)
         return from_kf_id
 
     def update_received_kf_id(self, other_robot_id, kf_id):
@@ -102,12 +110,19 @@ class NeighborManager():
         Returns:
             range: indexes in list to process
         """
-        if self.neighbors_monitors[other_robot_id].last_keyframe_received >= end_id:
+        if self.neighbors_monitors[
+                other_robot_id].last_keyframe_received >= end_id:
             list_index_range = range(0)
         else:
-            s = max(0, self.neighbors_monitors[other_robot_id].last_keyframe_received - start_id)
-            list_index_range = range(s, end_id-start_id+1)
-        self.update_received_kf_id(other_robot_id, max(self.neighbors_monitors[other_robot_id].last_keyframe_received, end_id))
+            s = max(
+                0,
+                self.neighbors_monitors[other_robot_id].last_keyframe_received
+                - start_id)
+            list_index_range = range(s, end_id - start_id + 1)
+        self.update_received_kf_id(
+            other_robot_id,
+            max(self.neighbors_monitors[other_robot_id].last_keyframe_received,
+                end_id))
         return list_index_range
 
     def get_current_neighbors_callback(self, msg):
@@ -116,7 +131,8 @@ class NeighborManager():
         Args:
             msg (String): Empty
         """
-        is_robot_in_range, robots_in_range_list = self.check_neighbors_in_range()
+        is_robot_in_range, robots_in_range_list = self.check_neighbors_in_range(
+        )
         robots_in_range_list.remove(self.robot_id)
         msg = RobotIdsAndOrigin()
         msg.robots.ids = robots_in_range_list
@@ -124,5 +140,3 @@ class NeighborManager():
             msg.origins.ids.append(self.neighbors_monitors[i].origin_robot_id)
 
         self.neighbors_publisher.publish(msg)
-        
-       
