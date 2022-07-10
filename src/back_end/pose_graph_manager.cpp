@@ -153,6 +153,7 @@ void PoseGraphManager::reinitialize_received_pose_graphs() {
   }
   other_robots_graph_and_estimates_.clear();
   received_pose_graphs_connectivity_.clear();
+  RCLCPP_INFO(node_->get_logger(), " CLEAR "); // TODO: remove
 }
 
 bool PoseGraphManager::check_received_pose_graphs() {
@@ -202,6 +203,11 @@ void PoseGraphManager::inter_robot_loop_closure_callback(
     inter_robot_loop_closures_[{std::min(msg->robot0_id, msg->robot1_id),
                                 std::max(msg->robot0_id, msg->robot1_id)}]
         .push_back(factor);
+    if (msg->robot0_id == robot_id_){
+      connected_robots_.insert(msg->robot1_id);
+    } else if (msg->robot1_id == robot_id_) {
+      connected_robots_.insert(msg->robot0_id);
+    }
   }
 }
 
@@ -230,6 +236,9 @@ bool PoseGraphManager::is_optimizer() {
       is_optimizer &= false;
     }
   }
+  if (current_neighbors_ids_.robots.ids.size() == 0 || current_pose_estimates_->size() == 0){
+    is_optimizer = false;
+  }
   return is_optimizer;
 }
 
@@ -248,7 +257,7 @@ void PoseGraphManager::get_pose_graph_callback(
       unsigned int min_robot_id = std::min(msg->ids[i], msg->ids[j]);
       unsigned int max_robot_id = std::max(msg->ids[i], msg->ids[j]);
       if (inter_robot_loop_closures_[{min_robot_id, max_robot_id}].size() > 0) {
-        connected_robots.insert(max_robot_id);
+        connected_robots.insert(max_robot_id); // TODO: double check this
         if (min_robot_id == robot_id_) {
           graph->push_back(
               inter_robot_loop_closures_[{min_robot_id, max_robot_id}].begin(),
@@ -259,7 +268,9 @@ void PoseGraphManager::get_pose_graph_callback(
   }
 
   out_msg.edges = gtsam_factors_to_msg(graph);
+  RCLCPP_INFO(node_->get_logger(), " Pose graph publish robot " + std::to_string(robot_id_)); // TODO: remove
   for (auto id : connected_robots) {
+    RCLCPP_INFO(node_->get_logger(), " Connected ids: " + std::to_string(id)); // TODO: remove
     out_msg.connected_robots.ids.push_back(id);
   }
   pose_graph_publisher_->publish(out_msg);
@@ -273,13 +284,31 @@ void PoseGraphManager::pose_graph_callback(
   received_pose_graphs_[msg->robot_id] = true;
   received_pose_graphs_connectivity_.insert(
       {msg->robot_id, msg->connected_robots.ids});
+  RCLCPP_INFO(node_->get_logger(), " Pose graph callback: " + std::to_string(msg->robot_id) + " < " + std::to_string(msg->connected_robots.ids.size())); // TODO: remove
+  for (auto id : received_pose_graphs_connectivity_) { // TODO: remove
+    RCLCPP_INFO(node_->get_logger(), " <<: " + std::to_string(id.first) + " < " + std::to_string(id.second.size())); // TODO: remove
+    for (auto j : id.second) { // TODO: remove
+      RCLCPP_INFO(node_->get_logger(), std::to_string(j)); // TODO: remove. should be 0?
+    }
+  }
+  RCLCPP_INFO(node_->get_logger(), " ;;;;;;;;;;;;;;;;;;; "); // TODO: remove
   if (check_received_pose_graphs()) {
     end_waiting();
     optimizer_state_ = OptimizerState::OPTIMIZATION;
   }
+  RCLCPP_INFO(node_->get_logger(), " ;;;;;;;;2222222;;;;; "); // TODO: remove
 }
 
 std::map<unsigned int, bool> PoseGraphManager::connected_robot_pose_graph() {
+  RCLCPP_INFO(node_->get_logger(), " ;;Connected;; "); // TODO: remove
+  RCLCPP_INFO(node_->get_logger(), " ;--- " + std::to_string(connected_robots_.size())); // TODO: remove
+  if (connected_robots_.size() > 0){
+    std::vector<unsigned int> v(connected_robots_.begin(), connected_robots_.end());
+    RCLCPP_INFO(node_->get_logger(), " ;;Connected22;; "); // TODO: remove
+    received_pose_graphs_connectivity_.insert({robot_id_, v});      
+    RCLCPP_INFO(node_->get_logger(), " Current ids: " + std::to_string(robot_id_) + " " + std::to_string(v[0])); // TODO: remove
+  }
+  
   std::map<unsigned int, bool> is_robot_connected;
   is_robot_connected.insert({robot_id_, true});
   for (auto id : current_neighbors_ids_.robots.ids) {
@@ -296,20 +325,31 @@ std::map<unsigned int, bool> PoseGraphManager::connected_robot_pose_graph() {
   unsigned int current_id = robot_id_;
   visited[current_id] = true;
   queue.push_back(current_id);
+  RCLCPP_INFO(node_->get_logger(), " ---------- "); // TODO: remove
+
 
   while (!queue.empty()) {
     current_id = queue.front();
     queue.pop_front();
+    RCLCPP_INFO(node_->get_logger(), "!! = " + std::to_string(current_id) + " | " + std::to_string(received_pose_graphs_connectivity_[current_id].size())); // TODO: remove
 
     for (auto id : received_pose_graphs_connectivity_[current_id]) {
       is_robot_connected[id] = true;
-
+      RCLCPP_INFO(node_->get_logger(), "** = " + std::to_string(current_id) + " | " + std::to_string(received_pose_graphs_connectivity_[current_id].size()) + " // " + std::to_string(id) + " ++ " + std::to_string(is_robot_connected[id]) + " $$ " + std::to_string(visited[id])); // TODO: remove
+      
       if (!visited[id]) {
         visited[id] = true;
         queue.push_back(id);
       }
     }
   }
+  for (auto id : received_pose_graphs_connectivity_) { // TODO: remove
+    RCLCPP_INFO(node_->get_logger(), " <<: " + std::to_string(id.first) + " < " + std::to_string(id.second.size())); // TODO: remove
+  }
+  for (auto id : current_neighbors_ids_.robots.ids) { // TODO: remove
+    RCLCPP_INFO(node_->get_logger(), " &&: " + std::to_string(id) + "  " + std::to_string(is_robot_connected[id])); // TODO: remove
+  }
+  RCLCPP_INFO(node_->get_logger(), " ============= "); // TODO: remove
   return is_robot_connected;
 }
 
@@ -345,15 +385,20 @@ void PoseGraphManager::optimization_callback() {
 std::pair<gtsam::NonlinearFactorGraph::shared_ptr, gtsam::Values::shared_ptr>
 PoseGraphManager::aggregate_pose_graphs() {
   // Check connectivity
+  RCLCPP_INFO(node_->get_logger(), " ;;;agg 0 "); // TODO: remove
   auto is_pose_graph_connected = connected_robot_pose_graph();
+  RCLCPP_INFO(node_->get_logger(), " ;;;agg 1 "); // TODO: remove
   // Aggregate graphs
   auto graph = boost::make_shared<gtsam::NonlinearFactorGraph>();
   auto estimates = boost::make_shared<gtsam::Values>();
   // Local graph
   graph->push_back(pose_graph_->begin(), pose_graph_->end());
+  RCLCPP_INFO(node_->get_logger(), " ;;;agg 2 "); // TODO: remove
   auto included_robots_ids = current_neighbors_ids_;
   included_robots_ids.robots.ids.push_back(robot_id_);
+  RCLCPP_INFO(node_->get_logger(), "included_robots : ");
   for (unsigned int i = 0; i < included_robots_ids.robots.ids.size(); i++) {
+    RCLCPP_INFO(node_->get_logger(), std::to_string(included_robots_ids.robots.ids[i]) + " " + std::to_string(is_pose_graph_connected[included_robots_ids.robots.ids[i]])); // TODO: remove
     for (unsigned int j = i + 1; j < included_robots_ids.robots.ids.size();
          j++) {
       if (is_pose_graph_connected[included_robots_ids.robots.ids[i]] &&
@@ -366,6 +411,7 @@ PoseGraphManager::aggregate_pose_graphs() {
              inter_robot_loop_closures_[{min_id, max_id}]) {
           graph->push_back(factor);
         }
+        RCLCPP_INFO(node_->get_logger(), "Inter robot : " + std::to_string(min_id) + " " + std::to_string(max_id) + " " + std::to_string(inter_robot_loop_closures_[{min_id, max_id}].size()));
       }
     }
   }
@@ -373,10 +419,13 @@ PoseGraphManager::aggregate_pose_graphs() {
   // Add other robots graphs
   for (auto id : current_neighbors_ids_.robots.ids) {
     if (is_pose_graph_connected[id]) {
+      RCLCPP_INFO(node_->get_logger(), "Poses : " + std::to_string(id) + " " + std::to_string(other_robots_graph_and_estimates_[id].second->size()));
       estimates->insert(*other_robots_graph_and_estimates_[id].second);
     }
   }
   for (auto id : current_neighbors_ids_.robots.ids) {
+    RCLCPP_INFO(node_->get_logger(), "Other graph : " + std::to_string(id) + " " + std::to_string(other_robots_graph_and_estimates_[id].first->size()));
+     
     for (const auto &factor_ : *other_robots_graph_and_estimates_[id].first) {
       auto factor =
           boost::dynamic_pointer_cast<gtsam::BetweenFactor<gtsam::Pose3>>(
@@ -402,8 +451,13 @@ void PoseGraphManager::optimized_estimates_callback(
     current_pose_estimates_->update(*optimized_estimates);
     origin_robot_id_ = msg->origin_robot_id;
     gtsam::LabeledSymbol first_symbol(GRAPH_LABEL, ROBOT_LABEL(robot_id_), 0);
-    update_transform_to_origin(
-        current_pose_estimates_->at<gtsam::Pose3>(first_symbol));
+
+    gtsam::Pose3 first_pose;
+    if (current_pose_estimates_->exists(first_symbol))
+    {
+      first_pose = current_pose_estimates_->at<gtsam::Pose3>(first_symbol);
+    }
+    update_transform_to_origin(first_pose);
   }
 }
 
@@ -466,24 +520,41 @@ void PoseGraphManager::broadcast_tf_callback() {
 void PoseGraphManager::perform_optimization() {
 
   // Build global pose graph
+  RCLCPP_INFO(node_->get_logger(), "Perf opt 0  ");
+  gtsam::writeG2o(*pose_graph_, *current_pose_estimates_, "before_aggregation.g2o");// TODO: remove
+  RCLCPP_INFO(node_->get_logger(), " ;;;;Perf oopt "); // TODO: remove
   auto graph_and_estimates = aggregate_pose_graphs();
 
+  RCLCPP_INFO(node_->get_logger(), "Perf opt 1  ");
   // Add prior
   gtsam::LabeledSymbol first_symbol(GRAPH_LABEL, ROBOT_LABEL(robot_id_), 0);
+  if (!current_pose_estimates_->exists(first_symbol)){
+    return;
+  }
+  RCLCPP_INFO(node_->get_logger(), "Perf opt 2  ");
   graph_and_estimates.first->addPrior(
       first_symbol, current_pose_estimates_->at<gtsam::Pose3>(first_symbol),
       default_noise_model_);
 
+  RCLCPP_INFO(node_->get_logger(), "Perf opt 3  ");
+  gtsam::writeG2o(*graph_and_estimates.first, *graph_and_estimates.second, "before_optimization.g2o");// TODO: remove
+
+  RCLCPP_INFO(node_->get_logger(), "Perf opt 3.1  ");
   // // Optimize graph
   gtsam::GncParams<gtsam::LevenbergMarquardtParams> params;
   gtsam::GncOptimizer<gtsam::GncParams<gtsam::LevenbergMarquardtParams>>
       optimizer(*graph_and_estimates.first, *graph_and_estimates.second,
                 params);
+  RCLCPP_INFO(node_->get_logger(), "Perf opt 3.2  ");
   gtsam::Values result = optimizer.optimize();
+  RCLCPP_INFO(node_->get_logger(), "Perf opt 4  ");
+
+  gtsam::writeG2o(*pose_graph_, result, "after_optimization.g2o");// TODO: remove
 
   // Share results
-  share_optimized_estimates(result);
+  // share_optimized_estimates(result); // TODO: reestablish
 
+  RCLCPP_INFO(node_->get_logger(), "Perf opt 5  "); // TODO: remove
   // // Publish result info for monitoring
   cslam_common_interfaces::msg::OptimizationResult msg;
   msg.success = true;
@@ -493,6 +564,7 @@ void PoseGraphManager::perform_optimization() {
       gtsam_values_to_msg(result); // TODO: Do not fill, unless debugging mode
   debug_optimization_result_publisher_->publish(
       msg); // TODO: publish on debug mode
+  RCLCPP_INFO(node_->get_logger(), "Perf opt 6  "); // TODO: remove
 }
 
 void PoseGraphManager::optimization_loop_callback() {

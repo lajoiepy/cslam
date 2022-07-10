@@ -263,6 +263,8 @@ private:
 
   std::map<unsigned int, bool> received_pose_graphs_;
 
+  std::set<unsigned int> connected_robots_;
+
   std::map<unsigned int, std::vector<unsigned int>>
       received_pose_graphs_connectivity_;
 
