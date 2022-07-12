@@ -219,6 +219,7 @@ private:
 
   gtsam::NonlinearFactorGraph::shared_ptr pose_graph_;
   gtsam::Values::shared_ptr current_pose_estimates_;
+  gtsam::Values::shared_ptr odometry_pose_estimates_;
 
   std::map<unsigned int, std::pair<gtsam::NonlinearFactorGraph::shared_ptr,
                                    gtsam::Values::shared_ptr>>

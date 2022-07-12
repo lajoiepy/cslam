@@ -144,64 +144,66 @@ class NetVLAD(object):
         self.params = params
         self.node = node
 
-        if torch.cuda.is_available():
-            self.device = torch.device("cuda")
-        else:
-            self.device = torch.device("cpu")
+        self.enable = self.params['nn_checkpoint'].lower() != 'disable'
+        if self.enable:
+            if torch.cuda.is_available():
+                self.device = torch.device("cuda")
+            else:
+                self.device = torch.device("cpu")
 
-        encoder_dim = 512
-        encoder = models.vgg16(pretrained=True)
-        # capture only feature part and remove last relu and maxpool
-        layers = list(encoder.features.children())[:-2]
-        # if using pretrained then only train conv5_1, conv5_2, and conv5_3
-        for l in layers[:-5]:
-            for p in l.parameters():
-                p.requires_grad = False
+            encoder_dim = 512
+            encoder = models.vgg16(pretrained=True)
+            # capture only feature part and remove last relu and maxpool
+            layers = list(encoder.features.children())[:-2]
+            # if using pretrained then only train conv5_1, conv5_2, and conv5_3
+            for l in layers[:-5]:
+                for p in l.parameters():
+                    p.requires_grad = False
 
-        encoder = nn.Sequential(*layers)
-        self.model = nn.Module()
-        self.model.add_module('encoder', encoder)
-        netvlad_layer = NetVLADLayer(num_clusters=64,
-                                     dim=encoder_dim,
-                                     vladv2=False)
-        self.model.add_module('pool', netvlad_layer)
+            encoder = nn.Sequential(*layers)
+            self.model = nn.Module()
+            self.model.add_module('encoder', encoder)
+            netvlad_layer = NetVLADLayer(num_clusters=64,
+                                        dim=encoder_dim,
+                                        vladv2=False)
+            self.model.add_module('pool', netvlad_layer)
 
-        self.isParallel = False
-        print('=> Number of CUDA devices = ' + str(torch.cuda.device_count()))
-        if torch.cuda.device_count() > 1:
-            self.model.encoder = nn.DataParallel(self.model.encoder)
-            self.model.pool = nn.DataParallel(self.model.pool)
-            self.isParallel = True
+            self.isParallel = False
+            print('=> Number of CUDA devices = ' + str(torch.cuda.device_count()))
+            if torch.cuda.device_count() > 1:
+                self.model.encoder = nn.DataParallel(self.model.encoder)
+                self.model.pool = nn.DataParallel(self.model.pool)
+                self.isParallel = True
 
-        resume_ckpt = self.params['nn_checkpoint']
-        if isfile(resume_ckpt):
-            print("=> loading checkpoint '{}'".format(resume_ckpt))
-            checkpoint = torch.load(resume_ckpt,
-                                    map_location=lambda storage, loc: storage)
-            start_epoch = checkpoint['epoch']
-            best_metric = checkpoint['best_score']
-            self.model.load_state_dict(checkpoint['state_dict'])
-            self.model = self.model.to(self.device)
-            print("=> loaded checkpoint '{}' (epoch {})".format(
-                resume_ckpt, checkpoint['epoch']))
-        else:
-            print("Error: Checkpoint path is incorrect")
+            resume_ckpt = self.params['nn_checkpoint']
+            if isfile(resume_ckpt):
+                print("=> loading checkpoint '{}'".format(resume_ckpt))
+                checkpoint = torch.load(resume_ckpt,
+                                        map_location=lambda storage, loc: storage)
+                start_epoch = checkpoint['epoch']
+                best_metric = checkpoint['best_score']
+                self.model.load_state_dict(checkpoint['state_dict'])
+                self.model = self.model.to(self.device)
+                print("=> loaded checkpoint '{}' (epoch {})".format(
+                    resume_ckpt, checkpoint['epoch']))
+            else:
+                print("Error: Checkpoint path is incorrect")
 
-        self.model.eval()
-        with torch.no_grad():
-            print('====> Extracting Features')
-            pool_size = encoder_dim
-            pool_size *= 64
+            self.model.eval()
+            with torch.no_grad():
+                print('====> Extracting Features')
+                pool_size = encoder_dim
+                pool_size *= 64
 
-            self.transform = transforms.Compose([
-                transforms.CenterCrop(self.params["image_crop_size"]),
-                transforms.Resize(224, interpolation=3),
-                transforms.ToTensor(),
-                transforms.Normalize(IMAGENET_DEFAULT_MEAN,
-                                     IMAGENET_DEFAULT_STD),
-            ])
+                self.transform = transforms.Compose([
+                    transforms.CenterCrop(self.params["image_crop_size"]),
+                    transforms.Resize(224, interpolation=3),
+                    transforms.ToTensor(),
+                    transforms.Normalize(IMAGENET_DEFAULT_MEAN,
+                                        IMAGENET_DEFAULT_STD),
+                ])
 
-        self.pca = pickle.load(open(self.params['pca_checkpoint'], 'rb'))
+            self.pca = pickle.load(open(self.params['pca_checkpoint'], 'rb'))
 
     def compute_embedding(self, keyframe):
         """Load image to device and extract the global image descriptor
@@ -212,23 +214,28 @@ class NetVLAD(object):
         Returns:
             np.array: global image descriptor
         """
-        with torch.no_grad():
-            image = Image.fromarray(keyframe)
-            input = self.transform(image)
-            input = torch.unsqueeze(input, 0)
-            input = input.to(self.device)
-            image_encoding = self.model.encoder(input)
-            vlad_encoding = self.model.pool(image_encoding)
+        if self.enable:
+            with torch.no_grad():
+                image = Image.fromarray(keyframe)
+                input = self.transform(image)
+                input = torch.unsqueeze(input, 0)
+                input = input.to(self.device)
+                image_encoding = self.model.encoder(input)
+                vlad_encoding = self.model.pool(image_encoding)
 
-            # Compute NetVLAD
-            embedding = vlad_encoding.detach().cpu().numpy()
+                # Compute NetVLAD
+                embedding = vlad_encoding.detach().cpu().numpy()
 
-            # Run PCA transform
-            reduced_embedding = self.pca.transform(embedding)
-            normalized_embedding = sklearn.preprocessing.normalize(
-                reduced_embedding)
-            output = normalized_embedding[0]
+                # Run PCA transform
+                reduced_embedding = self.pca.transform(embedding)
+                normalized_embedding = sklearn.preprocessing.normalize(
+                    reduced_embedding)
+                output = normalized_embedding[0]
 
-            del input, image_encoding, vlad_encoding, reduced_embedding, normalized_embedding, image
+                del input, image_encoding, vlad_encoding, reduced_embedding, normalized_embedding, image
 
-        return output
+            return output
+        else:
+            # Random descriptor if disabled
+            # Use this option only for testing
+            return np.random.rand(128)
