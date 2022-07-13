@@ -1,5 +1,5 @@
-#ifndef _POSEGRAPHMANAGER_H_
-#define _POSEGRAPHMANAGER_H_
+#ifndef _POSEGRAPH_MANAGER_H_
+#define _POSEGRAPH_MANAGER_H_
 
 #include <rclcpp/rclcpp.hpp>
 

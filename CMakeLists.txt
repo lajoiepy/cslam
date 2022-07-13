@@ -145,6 +145,7 @@ set_target_properties(map_manager
   PROPERTIES OUTPUT_NAME "map_manager")
 
 add_executable(pose_graph_manager 
+  src/back_end/decentralized_pgo.cpp
   src/back_end/pose_graph_manager.cpp
   src/back_end/pose_graph_manager_node.cpp
   src/back_end/gtsam_utils.cpp)
@@ -201,7 +202,7 @@ foreach(_test_path ${_cslam_python_tests})
   get_filename_component(_test_name ${_test_path} NAME_WE)
   ament_add_pytest_test(${_test_name} ${_test_path}
     APPEND_ENV PYTHONPATH=${CMAKE_CURRENT_BINARY_DIR}
-    TIMEOUT 60
+    TIMEOUT 120
     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
   )
 endforeach()

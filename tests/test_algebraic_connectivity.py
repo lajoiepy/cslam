@@ -26,7 +26,7 @@ def build_simple_graph(nb_poses, nb_candidate_edges):
     while len(candidate_edges.values()) < nb_candidate_edges:
         edge = EdgeInterRobot(0, random.choice(range(nb_poses)), 0,
                               random.choice(range(nb_poses)), fixed_weight)
-        candidate_edges[(edge.robot0_image_id, edge.robot1_id)] = edge
+        candidate_edges[(edge.robot0_image_id, edge.robot1_image_id)] = edge
         i = i + 1
     return fixed_edges_list, list(candidate_edges.values())
 
@@ -61,7 +61,10 @@ def build_multi_robot_graph(nb_poses, nb_candidate_edges, nb_robots):
         edge = EdgeInterRobot(robot0_id,
                               random.choice(range(nb_poses)), robot1_id,
                               random.choice(range(nb_poses)), fixed_weight)
-        candidate_edges[(edge.robot0_image_id, edge.robot1_id)] = edge
+        if edge.robot0_id < edge.robot1_id:                      
+            candidate_edges[(edge.robot0_id, edge.robot0_image_id, edge.robot1_id, edge.robot1_image_id)] = edge
+        else:
+            candidate_edges[(edge.robot1_id, edge.robot1_image_id, edge.robot0_id, edge.robot0_image_id)] = edge
         i = i + 1
 
     return fixed_edges_list, list(candidate_edges.values())
