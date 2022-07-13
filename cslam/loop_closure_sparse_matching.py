@@ -17,20 +17,15 @@ class LoopClosureSparseMatching(object):
         """
         # Extract params
         self.params = params
-        self.robot_id = self.params['robot_id']
-        self.nb_robots = self.params['nb_robots']
-        self.threshold = self.params['similarity_threshold']
-        self.similarity_loc = self.params['similarity_loc']
-        self.similarity_scale = self.params['similarity_scale']
         # Initialize matching structs
         self.local_nnsm = NearestNeighborsMatching()
         self.other_robots_nnsm = {}
-        for i in range(self.nb_robots):
-            if i != self.robot_id:
+        for i in range(self.params['nb_robots']):
+            if i != self.params['robot_id']:
                 self.other_robots_nnsm[i] = NearestNeighborsMatching()
         # Initialize candidate selection algorithm
         self.candidate_selector = AlgebraicConnectivityMaximization(
-            self.robot_id, self.nb_robots)
+            self.params['robot_id'], self.params['nb_robots'])
 
     def distance_to_similarity(self, distance):
         """Converts a distance metric into a similarity score
@@ -41,8 +36,8 @@ class LoopClosureSparseMatching(object):
         Returns:
             float: similarity score
         """
-        return 1 / (1 + np.exp(
-            (distance - self.similarity_loc) / self.similarity_scale))
+        return 1 / (1 + np.exp((distance - self.params['similarity_loc']) /
+                               self.params['similarity_scale']))
 
     def add_local_global_descriptor(self, embedding, id):
         """ Add a local keyframe for matching
@@ -52,14 +47,14 @@ class LoopClosureSparseMatching(object):
             id (int): keyframe id
         """
         self.local_nnsm.add_item(embedding, id)
-        for i in range(self.nb_robots):
-            if i != self.robot_id:
+        for i in range(self.params['nb_robots']):
+            if i != self.params['robot_id']:
                 kf, d = self.other_robots_nnsm[i].search_best(embedding)
                 if kf is not None:
                     similarity = self.distance_to_similarity(d)
-                    if similarity >= self.threshold:
+                    if similarity >= self.params['similarity_threshold']:
                         self.candidate_selector.add_match(
-                            EdgeInterRobot(self.robot_id, id, i, kf,
+                            EdgeInterRobot(self.params['robot_id'], id, i, kf,
                                            similarity))
 
     def add_other_robot_global_descriptor(self, msg):
@@ -74,9 +69,9 @@ class LoopClosureSparseMatching(object):
         kf, d = self.local_nnsm.search_best(np.asarray(msg.descriptor))
         if kf is not None:
             similarity = self.distance_to_similarity(d)
-            if similarity >= self.threshold:
+            if similarity >= self.params['similarity_threshold']:
                 self.candidate_selector.add_match(
-                    EdgeInterRobot(self.robot_id, kf, msg.robot_id,
+                    EdgeInterRobot(self.params['robot_id'], kf, msg.robot_id,
                                    msg.image_id, similarity))
 
     def match_local_loop_closures(self, descriptor):

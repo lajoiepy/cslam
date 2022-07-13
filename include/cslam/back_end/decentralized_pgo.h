@@ -25,14 +25,24 @@
 
 #include <tf2_ros/transform_broadcaster.h>
 
-#include <list>
+#include <chrono>
+#include <future>
 #include <gtsam/slam/dataset.h>
+#include <list>
+#include <thread>
 
 #include "cslam/back_end/gtsam_utils.h"
 
 namespace cslam {
 
-enum OptimizerState { IDLE, WAITING_FOR_NEIGHBORS_INFO, POSEGRAPH_COLLECTION, WAITING_FOR_NEIGHBORS_POSEGRAPHS, OPTIMIZATION };
+enum OptimizerState {
+  IDLE,
+  WAITING_FOR_NEIGHBORS_INFO,
+  POSEGRAPH_COLLECTION,
+  WAITING_FOR_NEIGHBORS_POSEGRAPHS,
+  START_OPTIMIZATION,
+  OPTIMIZATION
+};
 
 class DecentralizedPGO {
 public:
@@ -101,8 +111,7 @@ public:
    * @param msg
    */
   void print_current_estimates_callback(
-      const std_msgs::msg::String::ConstSharedPtr
-          msg);
+      const std_msgs::msg::String::ConstSharedPtr msg);
 
   /**
    * @brief Starts pose graph optimization process every X ms (defined in
@@ -133,7 +142,7 @@ public:
    * @brief Performs pose graph optimization
    *
    */
-  void perform_optimization();
+  void start_optimization();
 
   /**
    * @brief Request to check the current neighbors
@@ -210,6 +219,22 @@ public:
    * @return false
    */
   bool is_optimizer();
+
+  /**
+   * @brief Pose graph optimization function
+   *
+   * @param graph pose graph
+   * @param initial initial values
+   * @return gtsam::Values optimized values
+   */
+  gtsam::Values optimize(const gtsam::NonlinearFactorGraph::shared_ptr &graph,
+                         const gtsam::Values::shared_ptr &initial);
+
+  /**
+   * @brief Check if the optimization is finished
+   *
+   */
+  void check_result_and_finish_optimization();
 
 private:
   // TODO: document
@@ -290,6 +315,10 @@ private:
   cslam_common_interfaces::msg::RobotIdsAndOrigin current_neighbors_ids_;
 
   OptimizerState optimizer_state_;
+
+  std::future<gtsam::Values> optimization_result_;
+
+  gtsam::GraphAndValues aggregate_pose_graph_;
 
   rclcpp::Publisher<cslam_common_interfaces::msg::OptimizerState>::SharedPtr
       optimizer_state_publisher_;

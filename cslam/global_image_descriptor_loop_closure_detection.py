@@ -35,13 +35,8 @@ class GlobalImageDescriptorLoopClosureDetection(object):
         """
         self.params = params
         self.node = node
-        self.robot_id = self.params['robot_id']
-        self.nb_robots = self.params['nb_robots']
-        self.enable_neighbor_monitoring = self.params[
-            'enable_neighbor_monitoring']
 
         self.lcm = LoopClosureSparseMatching(params)
-        self.loop_closure_budget = self.params["loop_closure_budget"]
 
         # Place Recognition network setup
         if self.params['global_descriptor_technique'].lower() == 'netvlad':
@@ -71,7 +66,7 @@ class GlobalImageDescriptorLoopClosureDetection(object):
             self.receive_inter_robot_loop_closure, 100)
 
         self.local_descriptors_request_publishers = {}
-        for i in range(self.nb_robots):
+        for i in range(self.params['nb_robots']):
             self.local_descriptors_request_publishers[
                 i] = self.node.create_publisher(
                     LocalDescriptorsRequest,
@@ -79,8 +74,8 @@ class GlobalImageDescriptorLoopClosureDetection(object):
 
         # Listen for changes in node liveliness
         self.neighbor_manager = NeighborManager(
-            self.node, self.robot_id, self.nb_robots,
-            self.enable_neighbor_monitoring,
+            self.node, self.params['robot_id'], self.params['nb_robots'],
+            self.params['enable_neighbor_monitoring'],
             self.params['max_heartbeat_delay_sec'])
 
         self.global_descriptors_buffer = []
@@ -101,7 +96,7 @@ class GlobalImageDescriptorLoopClosureDetection(object):
         # Store global descriptor
         msg = GlobalImageDescriptor()
         msg.image_id = id
-        msg.robot_id = self.robot_id
+        msg.robot_id = self.params['robot_id']
         msg.descriptor = embedding.tolist()
         self.global_descriptors_buffer.append(msg)
 
@@ -162,8 +157,8 @@ class GlobalImageDescriptorLoopClosureDetection(object):
         if len(neighbors_in_range_list
                ) > 0 and self.neighbor_manager.local_robot_is_broker():
             # Find matches that maximize the algebraic connectivity
-            selection = self.lcm.select_candidates(self.loop_closure_budget,
-                                                   neighbors_is_in_range)
+            selection = self.lcm.select_candidates(
+                self.params["loop_closure_budget"], neighbors_is_in_range)
 
             # Extract and publish local descriptors
             vertices_info = self.edge_list_to_vertices(selection)
@@ -223,7 +218,7 @@ class GlobalImageDescriptorLoopClosureDetection(object):
         Args:
             msg (cslam_loop_detection_interfaces::msg::GlobalImageDescriptors): descriptors
         """
-        if msg.descriptors[0].robot_id != self.robot_id:
+        if msg.descriptors[0].robot_id != self.params['robot_id']:
             unknown_range = self.neighbor_manager.get_unknown_range(
                 msg.descriptors[0].image_id, msg.descriptors[-1].image_id,
                 msg.descriptors[0].robot_id)
