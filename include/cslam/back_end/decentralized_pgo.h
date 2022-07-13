@@ -1,5 +1,5 @@
-#ifndef _POSEGRAPH_MANAGER_H_
-#define _POSEGRAPH_MANAGER_H_
+#ifndef _DECENTRALIZED_PGO_H_
+#define _DECENTRALIZED_PGO_H_
 
 #include <rclcpp/rclcpp.hpp>
 
@@ -34,15 +34,15 @@ namespace cslam {
 
 enum OptimizerState { IDLE, WAITING, POSEGRAPH_COLLECTION, OPTIMIZATION };
 
-class PoseGraphManager {
+class DecentralizedPGO {
 public:
   /**
    * @brief Initialization of parameters and ROS 2 objects
    *
    * @param node ROS 2 node handle
    */
-  PoseGraphManager(std::shared_ptr<rclcpp::Node> &node);
-  ~PoseGraphManager(){};
+  DecentralizedPGO(std::shared_ptr<rclcpp::Node> &node);
+  ~DecentralizedPGO(){};
 
   /**
    * @brief Receives odometry msg + keyframe id

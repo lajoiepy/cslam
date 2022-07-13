@@ -1,4 +1,4 @@
-#include "cslam/back_end/pose_graph_manager.h"
+#include "cslam/back_end/decentralized_pgo.h"
 
 using namespace cslam;
 
@@ -22,7 +22,7 @@ int main(int argc, char **argv) {
   node->declare_parameter<int>("max_waiting_time_sec", 100);
   node->declare_parameter<double>("heartbeat_period_sec", 1.0);
 
-  PoseGraphManager manager(node);
+  DecentralizedPGO manager(node);
 
   rclcpp::spin(node);
 

@@ -282,7 +282,7 @@ void StereoHandler::stereo_callback(
 
     nb_local_frames_++;
   } else {
-    RCLCPP_WARN(node_->get_logger(), "Odom: input images empty?!?");
+    RCLCPP_WARN(node_->get_logger(), "Odom: input images empty?!");
   }
 }
 

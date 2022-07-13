@@ -1,8 +1,8 @@
-#include "cslam/back_end/pose_graph_manager.h"
+#include "cslam/back_end/decentralized_pgo.h"
 
 using namespace cslam;
 
-PoseGraphManager::PoseGraphManager(std::shared_ptr<rclcpp::Node> &node)
+DecentralizedPGO::DecentralizedPGO(std::shared_ptr<rclcpp::Node> &node)
     : node_(node), max_waiting_time_sec_(60, 0) {
 
   node_->get_parameter("nb_robots", nb_robots_);
@@ -20,19 +20,19 @@ PoseGraphManager::PoseGraphManager(std::shared_ptr<rclcpp::Node> &node)
   odometry_subscriber_ =
       node->create_subscription<cslam_common_interfaces::msg::KeyframeOdom>(
           "keyframe_odom", 1000,
-          std::bind(&PoseGraphManager::odometry_callback, this,
+          std::bind(&DecentralizedPGO::odometry_callback, this,
                     std::placeholders::_1));
 
   inter_robot_loop_closure_subscriber_ = node->create_subscription<
       cslam_loop_detection_interfaces::msg::InterRobotLoopClosure>(
       "/inter_robot_loop_closure", 1000,
-      std::bind(&PoseGraphManager::inter_robot_loop_closure_callback, this,
+      std::bind(&DecentralizedPGO::inter_robot_loop_closure_callback, this,
                 std::placeholders::_1));
 
   print_current_estimates_subscriber_ =
       node->create_subscription<std_msgs::msg::String>(
           "print_current_estimates", 100,
-          std::bind(&PoseGraphManager::print_current_estimates_callback, this,
+          std::bind(&DecentralizedPGO::print_current_estimates_callback, this,
                     std::placeholders::_1));
 
   rotation_default_noise_std_ = 0.01;
@@ -49,11 +49,11 @@ PoseGraphManager::PoseGraphManager(std::shared_ptr<rclcpp::Node> &node)
   // Optimization timers
   optimization_timer_ = node_->create_wall_timer(
       std::chrono::milliseconds(pose_graph_manager_process_period_ms_),
-      std::bind(&PoseGraphManager::optimization_callback, this));
+      std::bind(&DecentralizedPGO::optimization_callback, this));
 
   optimization_loop_timer_ = node_->create_wall_timer(
       std::chrono::milliseconds(pose_graph_optimization_loop_period_ms_),
-      std::bind(&PoseGraphManager::optimization_loop_callback, this));
+      std::bind(&DecentralizedPGO::optimization_loop_callback, this));
 
   // Publishers for optimization result
   debug_optimization_result_publisher_ =
@@ -72,7 +72,7 @@ PoseGraphManager::PoseGraphManager(std::shared_ptr<rclcpp::Node> &node)
   optimized_estimates_subscriber_ = node->create_subscription<
       cslam_common_interfaces::msg::OptimizationResult>(
       "optimized_estimates", 100,
-      std::bind(&PoseGraphManager::optimized_estimates_callback, this,
+      std::bind(&DecentralizedPGO::optimized_estimates_callback, this,
                 std::placeholders::_1));
 
   optimizer_state_publisher_ =
@@ -95,7 +95,7 @@ PoseGraphManager::PoseGraphManager(std::shared_ptr<rclcpp::Node> &node)
   current_neighbors_subscriber_ = node->create_subscription<
       cslam_common_interfaces::msg::RobotIdsAndOrigin>(
       "current_neighbors", 100,
-      std::bind(&PoseGraphManager::current_neighbors_callback, this,
+      std::bind(&DecentralizedPGO::current_neighbors_callback, this,
                 std::placeholders::_1));
 
   // PoseGraph ROS 2 objects
@@ -109,7 +109,7 @@ PoseGraphManager::PoseGraphManager(std::shared_ptr<rclcpp::Node> &node)
   get_pose_graph_subscriber_ =
       node->create_subscription<cslam_common_interfaces::msg::RobotIds>(
           "get_pose_graph", 100,
-          std::bind(&PoseGraphManager::get_pose_graph_callback, this,
+          std::bind(&DecentralizedPGO::get_pose_graph_callback, this,
                     std::placeholders::_1));
 
   pose_graph_publisher_ =
@@ -119,7 +119,7 @@ PoseGraphManager::PoseGraphManager(std::shared_ptr<rclcpp::Node> &node)
   pose_graph_subscriber_ =
       node->create_subscription<cslam_common_interfaces::msg::PoseGraph>(
           "/pose_graph", 100,
-          std::bind(&PoseGraphManager::pose_graph_callback, this,
+          std::bind(&DecentralizedPGO::pose_graph_callback, this,
                     std::placeholders::_1));
 
   // Optimizer
@@ -131,13 +131,13 @@ PoseGraphManager::PoseGraphManager(std::shared_ptr<rclcpp::Node> &node)
 
   tf_broadcaster_timer_ = node_->create_wall_timer(
       std::chrono::milliseconds(pose_graph_optimization_loop_period_ms_),
-      std::bind(&PoseGraphManager::broadcast_tf_callback, this));
+      std::bind(&DecentralizedPGO::broadcast_tf_callback, this));
 
   heartbeat_publisher_ =
       node_->create_publisher<std_msgs::msg::UInt32>("heartbeat", 10);
   heartbeat_timer_ = node_->create_wall_timer(
       std::chrono::milliseconds((unsigned int)heartbeat_period_sec_ * 1000),
-      std::bind(&PoseGraphManager::heartbeat_timer_callback, this));
+      std::bind(&DecentralizedPGO::heartbeat_timer_callback, this));
 
   reference_frame_per_robot_publisher_ =
       node_->create_publisher<cslam_common_interfaces::msg::ReferenceFrames>(
@@ -148,7 +148,7 @@ PoseGraphManager::PoseGraphManager(std::shared_ptr<rclcpp::Node> &node)
   RCLCPP_INFO(node_->get_logger(), "Initialization done.");
 }
 
-void PoseGraphManager::reinitialize_received_pose_graphs() {
+void DecentralizedPGO::reinitialize_received_pose_graphs() {
   for (unsigned int i = 0; i < nb_robots_; i++) {
     received_pose_graphs_[i] = false;
   }
@@ -156,7 +156,7 @@ void PoseGraphManager::reinitialize_received_pose_graphs() {
   received_pose_graphs_connectivity_.clear();
 }
 
-bool PoseGraphManager::check_received_pose_graphs() {
+bool DecentralizedPGO::check_received_pose_graphs() {
   bool received_all = true;
   for (auto id : current_neighbors_ids_.robots.ids) {
     received_all &= received_pose_graphs_[id];
@@ -164,7 +164,7 @@ bool PoseGraphManager::check_received_pose_graphs() {
   return received_all;
 }
 
-void PoseGraphManager::odometry_callback(
+void DecentralizedPGO::odometry_callback(
     const cslam_common_interfaces::msg::KeyframeOdom::ConstSharedPtr msg) {
 
   gtsam::Pose3 current_estimate = odometry_msg_to_pose3(msg->odom);
@@ -187,7 +187,7 @@ void PoseGraphManager::odometry_callback(
   latest_local_symbol_ = symbol;
 }
 
-void PoseGraphManager::inter_robot_loop_closure_callback(
+void DecentralizedPGO::inter_robot_loop_closure_callback(
     const cslam_loop_detection_interfaces::msg::InterRobotLoopClosure::
         ConstSharedPtr msg) {
   if (msg->success) {
@@ -214,12 +214,12 @@ void PoseGraphManager::inter_robot_loop_closure_callback(
   }
 }
 
-void PoseGraphManager::print_current_estimates_callback(
+void DecentralizedPGO::print_current_estimates_callback(
     const std_msgs::msg::String::ConstSharedPtr msg) {
   gtsam::writeG2o(*pose_graph_, *current_pose_estimates_, msg->data);
 }
 
-void PoseGraphManager::current_neighbors_callback(
+void DecentralizedPGO::current_neighbors_callback(
     const cslam_common_interfaces::msg::RobotIdsAndOrigin::ConstSharedPtr msg) {
   current_neighbors_ids_ = *msg;
   end_waiting();
@@ -228,7 +228,7 @@ void PoseGraphManager::current_neighbors_callback(
   }
 }
 
-bool PoseGraphManager::is_optimizer() {
+bool DecentralizedPGO::is_optimizer() {
   // Here we could implement a different priority check
   bool is_optimizer = true;
   for (unsigned int i = 0; i < current_neighbors_ids_.origins.ids.size(); i++) {
@@ -246,7 +246,7 @@ bool PoseGraphManager::is_optimizer() {
   return is_optimizer;
 }
 
-void PoseGraphManager::get_pose_graph_callback(
+void DecentralizedPGO::get_pose_graph_callback(
     const cslam_common_interfaces::msg::RobotIds::ConstSharedPtr msg) {
   cslam_common_interfaces::msg::PoseGraph out_msg;
   out_msg.robot_id = robot_id_;
@@ -281,7 +281,7 @@ void PoseGraphManager::get_pose_graph_callback(
   pose_graph_publisher_->publish(out_msg);
 }
 
-void PoseGraphManager::pose_graph_callback(
+void DecentralizedPGO::pose_graph_callback(
     const cslam_common_interfaces::msg::PoseGraph::ConstSharedPtr msg) {
   if (optimizer_state_ == OptimizerState::WAITING) {
     other_robots_graph_and_estimates_.insert(
@@ -297,7 +297,7 @@ void PoseGraphManager::pose_graph_callback(
   }
 }
 
-std::map<unsigned int, bool> PoseGraphManager::connected_robot_pose_graph() {
+std::map<unsigned int, bool> DecentralizedPGO::connected_robot_pose_graph() {
   if (connected_robots_.size() > 0) {
     std::vector<unsigned int> v(connected_robots_.begin(),
                                 connected_robots_.end());
@@ -337,19 +337,19 @@ std::map<unsigned int, bool> PoseGraphManager::connected_robot_pose_graph() {
   return is_robot_connected;
 }
 
-void PoseGraphManager::resquest_current_neighbors() {
+void DecentralizedPGO::resquest_current_neighbors() {
   get_current_neighbors_publisher_->publish(std_msgs::msg::String());
 }
 
-void PoseGraphManager::start_waiting() {
+void DecentralizedPGO::start_waiting() {
   optimizer_state_ = OptimizerState::WAITING;
   is_waiting_ = true;
   start_waiting_time_ = node_->now();
 }
 
-void PoseGraphManager::end_waiting() { is_waiting_ = false; }
+void DecentralizedPGO::end_waiting() { is_waiting_ = false; }
 
-bool PoseGraphManager::check_waiting_timeout() {
+bool DecentralizedPGO::check_waiting_timeout() {
   if ((node_->now() - start_waiting_time_) > max_waiting_time_sec_) {
     end_waiting();
     optimizer_state_ = OptimizerState::IDLE;
@@ -357,7 +357,7 @@ bool PoseGraphManager::check_waiting_timeout() {
   return is_waiting_;
 }
 
-void PoseGraphManager::optimization_callback() {
+void DecentralizedPGO::optimization_callback() {
   if (optimizer_state_ == OptimizerState::IDLE &&
       odometry_pose_estimates_->size() > 0) {
     reinitialize_received_pose_graphs();
@@ -367,7 +367,7 @@ void PoseGraphManager::optimization_callback() {
 }
 
 std::pair<gtsam::NonlinearFactorGraph::shared_ptr, gtsam::Values::shared_ptr>
-PoseGraphManager::aggregate_pose_graphs() { // TODO: clean function
+DecentralizedPGO::aggregate_pose_graphs() { // TODO: clean function
   // Check connectivity
   auto is_pose_graph_connected = connected_robot_pose_graph();
   // Aggregate graphs
@@ -425,7 +425,7 @@ PoseGraphManager::aggregate_pose_graphs() { // TODO: clean function
   return {graph, estimates};
 }
 
-void PoseGraphManager::optimized_estimates_callback(
+void DecentralizedPGO::optimized_estimates_callback(
     const cslam_common_interfaces::msg::OptimizationResult::ConstSharedPtr
         msg) {
   if (odometry_pose_estimates_->size() > 0) {
@@ -441,7 +441,7 @@ void PoseGraphManager::optimized_estimates_callback(
   }
 }
 
-void PoseGraphManager::share_optimized_estimates(
+void DecentralizedPGO::share_optimized_estimates(
     const gtsam::Values &estimates) {
   auto included_robots_ids = current_neighbors_ids_;
   included_robots_ids.robots.ids.push_back(robot_id_);
@@ -457,13 +457,13 @@ void PoseGraphManager::share_optimized_estimates(
   }
 }
 
-void PoseGraphManager::heartbeat_timer_callback() {
+void DecentralizedPGO::heartbeat_timer_callback() {
   std_msgs::msg::UInt32 msg;
   msg.data = origin_robot_id_;
   heartbeat_publisher_->publish(msg);
 }
 
-void PoseGraphManager::update_transform_to_origin(const gtsam::Pose3 &pose) {
+void DecentralizedPGO::update_transform_to_origin(const gtsam::Pose3 &pose) {
   rclcpp::Time now = node_->get_clock()->now();
   origin_to_first_pose_.header.stamp = now;
   origin_to_first_pose_.header.frame_id =
@@ -478,15 +478,17 @@ void PoseGraphManager::update_transform_to_origin(const gtsam::Pose3 &pose) {
   for (auto i : current_neighbors_ids_.robots.ids) {
     reference_frame_per_robot_[i] = origin_to_first_pose_;
   }
-  cslam_common_interfaces::msg::ReferenceFrames msg;
-  for (const auto &ref : reference_frame_per_robot_) {
-    msg.robots.ids.push_back(ref.first);
-    msg.reference_frames.push_back(ref.second);
+  if (reference_frame_per_robot_publisher_->get_subscription_count() > 0) {
+    cslam_common_interfaces::msg::ReferenceFrames msg;
+    for (const auto &ref : reference_frame_per_robot_) {
+      msg.robots.ids.push_back(ref.first);
+      msg.reference_frames.push_back(ref.second);
+    }
+    reference_frame_per_robot_publisher_->publish(msg);
   }
-  reference_frame_per_robot_publisher_->publish(msg);
 }
 
-void PoseGraphManager::broadcast_tf_callback() {
+void DecentralizedPGO::broadcast_tf_callback() {
   rclcpp::Time now = node_->get_clock()->now();
   origin_to_first_pose_.header.stamp = now;
   // Useful for visualization.
@@ -497,7 +499,7 @@ void PoseGraphManager::broadcast_tf_callback() {
   }
 }
 
-void PoseGraphManager::perform_optimization() {
+void DecentralizedPGO::perform_optimization() {
 
   // Build global pose graph
   auto graph_and_estimates = aggregate_pose_graphs();
@@ -530,18 +532,17 @@ void PoseGraphManager::perform_optimization() {
   // Share results
   share_optimized_estimates(result);
 
-  // // Publish result info for monitoring
-  cslam_common_interfaces::msg::OptimizationResult msg;
-  msg.success = true;
-  msg.factors = gtsam_factors_to_msg(
-      graph_and_estimates.first); // TODO: Do not fill, unless debugging mode
-  msg.estimates =
-      gtsam_values_to_msg(result); // TODO: Do not fill, unless debugging mode
-  debug_optimization_result_publisher_->publish(
-      msg); // TODO: publish on debug mode
+  // Publish result info for monitoring
+  if (debug_optimization_result_publisher_->get_subscription_count() > 0) {
+    cslam_common_interfaces::msg::OptimizationResult msg;
+    msg.success = true;
+    msg.factors = gtsam_factors_to_msg(graph_and_estimates.first);
+    msg.estimates = gtsam_values_to_msg(result);
+    debug_optimization_result_publisher_->publish(msg);
+  }
 }
 
-void PoseGraphManager::optimization_loop_callback() {
+void DecentralizedPGO::optimization_loop_callback() {
   if (!odometry_pose_estimates_->empty()) {
     if (optimizer_state_ ==
         OptimizerState::POSEGRAPH_COLLECTION) // TODO: Document
@@ -564,7 +565,9 @@ void PoseGraphManager::optimization_loop_callback() {
       check_waiting_timeout();
     }
   }
-  cslam_common_interfaces::msg::OptimizerState state_msg;
-  state_msg.state = optimizer_state_;
-  optimizer_state_publisher_->publish(state_msg);
+  if (optimizer_state_publisher_->get_subscription_count() > 0) {
+    cslam_common_interfaces::msg::OptimizerState state_msg;
+    state_msg.state = optimizer_state_;
+    optimizer_state_publisher_->publish(state_msg);
+  }
 }

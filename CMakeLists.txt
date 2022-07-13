@@ -146,7 +146,6 @@ set_target_properties(map_manager
 
 add_executable(pose_graph_manager 
   src/back_end/decentralized_pgo.cpp
-  src/back_end/pose_graph_manager.cpp
   src/back_end/pose_graph_manager_node.cpp
   src/back_end/gtsam_utils.cpp)
 add_dependencies(pose_graph_manager  
