@@ -216,6 +216,7 @@ void DecentralizedPGO::inter_robot_loop_closure_callback(
 
 void DecentralizedPGO::print_current_estimates_callback(
     const std_msgs::msg::String::ConstSharedPtr msg) {
+  RCLCPP_INFO(node_->get_logger(), std::to_string(robot_id_) + " Write estimates size = " + std::to_string(current_pose_estimates_->size()) + " ||| size filtered = " + std::to_string((current_pose_estimates_->filter<gtsam::Pose3>()).size()) + " -----  " + msg->data); // TODO: remove
   gtsam::writeG2o(*pose_graph_, *current_pose_estimates_, msg->data);
 }
 
@@ -225,6 +226,9 @@ void DecentralizedPGO::current_neighbors_callback(
   end_waiting();
   if (is_optimizer()) {
     optimizer_state_ = OptimizerState::POSEGRAPH_COLLECTION;
+  }
+  else {
+    optimizer_state_ = OptimizerState::IDLE;
   }
 }
 
@@ -243,6 +247,13 @@ bool DecentralizedPGO::is_optimizer() {
       odometry_pose_estimates_->size() == 0) {
     is_optimizer = false;
   }
+  RCLCPP_INFO(node_->get_logger(), std::to_string(robot_id_) + " =================== " ); // TODO: remove
+  RCLCPP_INFO(node_->get_logger(), std::to_string(robot_id_) + " is optimizer " + std::to_string(is_optimizer)); // TODO: remove
+  RCLCPP_INFO(node_->get_logger(), "neighbors of " + std::to_string(robot_id_)); // TODO: remove
+  for (unsigned int i = 0; i < current_neighbors_ids_.robots.ids.size(); i++) { // TODO: remove
+    RCLCPP_INFO(node_->get_logger(), "id = " + std::to_string(current_neighbors_ids_.robots.ids[i]) + ", origin id = " + std::to_string(current_neighbors_ids_.origins.ids[i])); // TODO: remove
+  } // TODO: remove
+  RCLCPP_INFO(node_->get_logger(), std::to_string(robot_id_) + " ~~~~~~~~~~~~~~~~~~~ " ); // TODO: remove
   return is_optimizer;
 }
 
@@ -260,7 +271,8 @@ void DecentralizedPGO::get_pose_graph_callback(
     for (unsigned int j = i + 1; j < msg->ids.size(); j++) {
       unsigned int min_robot_id = std::min(msg->ids[i], msg->ids[j]);
       unsigned int max_robot_id = std::max(msg->ids[i], msg->ids[j]);
-      if (inter_robot_loop_closures_[{min_robot_id, max_robot_id}].size() > 0) {
+      if (inter_robot_loop_closures_[{min_robot_id, max_robot_id}].size() > 0 &&
+          (min_robot_id == robot_id_ || max_robot_id == robot_id_)) {
         connected_robots.insert(min_robot_id);
         connected_robots.insert(max_robot_id);
         if (min_robot_id == robot_id_) {
@@ -273,17 +285,21 @@ void DecentralizedPGO::get_pose_graph_callback(
   }
 
   out_msg.edges = gtsam_factors_to_msg(graph);
+  RCLCPP_INFO(node_->get_logger(), "+++++++++++++++++++++++"); // TODO: remove
+  RCLCPP_INFO(node_->get_logger(), "connected_robots.ids local = " + std::to_string(robot_id_)); // TODO: remove
   for (auto id : connected_robots) {
     if (id != robot_id_) {
       out_msg.connected_robots.ids.push_back(id);
+      RCLCPP_INFO(node_->get_logger(), "connected = " + std::to_string(id)); // TODO: remove
     }
   }
+  RCLCPP_INFO(node_->get_logger(), "------------------------"); // TODO: remove
   pose_graph_publisher_->publish(out_msg);
 }
 
 void DecentralizedPGO::pose_graph_callback(
     const cslam_common_interfaces::msg::PoseGraph::ConstSharedPtr msg) {
-  if (optimizer_state_ == OptimizerState::WAITING) {
+  if (optimizer_state_ == OptimizerState::WAITING_FOR_NEIGHBORS_POSEGRAPHS) {
     other_robots_graph_and_estimates_.insert(
         {msg->robot_id,
          {edges_msg_to_gtsam(msg->edges), values_msg_to_gtsam(msg->values)}});
@@ -303,6 +319,17 @@ std::map<unsigned int, bool> DecentralizedPGO::connected_robot_pose_graph() {
                                 connected_robots_.end());
     received_pose_graphs_connectivity_.insert({robot_id_, v});
   }
+  RCLCPP_INFO(node_->get_logger(), " ***************************** "); // TODO: remove
+  RCLCPP_INFO(node_->get_logger(), "received_pose_graphs_connectivity_ local = " + std::to_string(robot_id_)); // TODO: remove
+  for (auto id : current_neighbors_ids_.robots.ids) { // TODO: remove
+    std::string connect = "Neighbor " + std::to_string(id) + " connected = ";
+    for (auto j : received_pose_graphs_connectivity_[id])
+    {
+      connect += std::to_string(j) + " ";
+    }
+    RCLCPP_INFO(node_->get_logger(), connect); // TODO: remove
+  } // TODO: remove
+  RCLCPP_INFO(node_->get_logger(), " !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! "); // TODO: remove
 
   std::map<unsigned int, bool> is_robot_connected;
   is_robot_connected.insert({robot_id_, true});
@@ -342,19 +369,26 @@ void DecentralizedPGO::resquest_current_neighbors() {
 }
 
 void DecentralizedPGO::start_waiting() {
-  optimizer_state_ = OptimizerState::WAITING;
+  if (optimizer_state_ == OptimizerState::IDLE){
+    optimizer_state_ = OptimizerState::WAITING_FOR_NEIGHBORS_INFO;
+  } else if (optimizer_state_ == OptimizerState::POSEGRAPH_COLLECTION) {
+    optimizer_state_ = OptimizerState::WAITING_FOR_NEIGHBORS_POSEGRAPHS;
+  }
   is_waiting_ = true;
   start_waiting_time_ = node_->now();
 }
 
 void DecentralizedPGO::end_waiting() { is_waiting_ = false; }
 
+bool DecentralizedPGO::is_waiting() { return is_waiting_; }
+
 bool DecentralizedPGO::check_waiting_timeout() {
   if ((node_->now() - start_waiting_time_) > max_waiting_time_sec_) {
     end_waiting();
     optimizer_state_ = OptimizerState::IDLE;
+    RCLCPP_INFO(node_->get_logger(), "Time out: " + std::to_string(robot_id_));
   }
-  return is_waiting_;
+  return is_waiting();
 }
 
 void DecentralizedPGO::optimization_callback() {
@@ -367,7 +401,7 @@ void DecentralizedPGO::optimization_callback() {
 }
 
 std::pair<gtsam::NonlinearFactorGraph::shared_ptr, gtsam::Values::shared_ptr>
-DecentralizedPGO::aggregate_pose_graphs() { // TODO: clean function
+DecentralizedPGO::aggregate_pose_graphs() { 
   // Check connectivity
   auto is_pose_graph_connected = connected_robot_pose_graph();
   // Aggregate graphs
@@ -382,6 +416,11 @@ DecentralizedPGO::aggregate_pose_graphs() { // TODO: clean function
       estimates->insert(*other_robots_graph_and_estimates_[id].second);
     }
   }
+  for (auto id : current_neighbors_ids_.robots.ids) { // TODO: remove
+    bool connected = is_pose_graph_connected[id];
+    RCLCPP_INFO(node_->get_logger(), "Is pose graph connected? local=" + std::to_string(robot_id_) + " , other=" + std::to_string(id) + " , connected=" + std::to_string(connected)); // TODO: remove
+  } // TODO: remove
+  // Add local inter-robot loop closures
   auto included_robots_ids = current_neighbors_ids_;
   included_robots_ids.robots.ids.push_back(robot_id_);
   for (unsigned int i = 0; i < included_robots_ids.robots.ids.size(); i++) {
@@ -403,6 +442,7 @@ DecentralizedPGO::aggregate_pose_graphs() { // TODO: clean function
       }
     }
   }
+  // Add other robots factors
   for (auto id : current_neighbors_ids_.robots.ids) {
 
     for (const auto &factor_ : *other_robots_graph_and_estimates_[id].first) {
@@ -428,7 +468,7 @@ DecentralizedPGO::aggregate_pose_graphs() { // TODO: clean function
 void DecentralizedPGO::optimized_estimates_callback(
     const cslam_common_interfaces::msg::OptimizationResult::ConstSharedPtr
         msg) {
-  if (odometry_pose_estimates_->size() > 0) {
+  if (odometry_pose_estimates_->size() > 0 && msg->estimates.size() > 0) {
     current_pose_estimates_ = values_msg_to_gtsam(msg->estimates);
     origin_robot_id_ = msg->origin_robot_id;
     gtsam::LabeledSymbol first_symbol(GRAPH_LABEL, ROBOT_LABEL(robot_id_), 0);
@@ -439,6 +479,7 @@ void DecentralizedPGO::optimized_estimates_callback(
     }
     update_transform_to_origin(first_pose);
   }
+  RCLCPP_INFO(node_->get_logger(), "Robot " + std::to_string(robot_id_) + " Update estimates of length " + std::to_string(msg->estimates.size()) + " , Current size =" + std::to_string(current_pose_estimates_->size()) + " , Odom size = " + std::to_string(odometry_pose_estimates_->size()));
 }
 
 void DecentralizedPGO::share_optimized_estimates(
@@ -452,6 +493,7 @@ void DecentralizedPGO::share_optimized_estimates(
     msg.estimates =
         gtsam_values_to_msg(estimates.filter(gtsam::LabeledSymbol::LabelTest(
             ROBOT_LABEL(included_robots_ids.robots.ids[i]))));
+    RCLCPP_INFO(node_->get_logger(), "Robot " + std::to_string(robot_id_) + " Share estimate to " + std::to_string(included_robots_ids.robots.ids[i]) + " of length " + std::to_string(msg.estimates.size()));
     optimized_estimates_publishers_[included_robots_ids.robots.ids[i]]->publish(
         msg);
   }
@@ -561,7 +603,7 @@ void DecentralizedPGO::optimization_loop_callback() {
       // Call optimization
       perform_optimization();
       optimizer_state_ = OptimizerState::IDLE;
-    } else if (optimizer_state_ == OptimizerState::WAITING) {
+    } else if (is_waiting()) {
       check_waiting_timeout();
     }
   }
@@ -570,4 +612,5 @@ void DecentralizedPGO::optimization_loop_callback() {
     state_msg.state = optimizer_state_;
     optimizer_state_publisher_->publish(state_msg);
   }
+  RCLCPP_INFO(node_->get_logger(), "Robot " + std::to_string(robot_id_) + " State = " + std::to_string(optimizer_state_));
 }

@@ -32,7 +32,7 @@
 
 namespace cslam {
 
-enum OptimizerState { IDLE, WAITING, POSEGRAPH_COLLECTION, OPTIMIZATION };
+enum OptimizerState { IDLE, WAITING_FOR_NEIGHBORS_INFO, POSEGRAPH_COLLECTION, WAITING_FOR_NEIGHBORS_POSEGRAPHS, OPTIMIZATION };
 
 class DecentralizedPGO {
 public:
@@ -170,6 +170,12 @@ public:
    *
    */
   void end_waiting();
+
+  /**
+   * @brief Check if waiting
+   *
+   */
+  bool is_waiting();
 
   /**
    * @brief Breadth First Seach to check connectivity
