@@ -25,4 +25,3 @@ template <class DataHandlerType>
 void MapManager<DataHandlerType>::process_new_keyframes() {
   local_data_handler_.process_new_keyframe();
 }
-// TODO: intra-robot loop closures

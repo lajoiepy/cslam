@@ -74,18 +74,18 @@ class LoopClosureSparseMatching(object):
                     EdgeInterRobot(self.params['robot_id'], kf, msg.robot_id,
                                    msg.image_id, similarity))
 
-    def match_local_loop_closures(self, descriptor):
+    def match_local_loop_closures(self, descriptor, kf_id):
         kfs, ds = self.local_nnsm.search(descriptor,
                                          k=self.params['nb_best_matches'])
 
-        if len(kfs) > 0 and kfs[0] == id:
+        if len(kfs) > 0 and kfs[0] == kf_id:
             kfs, ds = kfs[1:], ds[1:]
         if len(kfs) == 0:
-            return None
+            return None, None
 
         for kf, d in zip(kfs, ds):
             if abs(kf -
-                   id) < self.params['intra_loop_min_inbetween_keyframes']:
+                   kf_id) < self.params['intra_loop_min_inbetween_keyframes']:
                 continue
 
             if d > self.params['similarity_threshold']:

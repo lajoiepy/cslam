@@ -18,6 +18,7 @@
 #include <cslam_common_interfaces/msg/reference_frames.hpp>
 #include <cslam_common_interfaces/msg/robot_ids_and_origin.hpp>
 #include <cslam_loop_detection_interfaces/msg/inter_robot_loop_closure.hpp>
+#include <cslam_loop_detection_interfaces/msg/intra_robot_loop_closure.hpp>
 
 #include <geometry_msgs/msg/transform_stamped.hpp>
 #include <std_msgs/msg/string.hpp>
@@ -69,6 +70,15 @@ public:
    */
   void inter_robot_loop_closure_callback(
       const cslam_loop_detection_interfaces::msg::InterRobotLoopClosure::
+          ConstSharedPtr msg);
+
+  /**
+   * @brief Receives intra-robot loop closures
+   *
+   * @param msg
+   */
+  void intra_robot_loop_closure_callback(
+      const cslam_loop_detection_interfaces::msg::IntraRobotLoopClosure::
           ConstSharedPtr msg);
 
   /**
@@ -269,6 +279,10 @@ private:
   rclcpp::Subscription<
       cslam_loop_detection_interfaces::msg::InterRobotLoopClosure>::SharedPtr
       inter_robot_loop_closure_subscriber_;
+
+  rclcpp::Subscription<
+      cslam_loop_detection_interfaces::msg::IntraRobotLoopClosure>::SharedPtr
+      intra_robot_loop_closure_subscriber_;
 
   rclcpp::Publisher<cslam_common_interfaces::msg::OptimizationResult>::SharedPtr
       debug_optimization_result_publisher_;

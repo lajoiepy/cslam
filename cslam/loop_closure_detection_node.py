@@ -24,7 +24,8 @@ class LoopClosureDetection(Node):
                         ('pca_checkpoint', None), ('nn_checkpoint', None),
                         ('robot_id', None), ('nb_robots', None),
                         ('similarity_loc', 1.0), ('similarity_scale', 0.25),
-                        ('loop_closure_budget', 5), ('detection_period', 5),
+                        ('loop_closure_budget', 5),
+                        ('inter_robot_detection_period', 5),
                         ('nb_best_matches', 10), ('image_crop_size', None),
                         ('intra_loop_min_inbetween_keyframes', 10),
                         ('max_heartbeat_delay_sec', 5),
@@ -32,7 +33,7 @@ class LoopClosureDetection(Node):
                         ('global_descriptor_publication_period_sec', 1.0),
                         ('global_descriptor_publication_max_elems_per_msg',
                          10), ('enable_neighbor_monitoring', False),
-                        ('intra_robot_loop_closure_detection', False),
+                        ('enable_intra_robot_loop_closures', False),
                         ('global_descriptor_topic', None)])
         self.params = {}
         self.params['similarity_threshold'] = self.get_parameter(
@@ -53,10 +54,10 @@ class LoopClosureDetection(Node):
             'similarity_scale').value
         self.params['loop_closure_budget'] = self.get_parameter(
             'loop_closure_budget').value
-        self.params['intra_robot_loop_closure_detection'] = self.get_parameter(
-            'intra_robot_loop_closure_detection').value
-        self.params['detection_period'] = self.get_parameter(
-            'detection_period').value
+        self.params['enable_intra_robot_loop_closures'] = self.get_parameter(
+            'enable_intra_robot_loop_closures').value
+        self.params['inter_robot_detection_period'] = self.get_parameter(
+            'inter_robot_detection_period').value
         self.params["image_crop_size"] = self.get_parameter(
             'image_crop_size').value
         self.params["enable_neighbor_monitoring"] = self.get_parameter(
@@ -74,8 +75,9 @@ class LoopClosureDetection(Node):
 
         self.glcd = GlobalImageDescriptorLoopClosureDetection(
             self.params, self)
-        self.loop_detection_timer = self.create_timer(
-            self.params['detection_period'], self.glcd.detect_inter)
+        self.inter_robot_detection_timer = self.create_timer(
+            self.params['inter_robot_detection_period'],
+            self.glcd.detect_inter)
 
 
 if __name__ == '__main__':

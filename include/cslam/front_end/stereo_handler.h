@@ -36,6 +36,8 @@
 #include <cslam_loop_detection_interfaces/msg/inter_robot_loop_closure.hpp>
 #include <cslam_loop_detection_interfaces/msg/local_descriptors_request.hpp>
 #include <cslam_loop_detection_interfaces/msg/local_image_descriptors.hpp>
+#include <cslam_loop_detection_interfaces/msg/local_keyframe_match.hpp>
+#include <cslam_loop_detection_interfaces/msg/intra_robot_loop_closure.hpp>
 #include <deque>
 #include <functional>
 #include <nav_msgs/msg/odometry.hpp>
@@ -71,6 +73,15 @@ public:
   void local_descriptors_request(
       cslam_loop_detection_interfaces::msg::LocalDescriptorsRequest::
           ConstSharedPtr request);
+
+  /**
+   * @brief Receives a local match and tries to compute a local loop closure
+   * 
+   * @param msg 
+   */
+  void receive_local_keyframe_match(
+      cslam_loop_detection_interfaces::msg::LocalKeyframeMatch::ConstSharedPtr
+          msg);
 
   /**
    * @brief Message callback to receive descriptors and compute
@@ -178,6 +189,10 @@ private:
       keyframe_odom_publisher_;
 
   rclcpp::Subscription<
+      cslam_loop_detection_interfaces::msg::LocalKeyframeMatch>::SharedPtr
+      local_keyframe_match_subscriber_;
+
+  rclcpp::Subscription<
       cslam_loop_detection_interfaces::msg::LocalImageDescriptors>::SharedPtr
       local_descriptors_subscriber_;
 
@@ -186,6 +201,10 @@ private:
   rclcpp::Publisher<
       cslam_loop_detection_interfaces::msg::InterRobotLoopClosure>::SharedPtr
       inter_robot_loop_closure_publisher_;
+
+  rclcpp::Publisher<
+      cslam_loop_detection_interfaces::msg::IntraRobotLoopClosure>::SharedPtr
+      intra_robot_loop_closure_publisher_;
 
   std::shared_ptr<tf2_ros::Buffer> tf_buffer_;
   std::shared_ptr<tf2_ros::TransformListener> tf_listener_;

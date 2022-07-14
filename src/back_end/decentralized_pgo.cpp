@@ -23,6 +23,12 @@ DecentralizedPGO::DecentralizedPGO(std::shared_ptr<rclcpp::Node> &node)
           std::bind(&DecentralizedPGO::odometry_callback, this,
                     std::placeholders::_1));
 
+  intra_robot_loop_closure_subscriber_ = node->create_subscription<
+      cslam_loop_detection_interfaces::msg::IntraRobotLoopClosure>(
+      "intra_robot_loop_closure", 1000,
+      std::bind(&DecentralizedPGO::intra_robot_loop_closure_callback, this,
+                std::placeholders::_1));
+
   inter_robot_loop_closure_subscriber_ = node->create_subscription<
       cslam_loop_detection_interfaces::msg::InterRobotLoopClosure>(
       "/inter_robot_loop_closure", 1000,
@@ -185,6 +191,25 @@ void DecentralizedPGO::odometry_callback(
   // Update latest pose
   latest_local_pose_ = current_estimate;
   latest_local_symbol_ = symbol;
+}
+
+void DecentralizedPGO::intra_robot_loop_closure_callback(
+    const cslam_loop_detection_interfaces::msg::IntraRobotLoopClosure::
+        ConstSharedPtr msg) {
+  if (msg->success) {
+    gtsam::Pose3 measurement = transform_msg_to_pose3(msg->transform);
+
+    gtsam::LabeledSymbol symbol_from(GRAPH_LABEL, ROBOT_LABEL(robot_id_),
+                                     msg->keyframe0_id);
+    gtsam::LabeledSymbol symbol_to(GRAPH_LABEL, ROBOT_LABEL(robot_id_),
+                                   msg->keyframe1_id);
+
+    gtsam::BetweenFactor<gtsam::Pose3> factor =
+        gtsam::BetweenFactor<gtsam::Pose3>(symbol_from, symbol_to, measurement,
+                                           default_noise_model_);
+    
+    pose_graph_->push_back(factor);
+  }
 }
 
 void DecentralizedPGO::inter_robot_loop_closure_callback(

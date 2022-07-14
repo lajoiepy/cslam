@@ -12,8 +12,11 @@ from cslam.loop_closure_sparse_matching import LoopClosureSparseMatching
 from cslam.broker import Broker
 
 from cslam_common_interfaces.msg import KeyframeRGB
-from cslam_loop_detection_interfaces.msg import GlobalImageDescriptor, GlobalImageDescriptors
-from cslam_loop_detection_interfaces.msg import InterRobotLoopClosure, LocalDescriptorsRequest
+from cslam_loop_detection_interfaces.msg import (GlobalImageDescriptor,
+                                                 GlobalImageDescriptors,
+                                                 InterRobotLoopClosure,
+                                                 LocalDescriptorsRequest,
+                                                 LocalKeyframeMatch)
 
 import rclpy
 from rclpy.node import Node
@@ -61,6 +64,10 @@ class GlobalImageDescriptorLoopClosureDetection(object):
             self.global_descriptor_callback, 100)
         self.receive_keyframe_subscriber = self.node.create_subscription(
             KeyframeRGB, 'keyframe_data', self.receive_keyframe, 100)
+
+        self.local_match_publisher = self.node.create_publisher(
+            LocalKeyframeMatch, 'local_keyframe_match', 100)
+
         self.receive_inter_robot_loop_closure_subscriber = self.node.create_subscription(
             InterRobotLoopClosure, '/inter_robot_loop_closure',
             self.receive_inter_robot_loop_closure, 100)
@@ -83,19 +90,21 @@ class GlobalImageDescriptorLoopClosureDetection(object):
             self.params['global_descriptor_publication_period_sec'],
             self.global_descriptors_timer_callback)
 
-    def add_global_descriptor_to_map(self, embedding, id):
+    def add_global_descriptor_to_map(self, embedding, kf_id):
         """ Add global descriptor to matching list
 
         Args:
             embedding (np.array): descriptor
-            id (int): keyframe ID
+            kf_id (int): keyframe ID
         """
         # Add for matching
-        self.lcm.add_local_global_descriptor(embedding, id)
+        self.lcm.add_local_global_descriptor(embedding, kf_id)
+        # Local matching
+        self.detect_intra(embedding, kf_id)
 
         # Store global descriptor
         msg = GlobalImageDescriptor()
-        msg.image_id = id
+        msg.image_id = kf_id
         msg.robot_id = self.params['robot_id']
         msg.descriptor = embedding.tolist()
         self.global_descriptors_buffer.append(msg)
@@ -132,18 +141,24 @@ class GlobalImageDescriptorLoopClosureDetection(object):
 
             self.delete_useless_descriptors()
 
-    def detect_intra(self, embedding, id):
+    def detect_intra(self, embedding, kf_id):
         """ Detect intra-robot loop closures
 
         Args:
             embedding (np.array): descriptor
-            id (int): keyframe ID
+            kf_id (int): keyframe ID
 
         Returns:
             list(int): matched keyframes
         """
-        # TODO: integrate intra-robot loop closures
-        kfs, ds = self.lcm.match_local_loop_closures(embedding)
+        if self.params['enable_intra_robot_loop_closures']:
+            kf_match, _ = self.lcm.match_local_loop_closures(embedding, kf_id)
+            if kf_match is not None:
+                msg = LocalKeyframeMatch()
+                msg.keyframe0_id = kf_id
+                msg.keyframe1_id = kf_match
+                self.local_match_publisher.publish(msg)
+
 
     def detect_inter(self):
         """ Detect inter-robot loop closures

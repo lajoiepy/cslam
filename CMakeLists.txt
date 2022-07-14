@@ -187,7 +187,7 @@ install(
 ament_python_install_package(${PROJECT_NAME})
 
 install(PROGRAMS 
-cslam/loop_closure_detection.py 
+cslam/loop_closure_detection_node.py 
 DESTINATION lib/${PROJECT_NAME})
 
 # Add tests

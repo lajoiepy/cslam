@@ -77,6 +77,14 @@ StereoHandler::StereoHandler(std::shared_ptr<rclcpp::Node> &node)
       node_->create_publisher<cslam_common_interfaces::msg::KeyframeOdom>(
           "keyframe_odom", 100);
 
+  // Local matches subscription
+  local_keyframe_match_subscriber_ = node->create_subscription<
+      cslam_loop_detection_interfaces::msg::LocalKeyframeMatch>(
+      "local_keyframe_match", 100,
+      std::bind(&StereoHandler::receive_local_keyframe_match, this,
+                std::placeholders::_1));
+  ;
+
   // Publishers to other robots local descriptors subscribers
   std::string topic = "/local_descriptors";
   local_descriptors_publisher_ = node_->create_publisher<
@@ -94,6 +102,11 @@ StereoHandler::StereoHandler(std::shared_ptr<rclcpp::Node> &node)
   registration_params.insert(rtabmap::ParametersPair(
       rtabmap::Parameters::kVisMinInliers(), std::to_string(min_inliers_)));
   registration_.parseParameters(registration_params);
+
+  // Intra-robot loop closure publisher
+  intra_robot_loop_closure_publisher_ = node_->create_publisher<
+      cslam_loop_detection_interfaces::msg::IntraRobotLoopClosure>(
+      "intra_robot_loop_closure", 100);
 
   // Publisher for inter robot loop closure to all robots
   inter_robot_loop_closure_publisher_ = node_->create_publisher<
@@ -377,6 +390,29 @@ void StereoHandler::local_descriptors_request(
 
   // Publish local descriptors
   local_descriptors_publisher_->publish(msg);
+}
+
+void StereoHandler::receive_local_keyframe_match(
+    cslam_loop_detection_interfaces::msg::LocalKeyframeMatch::ConstSharedPtr
+        msg) {
+  auto keyframe0 = local_descriptors_map_.at(msg->keyframe0_id);
+  keyframe0->uncompressData();
+  auto keyframe1 = local_descriptors_map_.at(msg->keyframe1_id);
+  keyframe1->uncompressData();
+  rtabmap::RegistrationInfo reg_info;
+  rtabmap::Transform t = registration_.computeTransformation(
+      *keyframe0, *keyframe1, rtabmap::Transform(), &reg_info);
+
+  cslam_loop_detection_interfaces::msg::IntraRobotLoopClosure lc;
+  lc.keyframe0_id = msg->keyframe0_id;
+  lc.keyframe1_id = msg->keyframe1_id;
+  if (!t.isNull()) {
+    lc.success = true;
+    rtabmap_ros::transformToGeometryMsg(t, lc.transform);
+  } else {
+    lc.success = false;
+  }
+  intra_robot_loop_closure_publisher_->publish(lc);
 }
 
 void StereoHandler::local_descriptors_msg_to_sensor_data(

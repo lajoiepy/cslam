@@ -11,7 +11,7 @@ from launch_ros.actions import Node
 
 def launch_setup(context, *args, **kwargs):
     loop_detection_node = Node(package='cslam',
-                               executable='loop_closure_detection.py',
+                               executable='loop_closure_detection_node.py',
                                name='cslam_loop_closure_detection',
                                parameters=[
                                    LaunchConfiguration('config'), {

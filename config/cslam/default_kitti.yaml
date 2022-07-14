@@ -9,7 +9,7 @@
     image_crop_size: 376
     # Communication/computation budget
     loop_closure_budget: 5
-    detection_period: 5
+    inter_robot_detection_period: 5
     max_keyframe_queue_size: 10
     # Similarity settings
     similarity_threshold: 0.1
@@ -34,4 +34,4 @@
     pose_graph_manager_process_period_ms: 500
     pose_graph_optimization_loop_period_ms: 100
     max_waiting_time_sec: 60 # TODO: Document in separate file
-    enable_inter_robot_loop_closures: true
+    enable_intra_robot_loop_closures: true
