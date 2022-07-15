@@ -89,17 +89,6 @@ def generate_launch_description():
                               default_value='error',
                               description=''),
         OpaqueFunction(function=launch_setup),
-        # TODO: add param
-        # IncludeLaunchDescription(
-        #     PythonLaunchDescriptionSource(
-        #         os.path.join(get_package_share_directory('cslam'), 'launch',
-        #                      'slam', 'rtabmap_mapping.launch.py')),
-        #     launch_arguments={
-        #         'log_level': LaunchConfiguration('log_level'),
-        #         "robot_id": LaunchConfiguration('robot_id'),
-        #         "nb_robots": LaunchConfiguration('nb_robots')
-        #     }.items(),
-        # ),
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(
                 os.path.join(get_package_share_directory('cslam'), 'launch',

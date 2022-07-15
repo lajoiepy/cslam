@@ -32,7 +32,7 @@ public:
    * @brief Looks for loop closures in the current keyframe queue
    *
    */
-  void process_new_keyframes();
+  void process_new_sensor_data();
 
 private:
   // TODO: document

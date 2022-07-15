@@ -24,8 +24,6 @@ from rclpy.node import Node
 from cslam.neighbors_manager import NeighborManager
 from cslam.utils.utils import list_chunks
 
-
-# TODO: Add super class to support other types of descriptors
 class GlobalImageDescriptorLoopClosureDetection(object):
     """ Global Image descriptor matching """
 
@@ -179,10 +177,9 @@ class GlobalImageDescriptorLoopClosureDetection(object):
             vertices_info = self.edge_list_to_vertices(selection)
             broker = Broker(selection, neighbors_in_range_list)
             for selected_vertices_set in broker.brokerage(
-                    True):  # TODO: Add param
+                    self.params["use_vertex_cover_selection"]):
                 for v in selected_vertices_set:
                     # Call to send publish local descriptors
-                    # TODO: Compute vertex cover
                     msg = LocalDescriptorsRequest()
                     msg.image_id = v[1]
                     msg.matches_robot_id = vertices_info[v][0]

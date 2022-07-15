@@ -250,7 +250,8 @@ private:
   // TODO: document
   std::shared_ptr<rclcpp::Node> node_;
 
-  unsigned int nb_robots_, robot_id_;
+  unsigned int nb_robots_, robot_id_, optimization_count_;
+  bool enable_log_optimization_files_;
 
   unsigned int pose_graph_manager_process_period_ms_,
       pose_graph_optimization_loop_period_ms_;
@@ -338,6 +339,8 @@ private:
       optimizer_state_publisher_;
 
   bool is_waiting_;
+
+  std::string log_optimization_files_path_;
 
   rclcpp::Time start_waiting_time_;
   rclcpp::Duration max_waiting_time_sec_;

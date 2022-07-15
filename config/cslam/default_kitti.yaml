@@ -33,5 +33,10 @@
     intra_robot_loop_closure_detection: false
     pose_graph_manager_process_period_ms: 500
     pose_graph_optimization_loop_period_ms: 100
-    max_waiting_time_sec: 60 # TODO: Document in separate file
+    max_waiting_time_sec: 60 # TODO: Document in separate file, add namespaces
     enable_intra_robot_loop_closures: true
+    enable_log_optimization_files: true
+    log_optimization_files_path: "build/cslam_tests"
+    keyframe_generation_ratio: 1.0
+    use_vertex_cover_selection: true
+    sensor_base_frame_id : "camera_link"

@@ -63,7 +63,7 @@ public:
    * @brief Processes Latest received image
    *
    */
-  void process_new_keyframe();
+  void process_new_sensor_data();
 
   /**
    * @brief Service callback to publish local descriptors
@@ -122,6 +122,15 @@ public:
   void sensor_data_to_rgbd_msg(
       const std::shared_ptr<rtabmap::SensorData> sensor_data,
       rtabmap_ros::msg::RGBDImage &msg_data);
+  
+  /**
+   * @brief Generate a new keyframe according to the policy
+   * 
+   * @param keyframe Sensor data
+   * @return true A new keyframe is added to the map
+   * @return false The frame is rejected
+   */
+  bool generate_new_keyframe(std::shared_ptr<rtabmap::SensorData> & keyframe);
 
   /**
    * @brief Function to send the image to the python node
@@ -155,12 +164,15 @@ private:
   std::deque<std::pair<std::shared_ptr<rtabmap::SensorData>,
                        nav_msgs::msg::Odometry::ConstSharedPtr>>
       received_data_queue_;
+
+  std::shared_ptr<rtabmap::SensorData> previous_keyframe_;
+
   std::map<int, std::shared_ptr<rtabmap::SensorData>> local_descriptors_map_;
 
   std::shared_ptr<rclcpp::Node> node_;
 
   unsigned int min_inliers_, nb_robots_, robot_id_, max_queue_size_,
-      nb_local_frames_;
+      nb_local_keyframes_;
 
   image_transport::SubscriberFilter image_rect_left_;
   image_transport::SubscriberFilter image_rect_right_;
@@ -210,6 +222,8 @@ private:
   std::shared_ptr<tf2_ros::TransformListener> tf_listener_;
 
   std::string base_frame_id_;
+  float keyframe_generation_ratio_;
+  bool generate_new_keyframes_based_on_inliers_ratio_; 
 };
 } // namespace cslam
 #endif

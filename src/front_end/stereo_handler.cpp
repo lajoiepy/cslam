@@ -13,13 +13,22 @@ StereoHandler::StereoHandler(std::shared_ptr<rclcpp::Node> &node)
   node->declare_parameter<std::string>("right_camera_info_topic",
                                        "right/camera_info");
   node->declare_parameter<std::string>("odom_topic", "odom");
+  node->declare_parameter<float>("keyframe_generation_ratio", 0.0);
+  node->declare_parameter<std::string>("sensor_base_frame_id", "camera_link");
   node_->get_parameter("max_keyframe_queue_size", max_queue_size_);
+  node_->get_parameter("keyframe_generation_ratio", keyframe_generation_ratio_);
+  node_->get_parameter("sensor_base_frame_id", base_frame_id_);
 
-  nb_local_frames_ = 0;
-  base_frame_id_ = "camera_link"; // TODO: add param
+  if (keyframe_generation_ratio_ > 0.99) {
+    generate_new_keyframes_based_on_inliers_ratio_ = false;
+  } else {
+    generate_new_keyframes_based_on_inliers_ratio_ = true;
+  }
+
+  nb_local_keyframes_ = 0;
 
   // Subscriber for stereo images
-  int queue_size = 10; // TODO: param
+  int queue_size = 10;
   image_rect_left_.subscribe(
       node_.get(), node_->get_parameter("left_image_topic").as_string(), "raw",
       rclcpp::QoS(queue_size)
@@ -279,9 +288,7 @@ void StereoHandler::stereo_callback(
 
     auto data = std::make_shared<rtabmap::SensorData>(
         ptrImageLeft->image, ptrImageRight->image, stereoModel,
-        nb_local_frames_, rtabmap_ros::timestampFromROS(stamp));
-
-    // TODO: keyframe heuristic
+        0, rtabmap_ros::timestampFromROS(stamp));
 
     received_data_queue_.push_back(std::make_pair(data, odom));
     if (received_data_queue_.size() > max_queue_size_) {
@@ -292,8 +299,6 @@ void StereoHandler::stereo_callback(
           "Maximum queue size (%d) exceeded, the oldest element was removed.",
           max_queue_size_);
     }
-
-    nb_local_frames_++;
   } else {
     RCLCPP_WARN(node_->get_logger(), "Odom: input images empty?!");
   }
@@ -343,28 +348,57 @@ void StereoHandler::compute_local_descriptors(
   // Clear costly data
   frame_data->clearCompressedData();
   frame_data->clearRawData();
-
-  // Store descriptors
-  local_descriptors_map_.insert({frame_data->id(), frame_data});
 }
 
-void StereoHandler::process_new_keyframe() {
+bool StereoHandler::generate_new_keyframe(std::shared_ptr<rtabmap::SensorData> & keyframe) {
+  // Keyframe generation heuristic
+  bool generate_new_keyframe = true;
+  if (generate_new_keyframes_based_on_inliers_ratio_) {
+    if (nb_local_keyframes_ > 0)
+    {
+      rtabmap::RegistrationInfo reg_info;
+      rtabmap::Transform t = registration_.computeTransformation(
+          *keyframe, *previous_keyframe_, rtabmap::Transform(), &reg_info);
+      if (!t.isNull()){
+        if(float(reg_info.inliers) >
+            keyframe_generation_ratio_ *
+                float(previous_keyframe_->keypoints().size())) {
+          generate_new_keyframe = false;
+        }
+      }
+    }
+    if (generate_new_keyframe){
+      previous_keyframe_ = keyframe;
+    }
+  }
+  if (generate_new_keyframe){
+    // Store descriptors
+    keyframe->setId(nb_local_keyframes_);
+    local_descriptors_map_.insert({keyframe->id(), keyframe});
+    // Setup for next one
+    nb_local_keyframes_++;
+  }
+  return generate_new_keyframe;
+}
+
+void StereoHandler::process_new_sensor_data() {
   if (!received_data_queue_.empty()) {
     auto sensor_data = received_data_queue_.front();
     received_data_queue_.pop_front();
 
-    if (sensor_data.first->isValid() &&
-        local_descriptors_map_.find(sensor_data.first->id()) ==
-            local_descriptors_map_.end()) {
+    if (sensor_data.first->isValid()) {
       cv::Mat rgb;
       // rtabmap::LaserScan scan;
       sensor_data.first->uncompressDataConst(&rgb, 0);
       // pcl::PointCloud<pcl::PointXYZ>::Ptr cloud =
       // rtabmap::util3d::laserScanToPointCloud(scan, scan.localTransform());
       // Send keyframe for loop detection
-      send_keyframe(rgb, sensor_data.second, sensor_data.first->id());
-
       compute_local_descriptors(sensor_data.first);
+
+      if (generate_new_keyframe(sensor_data.first))
+      {
+        send_keyframe(rgb, sensor_data.second, sensor_data.first->id());
+      }
     }
   }
 }

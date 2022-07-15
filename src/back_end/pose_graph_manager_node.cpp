@@ -21,6 +21,8 @@ int main(int argc, char **argv) {
   node->declare_parameter<int>("pose_graph_optimization_loop_period_ms", 100);
   node->declare_parameter<int>("max_waiting_time_sec", 100);
   node->declare_parameter<double>("heartbeat_period_sec", 1.0);
+  node->declare_parameter<bool>("enable_log_optimization_files", false);
+  node->declare_parameter<std::string>("log_optimization_files_path", "");
 
   DecentralizedPGO manager(node);
 

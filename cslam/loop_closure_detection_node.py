@@ -34,7 +34,8 @@ class LoopClosureDetection(Node):
                         ('global_descriptor_publication_max_elems_per_msg',
                          10), ('enable_neighbor_monitoring', False),
                         ('enable_intra_robot_loop_closures', False),
-                        ('global_descriptor_topic', None)])
+                        ('global_descriptor_topic', None),
+                        ('use_vertex_cover_selection', True)])
         self.params = {}
         self.params['similarity_threshold'] = self.get_parameter(
             'similarity_threshold').value
@@ -72,6 +73,8 @@ class LoopClosureDetection(Node):
         self.params[
             "global_descriptor_publication_max_elems_per_msg"] = self.get_parameter(
                 'global_descriptor_publication_max_elems_per_msg').value
+        self.params["use_vertex_cover_selection"] = self.get_parameter(
+            'use_vertex_cover_selection').value
 
         self.glcd = GlobalImageDescriptorLoopClosureDetection(
             self.params, self)
