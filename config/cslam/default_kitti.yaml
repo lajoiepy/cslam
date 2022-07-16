@@ -1,42 +1,38 @@
 /**:
   ros__parameters:
-    # Sensor specific
-    left_image_topic: 'stereo_camera/left/image_rect_color'
-    right_image_topic: 'stereo_camera/right/image_rect_color'
-    left_camera_info_topic: 'stereo_camera/left/camera_info'
-    right_camera_info_topic: 'stereo_camera/right/camera_info'
-    odom_topic: 'odom'
-    image_crop_size: 376
-    # Communication/computation budget
-    loop_closure_budget: 5
-    inter_robot_detection_period: 5
-    max_keyframe_queue_size: 10
-    # Similarity settings
-    similarity_threshold: 0.1
-    similarity_loc: 1.0
-    similarity_scale: 0.25
-    # Global descriptor params
-    global_descriptor_topic: "/global_descriptors"
-    global_descriptor_technique: "netvlad"
-    nn_checkpoint: "/home/lajoiepy/Documents/projects/SelfSupervisedPlaceRecognition/pytorch-NetVlad/runs/Nov24_23-21-16_vgg16_netvlad-Pit-Baseline/checkpoints/model_best.pth.tar"
-    pca_checkpoint: "/home/lajoiepy/Documents/projects/SelfSupervisedPlaceRecognition/pytorch-NetVlad/pca.pkl"
-    intra_loop_min_inbetween_keyframes: 20
-    # Geometric verification params
-    pnp_min_inliers: 6
-    # Other params
-    enable_neighbor_monitoring: true
-    max_heartbeat_delay_sec: 5.0
-    heartbeat_period_sec: 1.0
-    map_manager_process_period_ms: 100
-    global_descriptor_publication_period_sec: 1.0
-    global_descriptor_publication_max_elems_per_msg: 10
-    intra_robot_loop_closure_detection: false
-    pose_graph_manager_process_period_ms: 500
-    pose_graph_optimization_loop_period_ms: 100
-    max_waiting_time_sec: 60 # TODO: Document in separate file, add namespaces
-    enable_intra_robot_loop_closures: true
-    enable_log_optimization_files: true
-    log_optimization_files_path: "build/cslam_tests"
-    keyframe_generation_ratio: 1.0
-    use_vertex_cover_selection: true
-    sensor_base_frame_id : "camera_link"
+    left_image_topic: "stereo_camera/left/image_rect_color"
+    right_image_topic: "stereo_camera/right/image_rect_color"
+    left_camera_info_topic: "stereo_camera/left/camera_info"
+    right_camera_info_topic: "stereo_camera/right/camera_info"
+    odom_topic: "odom"
+    sensor_base_frame_id: "camera_link"
+    frontend:
+      inter_robot_loop_closure_budget: 5
+      inter_robot_detection_period: 5
+      max_keyframe_queue_size: 10
+      similarity_threshold: 0.1
+      similarity_loc: 1.0
+      similarity_scale: 0.25
+      global_descriptor_topic: "/global_descriptors"
+      global_descriptor_technique: "netvlad"
+      image_crop_size: 376
+      nn_checkpoint: "/home/lajoiepy/Documents/projects/SelfSupervisedPlaceRecognition/pytorch-NetVlad/runs/Nov24_23-21-16_vgg16_netvlad-Pit-Baseline/checkpoints/model_best.pth.tar"
+      pca_checkpoint: "/home/lajoiepy/Documents/projects/SelfSupervisedPlaceRecognition/pytorch-NetVlad/pca.pkl"
+      pnp_min_inliers: 6
+      global_descriptor_publication_period_sec: 1.0
+      global_descriptor_publication_max_elems_per_msg: 10
+      enable_intra_robot_loop_closures: true
+      intra_loop_min_inbetween_keyframes: 20
+      keyframe_generation_ratio: 1.0
+      use_vertex_cover_selection: true
+      map_manager_process_period_ms: 100
+    neighbor_management:
+      enable_neighbor_monitoring: true
+      max_heartbeat_delay_sec: 5.0
+      heartbeat_period_sec: 1.0
+    backend:
+      pose_graph_optimization_start_period_ms: 500
+      pose_graph_optimization_loop_period_ms: 100
+      max_waiting_time_sec: 60
+      enable_log_optimization_files: true
+      log_optimization_files_path: "build/cslam_tests"

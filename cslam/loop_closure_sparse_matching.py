@@ -36,8 +36,8 @@ class LoopClosureSparseMatching(object):
         Returns:
             float: similarity score
         """
-        return 1 / (1 + np.exp((distance - self.params['similarity_loc']) /
-                               self.params['similarity_scale']))
+        return 1 / (1 + np.exp((distance - self.params['frontend.similarity_loc']) /
+                               self.params['frontend.similarity_scale']))
 
     def add_local_global_descriptor(self, embedding, id):
         """ Add a local keyframe for matching
@@ -52,7 +52,7 @@ class LoopClosureSparseMatching(object):
                 kf, d = self.other_robots_nnsm[i].search_best(embedding)
                 if kf is not None:
                     similarity = self.distance_to_similarity(d)
-                    if similarity >= self.params['similarity_threshold']:
+                    if similarity >= self.params['frontend.similarity_threshold']:
                         self.candidate_selector.add_match(
                             EdgeInterRobot(self.params['robot_id'], id, i, kf,
                                            similarity))
@@ -69,7 +69,7 @@ class LoopClosureSparseMatching(object):
         kf, d = self.local_nnsm.search_best(np.asarray(msg.descriptor))
         if kf is not None:
             similarity = self.distance_to_similarity(d)
-            if similarity >= self.params['similarity_threshold']:
+            if similarity >= self.params['frontend.similarity_threshold']:
                 self.candidate_selector.add_match(
                     EdgeInterRobot(self.params['robot_id'], kf, msg.robot_id,
                                    msg.image_id, similarity))
@@ -85,10 +85,10 @@ class LoopClosureSparseMatching(object):
 
         for kf, d in zip(kfs, ds):
             if abs(kf -
-                   kf_id) < self.params['intra_loop_min_inbetween_keyframes']:
+                   kf_id) < self.params['frontend.intra_loop_min_inbetween_keyframes']:
                 continue
 
-            if d > self.params['similarity_threshold']:
+            if d > self.params['frontend.similarity_threshold']:
                 continue
 
             return kf, kfs

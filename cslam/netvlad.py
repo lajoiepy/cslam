@@ -144,7 +144,7 @@ class NetVLAD(object):
         self.params = params
         self.node = node
 
-        self.enable = self.params['nn_checkpoint'].lower() != 'disable'
+        self.enable = self.params['frontend.nn_checkpoint'].lower() != 'disable'
         if self.enable:
             if torch.cuda.is_available():
                 self.device = torch.device("cuda")
@@ -175,7 +175,7 @@ class NetVLAD(object):
                 self.model.pool = nn.DataParallel(self.model.pool)
                 self.isParallel = True
 
-            resume_ckpt = self.params['nn_checkpoint']
+            resume_ckpt = self.params['frontend.nn_checkpoint']
             if isfile(resume_ckpt):
                 print("=> loading checkpoint '{}'".format(resume_ckpt))
                 checkpoint = torch.load(resume_ckpt,
@@ -196,14 +196,14 @@ class NetVLAD(object):
                 pool_size *= 64
 
                 self.transform = transforms.Compose([
-                    transforms.CenterCrop(self.params["image_crop_size"]),
+                    transforms.CenterCrop(self.params["frontend.image_crop_size"]),
                     transforms.Resize(224, interpolation=3),
                     transforms.ToTensor(),
                     transforms.Normalize(IMAGENET_DEFAULT_MEAN,
                                         IMAGENET_DEFAULT_STD),
                 ])
 
-            self.pca = pickle.load(open(self.params['pca_checkpoint'], 'rb'))
+            self.pca = pickle.load(open(self.params['frontend.pca_checkpoint'], 'rb'))
 
     def compute_embedding(self, keyframe):
         """Load image to device and extract the global image descriptor

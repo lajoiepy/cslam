@@ -13,10 +13,10 @@ StereoHandler::StereoHandler(std::shared_ptr<rclcpp::Node> &node)
   node->declare_parameter<std::string>("right_camera_info_topic",
                                        "right/camera_info");
   node->declare_parameter<std::string>("odom_topic", "odom");
-  node->declare_parameter<float>("keyframe_generation_ratio", 0.0);
+  node->declare_parameter<float>("frontend.keyframe_generation_ratio", 0.0);
   node->declare_parameter<std::string>("sensor_base_frame_id", "camera_link");
-  node_->get_parameter("max_keyframe_queue_size", max_queue_size_);
-  node_->get_parameter("keyframe_generation_ratio", keyframe_generation_ratio_);
+  node_->get_parameter("frontend.max_keyframe_queue_size", max_queue_size_);
+  node_->get_parameter("frontend.keyframe_generation_ratio", keyframe_generation_ratio_);
   node_->get_parameter("sensor_base_frame_id", base_frame_id_);
 
   if (keyframe_generation_ratio_ > 0.99) {
@@ -71,8 +71,8 @@ StereoHandler::StereoHandler(std::shared_ptr<rclcpp::Node> &node)
                 std::placeholders::_1));
 
   // Parameters
-  node_->get_parameter("max_keyframe_queue_size", max_queue_size_);
-  node_->get_parameter("pnp_min_inliers", min_inliers_);
+  node_->get_parameter("frontend.max_keyframe_queue_size", max_queue_size_);
+  node_->get_parameter("frontend.pnp_min_inliers", min_inliers_);
   node_->get_parameter("nb_robots", nb_robots_);
   node_->get_parameter("robot_id", robot_id_);
 

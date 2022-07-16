@@ -39,29 +39,82 @@ gtsam::Pose3 odometry_msg_to_pose3(const nav_msgs::msg::Odometry &odom_msg);
  */
 gtsam::Pose3 transform_msg_to_pose3(const geometry_msgs::msg::Transform &msg);
 
-// TODO: document
+/**
+ * @brief Converts from GTSAM to ROS 2 message
+ * 
+ * @param pose 
+ * @return geometry_msgs::msg::Pose 
+ */
 geometry_msgs::msg::Pose gtsam_pose_to_msg(const gtsam::Pose3 &pose);
 
+/**
+ * @brief Converts from GTSAM to ROS 2 message
+ * 
+ * @param pose 
+ * @return geometry_msgs::msg::Transform 
+ */
 geometry_msgs::msg::Transform
 gtsam_pose_to_transform_msg(const gtsam::Pose3 &pose);
 
+/**
+ * @brief Converts from GTSAM to ROS 2 message
+ * 
+ * @param values 
+ * @return std::vector<cslam_common_interfaces::msg::PoseGraphValue> 
+ */
 std::vector<cslam_common_interfaces::msg::PoseGraphValue>
 gtsam_values_to_msg(const gtsam::Values::shared_ptr values);
 
+/**
+ * @brief Converts from GTSAM to ROS 2 message
+ * 
+ * @param factors 
+ * @return std::vector<cslam_common_interfaces::msg::PoseGraphEdge> 
+ */
 std::vector<cslam_common_interfaces::msg::PoseGraphEdge>
 gtsam_factors_to_msg(const gtsam::NonlinearFactorGraph::shared_ptr factors);
 
+/**
+ * @brief Converts from GTSAM to ROS 2 message
+ * 
+ * @param values 
+ * @return std::vector<cslam_common_interfaces::msg::PoseGraphValue> 
+ */
 std::vector<cslam_common_interfaces::msg::PoseGraphValue>
 gtsam_values_to_msg(const gtsam::Values &values);
 
+/**
+ * @brief Converts from GTSAM to ROS 2 message
+ * 
+ * @param factors 
+ * @return std::vector<cslam_common_interfaces::msg::PoseGraphEdge> 
+ */
 std::vector<cslam_common_interfaces::msg::PoseGraphEdge>
 gtsam_factors_to_msg(const gtsam::NonlinearFactorGraph &factors);
 
+/**
+ * @brief Converts from ROS 2 message to GTSAM
+ * 
+ * @param pose 
+ * @return gtsam::Pose3 
+ */
 gtsam::Pose3 pose_msg_to_gtsam(const geometry_msgs::msg::Pose &pose);
 
+/**
+ * @brief Converts from ROS 2 message to GTSAM
+ * 
+ * @param values 
+ * @return gtsam::Values::shared_ptr 
+ */
 gtsam::Values::shared_ptr values_msg_to_gtsam(
     const std::vector<cslam_common_interfaces::msg::PoseGraphValue> &values);
 
+/**
+ * @brief Converts from ROS 2 message to GTSAM
+ * 
+ * @param edges 
+ * @return gtsam::NonlinearFactorGraph::shared_ptr 
+ */
 gtsam::NonlinearFactorGraph::shared_ptr edges_msg_to_gtsam(
     const std::vector<cslam_common_interfaces::msg::PoseGraphEdge> &edges);
 

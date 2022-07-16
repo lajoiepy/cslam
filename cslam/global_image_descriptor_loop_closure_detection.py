@@ -40,25 +40,25 @@ class GlobalImageDescriptorLoopClosureDetection(object):
         self.lcm = LoopClosureSparseMatching(params)
 
         # Place Recognition network setup
-        if self.params['global_descriptor_technique'].lower() == 'netvlad':
-            self.params['pca_checkpoint'] = self.node.get_parameter(
-                'pca_checkpoint').value
+        if self.params['frontend.global_descriptor_technique'].lower() == 'netvlad':
+            self.params['frontend.pca_checkpoint'] = self.node.get_parameter(
+                'frontend.pca_checkpoint').value
             self.global_descriptor = NetVLAD(self.params, self.node)
         else:
             self.node.get_logger().err(
                 'ERROR: Unknown technique. Using NetVLAD as default.')
-            self.params['pca_checkpoint'] = self.node.get_parameter(
-                'pca_checkpoint').value
+            self.params['frontend.pca_checkpoint'] = self.node.get_parameter(
+                'frontend.pca_checkpoint').value
             self.global_descriptor = NetVLAD(self.params, self.node)
 
         # ROS 2 objects setup
-        self.params['global_descriptor_topic'] = self.node.get_parameter(
-            'global_descriptor_topic').value
+        self.params['frontend.global_descriptor_topic'] = self.node.get_parameter(
+            'frontend.global_descriptor_topic').value
         self.global_descriptor_publisher = self.node.create_publisher(
-            GlobalImageDescriptors, self.params['global_descriptor_topic'],
+            GlobalImageDescriptors, self.params['frontend.global_descriptor_topic'],
             100)
         self.global_descriptor_subscriber = self.node.create_subscription(
-            GlobalImageDescriptors, self.params['global_descriptor_topic'],
+            GlobalImageDescriptors, self.params['frontend.global_descriptor_topic'],
             self.global_descriptor_callback, 100)
         self.receive_keyframe_subscriber = self.node.create_subscription(
             KeyframeRGB, 'keyframe_data', self.receive_keyframe, 100)
@@ -80,12 +80,12 @@ class GlobalImageDescriptorLoopClosureDetection(object):
         # Listen for changes in node liveliness
         self.neighbor_manager = NeighborManager(
             self.node, self.params['robot_id'], self.params['nb_robots'],
-            self.params['enable_neighbor_monitoring'],
-            self.params['max_heartbeat_delay_sec'])
+            self.params['neighbor_management.enable_neighbor_monitoring'],
+            self.params['neighbor_management.max_heartbeat_delay_sec'])
 
         self.global_descriptors_buffer = []
         self.global_descriptors_timer = self.node.create_timer(
-            self.params['global_descriptor_publication_period_sec'],
+            self.params['frontend.global_descriptor_publication_period_sec'],
             self.global_descriptors_timer_callback)
 
     def add_global_descriptor_to_map(self, embedding, kf_id):
@@ -130,7 +130,7 @@ class GlobalImageDescriptorLoopClosureDetection(object):
             msgs = list_chunks(
                 self.global_descriptors_buffer,
                 from_kf_id - self.global_descriptors_buffer[0].image_id,
-                self.params['global_descriptor_publication_max_elems_per_msg'])
+                self.params['frontend.global_descriptor_publication_max_elems_per_msg'])
 
             for m in msgs:
                 global_descriptors = GlobalImageDescriptors()
@@ -149,7 +149,7 @@ class GlobalImageDescriptorLoopClosureDetection(object):
         Returns:
             list(int): matched keyframes
         """
-        if self.params['enable_intra_robot_loop_closures']:
+        if self.params['frontend.enable_intra_robot_loop_closures']:
             kf_match, _ = self.lcm.match_local_loop_closures(embedding, kf_id)
             if kf_match is not None:
                 msg = LocalKeyframeMatch()
@@ -171,13 +171,13 @@ class GlobalImageDescriptorLoopClosureDetection(object):
                ) > 0 and self.neighbor_manager.local_robot_is_broker():
             # Find matches that maximize the algebraic connectivity
             selection = self.lcm.select_candidates(
-                self.params["loop_closure_budget"], neighbors_is_in_range)
+                self.params["frontend.inter_robot_loop_closure_budget"], neighbors_is_in_range)
 
             # Extract and publish local descriptors
             vertices_info = self.edge_list_to_vertices(selection)
             broker = Broker(selection, neighbors_in_range_list)
             for selected_vertices_set in broker.brokerage(
-                    self.params["use_vertex_cover_selection"]):
+                    self.params["frontend.use_vertex_cover_selection"]):
                 for v in selected_vertices_set:
                     # Call to send publish local descriptors
                     msg = LocalDescriptorsRequest()

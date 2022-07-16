@@ -9,7 +9,7 @@ MapManager<DataHandlerType>::MapManager(std::shared_ptr<rclcpp::Node> &node)
 
   node_->get_parameter("nb_robots", nb_robots_);
   node_->get_parameter("robot_id", robot_id_);
-  node_->get_parameter("map_manager_process_period_ms",
+  node_->get_parameter("frontend.map_manager_process_period_ms",
                        map_manager_process_period_ms_);
 
   std::chrono::milliseconds period(map_manager_process_period_ms_);

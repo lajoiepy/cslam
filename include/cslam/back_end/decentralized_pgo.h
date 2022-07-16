@@ -36,6 +36,17 @@
 
 namespace cslam {
 
+/**
+ * @brief State of the Pose Graph Optimization node
+ * 
+ * IDLE: Do nothing.
+ * WAITING_FOR_NEIGHBORS_INFO: Wait for info on neighbors in range.
+ * POSEGRAPH_COLLECTION: Send request for neighboring robots pose graph
+ * WAITING_FOR_NEIGHBORS_POSEGRAPHS: Waits for neighboring robot pose graphs
+ * START_OPTIMIZATION: Triggers optimization process.
+ * OPTIMIZATION: While the pose graph optimization thresad is running.
+ * 
+ */
 enum OptimizerState {
   IDLE,
   WAITING_FOR_NEIGHBORS_INFO,
@@ -247,13 +258,12 @@ public:
   void check_result_and_finish_optimization();
 
 private:
-  // TODO: document
   std::shared_ptr<rclcpp::Node> node_;
 
   unsigned int nb_robots_, robot_id_, optimization_count_;
   bool enable_log_optimization_files_;
 
-  unsigned int pose_graph_manager_process_period_ms_,
+  unsigned int pose_graph_optimization_start_period_ms_,
       pose_graph_optimization_loop_period_ms_;
 
   gtsam::SharedNoiseModel default_noise_model_;

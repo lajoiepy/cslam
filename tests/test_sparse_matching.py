@@ -13,9 +13,9 @@ def set_params():
     params = {}
     params['robot_id'] = 0
     params['nb_robots'] = 2
-    params['similarity_threshold'] = 0.0
-    params['similarity_loc'] = 1.0
-    params['similarity_scale'] = 0.25
+    params['frontend.similarity_threshold'] = 0.0
+    params['frontend.similarity_loc'] = 1.0
+    params['frontend.similarity_scale'] = 0.25
     return params
 
 

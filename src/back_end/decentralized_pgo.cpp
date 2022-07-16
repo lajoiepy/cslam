@@ -7,18 +7,18 @@ DecentralizedPGO::DecentralizedPGO(std::shared_ptr<rclcpp::Node> &node)
 
   node_->get_parameter("nb_robots", nb_robots_);
   node_->get_parameter("robot_id", robot_id_);
-  node_->get_parameter("pose_graph_manager_process_period_ms",
-                       pose_graph_manager_process_period_ms_);
-  node_->get_parameter("pose_graph_optimization_loop_period_ms",
+  node_->get_parameter("backend.pose_graph_optimization_start_period_ms",
+                       pose_graph_optimization_start_period_ms_);
+  node_->get_parameter("backend.pose_graph_optimization_loop_period_ms",
                        pose_graph_optimization_loop_period_ms_);
-  node_->get_parameter("heartbeat_period_sec", heartbeat_period_sec_);
-  node->get_parameter("enable_log_optimization_files",
+  node_->get_parameter("neighbor_management.heartbeat_period_sec", heartbeat_period_sec_);
+  node->get_parameter("backend.enable_log_optimization_files",
                       enable_log_optimization_files_);
-  node->get_parameter("log_optimization_files_path",
+  node->get_parameter("backend.log_optimization_files_path",
                       log_optimization_files_path_);
 
   int max_waiting_param;
-  node_->get_parameter("max_waiting_time_sec", max_waiting_param);
+  node_->get_parameter("backend.max_waiting_time_sec", max_waiting_param);
   max_waiting_time_sec_ = rclcpp::Duration(max_waiting_param, 0);
 
   odometry_subscriber_ =
@@ -58,7 +58,7 @@ DecentralizedPGO::DecentralizedPGO(std::shared_ptr<rclcpp::Node> &node)
 
   // Optimization timers
   optimization_timer_ = node_->create_wall_timer(
-      std::chrono::milliseconds(pose_graph_manager_process_period_ms_),
+      std::chrono::milliseconds(pose_graph_optimization_start_period_ms_),
       std::bind(&DecentralizedPGO::optimization_callback, this));
 
   optimization_loop_timer_ = node_->create_wall_timer(
@@ -613,7 +613,7 @@ void DecentralizedPGO::check_result_and_finish_optimization() {
 void DecentralizedPGO::optimization_loop_callback() {
   if (!odometry_pose_estimates_->empty()) {
     if (optimizer_state_ ==
-        OptimizerState::POSEGRAPH_COLLECTION) // TODO: Document
+        OptimizerState::POSEGRAPH_COLLECTION)
     {
       if (current_neighbors_ids_.robots.ids.size() > 0) {
         for (auto id : current_neighbors_ids_.robots.ids) {

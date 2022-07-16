@@ -160,7 +160,6 @@ public:
       const nav_msgs::msg::Odometry::ConstSharedPtr odom);
 
 private:
-  // TODO: document
   std::deque<std::pair<std::shared_ptr<rtabmap::SensorData>,
                        nav_msgs::msg::Odometry::ConstSharedPtr>>
       received_data_queue_;
