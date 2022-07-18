@@ -1,6 +1,7 @@
+#   Modified by Pierre-Yves Lajoie (2022)
+
 import numpy as np
 from collections import namedtuple
-import matplotlib.pyplot as plt
 from scipy.sparse import csr_matrix, coo_matrix
 import networkx as nx
 from typing import List
