@@ -5,7 +5,6 @@ import numpy as np
 import networkx as nx
 import networkx.linalg as la
 import networkx.generators as gen
-import matplotlib.pyplot as plt
 
 from scipy.sparse import csc_matrix, csr_matrix
 from scipy.sparse.linalg import eigsh, lobpcg
