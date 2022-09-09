@@ -1,17 +1,16 @@
 #   Modified by Pierre-Yves Lajoie (2022)
 
-from cslam.mac.utils import *
-import numpy as np
-import networkx as nx
-import networkx.linalg as la
-import networkx.generators as gen
+from collections import namedtuple
+from timeit import default_timer as timer
 
+import networkx as nx
+import networkx.generators as gen
+import networkx.linalg as la
+import numpy as np
 from scipy.sparse import csc_matrix, csr_matrix
 from scipy.sparse.linalg import eigsh, lobpcg
 
-from timeit import default_timer as timer
-
-from collections import namedtuple
+from cslam.mac.utils import *
 
 MACResult = namedtuple(
     'MACResult', ['w', 'F_unrounded', 'objective_values', 'duality_gaps'])

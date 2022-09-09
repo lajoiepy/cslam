@@ -43,13 +43,13 @@ class GlobalImageDescriptorLoopClosureDetection(object):
         if self.params['frontend.global_descriptor_technique'].lower() == 'netvlad':
             self.params['frontend.pca_checkpoint'] = self.node.get_parameter(
                 'frontend.pca_checkpoint').value
-            self.global_descriptor = NetVLAD(self.params, self.node)
+            self.global_descriptor = NetVLAD(self.params)
         else:
             self.node.get_logger().err(
                 'ERROR: Unknown technique. Using NetVLAD as default.')
             self.params['frontend.pca_checkpoint'] = self.node.get_parameter(
                 'frontend.pca_checkpoint').value
-            self.global_descriptor = NetVLAD(self.params, self.node)
+            self.global_descriptor = NetVLAD(self.params)
 
         # ROS 2 objects setup
         self.params['frontend.global_descriptor_topic'] = self.node.get_parameter(

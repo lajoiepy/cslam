@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 import numpy as np
-from cv_bridge import CvBridge
 
 import os
 from os.path import join, exists, isfile, realpath, dirname
@@ -22,7 +21,8 @@ import pickle
 import sklearn
 from sklearn.neighbors import NearestNeighbors
 
-from timm.data.constants import IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD
+IMAGENET_DEFAULT_MEAN = (0.485, 0.456, 0.406)
+IMAGENET_DEFAULT_STD = (0.229, 0.224, 0.225)
 
 
 class NetVLADLayer(nn.Module):
@@ -134,7 +134,7 @@ class NetVLAD(object):
     """NetVLAD matcher
     """
 
-    def __init__(self, params, node):
+    def __init__(self, params):
         """Initialization
 
         Args:
@@ -142,7 +142,6 @@ class NetVLAD(object):
             node (ROS 2 node handle): node handle
         """
         self.params = params
-        self.node = node
 
         self.enable = self.params['frontend.nn_checkpoint'].lower() != 'disable'
         if self.enable:

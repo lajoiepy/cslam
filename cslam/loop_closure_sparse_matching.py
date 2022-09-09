@@ -88,7 +88,7 @@ class LoopClosureSparseMatching(object):
                    kf_id) < self.params['frontend.intra_loop_min_inbetween_keyframes']:
                 continue
 
-            if d > self.params['frontend.similarity_threshold']:
+            if d > self.params['frontend.similarity_threshold']: # TODO: Convert to similarity
                 continue
 
             return kf, kfs
