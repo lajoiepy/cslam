@@ -23,7 +23,6 @@ class LoopClosureDetection(Node):
                         ('frontend.global_descriptor_technique', None),
                         ('frontend.pca_checkpoint', None), ('frontend.nn_checkpoint', None),
                         ('robot_id', None), ('nb_robots', None),
-                        ('frontend.similarity_loc', 1.0), ('frontend.similarity_scale', 0.25),
                         ('frontend.inter_robot_loop_closure_budget', 5),
                         ('frontend.inter_robot_detection_period', 5),
                         ('nb_best_matches', 10), ('frontend.image_crop_size', None),
@@ -49,10 +48,6 @@ class LoopClosureDetection(Node):
             'frontend.nn_checkpoint').value
         self.params['robot_id'] = self.get_parameter('robot_id').value
         self.params['nb_robots'] = self.get_parameter('nb_robots').value
-        self.params['frontend.similarity_loc'] = self.get_parameter(
-            'frontend.similarity_loc').value
-        self.params['frontend.similarity_scale'] = self.get_parameter(
-            'frontend.similarity_scale').value
         self.params['frontend.inter_robot_loop_closure_budget'] = self.get_parameter(
             'frontend.inter_robot_loop_closure_budget').value
         self.params['frontend.enable_intra_robot_loop_closures'] = self.get_parameter(

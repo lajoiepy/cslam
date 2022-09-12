@@ -11,8 +11,6 @@
       inter_robot_detection_period: 5
       max_keyframe_queue_size: 10
       similarity_threshold: 0.1
-      similarity_loc: 1.0
-      similarity_scale: 0.25
       global_descriptor_topic: "/global_descriptors"
       global_descriptor_technique: "netvlad"
       image_crop_size: 376

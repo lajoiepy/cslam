@@ -16,8 +16,6 @@
 
 `similarity_threshold`: Minimum similarity value required to consider a potential match.
 
-`similarity_loc, similarity_scale`: Similarity sigmoid parameters
-
 `global_descriptor_topic`: Topic name for global descriptors
 
 `global_descriptor_technique`: Global descriptors computation technique (e.g., netvlad)

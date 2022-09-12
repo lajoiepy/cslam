@@ -1,6 +1,10 @@
 import unittest
 
+import sys
+sys.path.append('/home/lajoiepy/Documents/projects/c-slam/c-slam-ws/src/cslam')
+
 from cslam.loop_closure_sparse_matching import LoopClosureSparseMatching
+from cslam.nns_matching import NearestNeighborsMatching
 import random
 import numpy as np
 from collections import namedtuple
@@ -14,8 +18,6 @@ def set_params():
     params['robot_id'] = 0
     params['nb_robots'] = 2
     params['frontend.similarity_threshold'] = 0.0
-    params['frontend.similarity_loc'] = 1.0
-    params['frontend.similarity_scale'] = 0.25
     return params
 
 
@@ -23,23 +25,13 @@ class TestSparseMatching(unittest.TestCase):
     """Unit tests for sparse matching
     """
 
-    def test_distance_to_similarity(self):
-        """Distance to similarity
-        """
-        params = set_params()
-        lcsm = LoopClosureSparseMatching(params)
-        for i in range(0, 100, 1):
-            d = i / 10
-            s = lcsm.distance_to_similarity(d)
-            self.assertGreaterEqual(s, 0.0)
-            self.assertLessEqual(s, 1.0)
-
     def test_add_local_global_descriptor(self):
         """Add local keyframe
         """
         params = set_params()
         lcsm = LoopClosureSparseMatching(params)
         descriptor = np.random.rand(10)
+        descriptor = descriptor / np.linalg.norm(descriptor)  
         lcsm.add_local_global_descriptor(descriptor, 1)
         for i in range(len(descriptor)):
             self.assertAlmostEqual(descriptor[i], lcsm.local_nnsm.data[0, i])
@@ -50,11 +42,38 @@ class TestSparseMatching(unittest.TestCase):
         params = set_params()
         lcsm = LoopClosureSparseMatching(params)
         descriptor = np.random.rand(10)
+        descriptor = descriptor / np.linalg.norm(descriptor)  
         msg = GlobalDescriptor(0, 1, descriptor.tolist())
         lcsm.add_other_robot_global_descriptor(msg)
         for i in range(len(descriptor)):
             self.assertAlmostEqual(descriptor[i],
                                    lcsm.other_robots_nnsm[1].data[0, i])
+
+    def test_similarity(self):
+        """Test that cosine similarity matching gives the same ordering as euclidean distance
+        """
+        nb_descriptors_in_db = 100
+        nnsm = NearestNeighborsMatching()
+        for i in range(nb_descriptors_in_db):
+            descriptor = np.random.rand(100)
+            descriptor = descriptor / np.linalg.norm(descriptor) # normalize
+            nnsm.add_item(descriptor, i)
+
+        nb_descriptors_to_test = 100
+        k = 100
+        for i in range(nb_descriptors_to_test):
+            query = np.random.rand(100)
+            query = query / np.linalg.norm(query)
+            ds = np.linalg.norm(query[np.newaxis, :] - nnsm.data[:nnsm.n], axis=1)
+            ns_dist = np.argsort(ds)[:k]
+            ns_sim, sims = nnsm.search(query, k)
+            # Check if sorted by similarity
+            self.assertTrue(np.all(sims[:-1] >= sims[1:]))
+            # Check if same order as distance
+            for j in range(k):
+                self.assertEqual(ns_dist[j], ns_sim[j])
+            ns_sim_best, sim_best = nnsm.search_best(query)     
+            self.assertEqual(ns_dist[0], ns_sim_best)   
 
     def test_matches(self):
         """Matches between descriptors
@@ -63,15 +82,18 @@ class TestSparseMatching(unittest.TestCase):
         lcsm = LoopClosureSparseMatching(params)
 
         descriptor0 = np.random.rand(10)
+        descriptor0 = descriptor0 / np.linalg.norm(descriptor0)        
         lcsm.add_local_global_descriptor(descriptor0, 2)
 
         descriptor1 = 1 - descriptor0
+        descriptor1 = descriptor1 / np.linalg.norm(descriptor1)   
         msg = GlobalDescriptor(3, 1, descriptor1.tolist())
         lcsm.add_other_robot_global_descriptor(msg)
 
         descriptor2 = descriptor0
         descriptor2[0] = 0.0
         descriptor2[1] = 0.0
+        descriptor2 = descriptor2 / np.linalg.norm(descriptor2)  
         msg2 = GlobalDescriptor(4, 1, descriptor2.tolist())
         lcsm.add_other_robot_global_descriptor(msg2)
 
@@ -90,14 +112,17 @@ class TestSparseMatching(unittest.TestCase):
         nb_local_kfs = 100
         for i in range(nb_local_kfs):
             descriptor = np.random.rand(10)
+            descriptor = descriptor / np.linalg.norm(descriptor)  
             lcsm.add_local_global_descriptor(descriptor, i)
         nb_other_kfs = 100
         for i in range(nb_other_kfs):
             descriptor = np.random.rand(10)
+            descriptor = descriptor / np.linalg.norm(descriptor)  
             msg = GlobalDescriptor(i, 1, descriptor.tolist())
             lcsm.add_other_robot_global_descriptor(msg)
         for i in range(nb_other_kfs):
             descriptor = np.random.rand(10)
+            descriptor = descriptor / np.linalg.norm(descriptor)  
             msg = GlobalDescriptor(i, 2, descriptor.tolist())
             lcsm.add_other_robot_global_descriptor(msg)
 
@@ -119,14 +144,17 @@ class TestSparseMatching(unittest.TestCase):
         nb_local_kfs = 100
         for i in range(nb_local_kfs):
             descriptor = np.random.rand(10)
+            descriptor = descriptor / np.linalg.norm(descriptor)  
             lcsm.add_local_global_descriptor(descriptor, i)
         nb_other_kfs = 100
         for i in range(nb_other_kfs):
             descriptor = np.random.rand(10)
+            descriptor = descriptor / np.linalg.norm(descriptor)  
             msg = GlobalDescriptor(i, 2, descriptor.tolist())
             lcsm.add_other_robot_global_descriptor(msg)
         for i in range(nb_other_kfs):
             descriptor = np.random.rand(10)
+            descriptor = descriptor / np.linalg.norm(descriptor)  
             msg = GlobalDescriptor(i, 3, descriptor.tolist())
             lcsm.add_other_robot_global_descriptor(msg)
 
@@ -150,14 +178,17 @@ class TestSparseMatching(unittest.TestCase):
         nb_local_kfs = 100
         for i in range(nb_local_kfs):
             descriptor = np.random.rand(10)
+            descriptor = descriptor / np.linalg.norm(descriptor)  
             lcsm.add_local_global_descriptor(descriptor, i)
         nb_other_kfs = 100
         for i in range(nb_other_kfs):
             descriptor = np.random.rand(10)
+            descriptor = descriptor / np.linalg.norm(descriptor)  
             msg = GlobalDescriptor(i, 2, descriptor.tolist())
             lcsm.add_other_robot_global_descriptor(msg)
         for i in range(nb_other_kfs):
             descriptor = np.random.rand(10)
+            descriptor = descriptor / np.linalg.norm(descriptor)  
             msg = GlobalDescriptor(i, 3, descriptor.tolist())
             lcsm.add_other_robot_global_descriptor(msg)
 

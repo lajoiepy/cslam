@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import numpy as np
+from scipy.spatial import distance
 
 
 class NearestNeighborsMatching(object):
@@ -51,9 +52,13 @@ class NearestNeighborsMatching(object):
         if len(self.data) == 0:
             return [], []
 
-        ds = np.linalg.norm(query[np.newaxis, :] - self.data[:self.n], axis=1)
-        ns = np.argsort(ds)[:k]
-        return [self.items[n] for n in ns], ds[ns]
+        similarities = np.zeros(self.n)
+
+        for i in range(self.n):
+            similarities[i] = 1 - distance.cosine(query, self.data[i,:].squeeze())
+
+        ns = np.argsort(similarities)[::-1][:k]
+        return [self.items[n] for n in ns], similarities[ns]
 
     def search_best(self, query):
         """Search for the nearest neighbor
@@ -67,6 +72,5 @@ class NearestNeighborsMatching(object):
         if len(self.data) == 0:
             return None, None
 
-        ds = np.linalg.norm(query[np.newaxis, :] - self.data[:self.n], axis=1)
-        n = np.argsort(ds)[0]
-        return self.items[n], ds[n]
+        items, similarities = self.search(query, 1)
+        return items[0], similarities[0]
