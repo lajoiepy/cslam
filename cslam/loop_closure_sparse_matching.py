@@ -65,11 +65,11 @@ class LoopClosureSparseMatching(object):
                                          k=self.params['nb_best_matches'])
 
         if len(kfs) > 0 and kfs[0] == kf_id:
-            kfs, similarity = kfs[1:], ds[1:]
+            kfs, similarities = kfs[1:], similarities[1:]
         if len(kfs) == 0:
             return None, None
 
-        for kf, d in zip(kfs, ds):
+        for kf, similarity in zip(kfs, similarities):
             if abs(kf -
                    kf_id) < self.params['frontend.intra_loop_min_inbetween_keyframes']:
                 continue
