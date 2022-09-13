@@ -97,8 +97,6 @@ DecentralizedPGO::DecentralizedPGO(std::shared_ptr<rclcpp::Node> &node)
         {i, node->create_publisher<
                 cslam_common_interfaces::msg::OptimizationResult>(
                 "/r" + std::to_string(i) + "/optimized_estimates", 100)});
-    reference_frame_per_robot_.insert(
-        {i, geometry_msgs::msg::TransformStamped()});
   }
 
   optimized_estimates_subscriber_ = node->create_subscription<
@@ -661,18 +659,11 @@ void DecentralizedPGO::update_transform_to_origin(const gtsam::Pose3 &pose)
   // Update the reference frame
   // This is the key info for many tasks since it allows conversions from
   // one robot reference frame to another.
-  // for (auto i : current_neighbors_ids_.robots.ids) { TODO: remove?
-  //   reference_frame_per_robot_[i] = origin_to_first_pose_;
-  // }
   if (reference_frame_per_robot_publisher_->get_subscription_count() > 0)
   {
     cslam_common_interfaces::msg::ReferenceFrames msg;
-    // for (const auto &ref : reference_frame_per_robot_) { TODO: remove?
-    //   msg.robots.ids.push_back(ref.first);
-    //   msg.reference_frames.push_back(ref.second);
-    // }
-    msg.robots.ids.push_back(robot_id_);
-    msg.reference_frames.push_back(origin_to_first_pose_);
+    msg.robot_id = robot_id_;
+    msg.origin_to_local = origin_to_first_pose_;
     reference_frame_per_robot_publisher_->publish(msg);
   }
   // Store for TF

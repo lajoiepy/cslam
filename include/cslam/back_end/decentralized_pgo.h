@@ -382,8 +382,6 @@ namespace cslam
 
         bool broadcast_tf_frames_;
 
-        std::map<unsigned int, geometry_msgs::msg::TransformStamped>
-            reference_frame_per_robot_; // TODO: remove this
         rclcpp::Publisher<cslam_common_interfaces::msg::ReferenceFrames>::SharedPtr
             reference_frame_per_robot_publisher_;
     };
