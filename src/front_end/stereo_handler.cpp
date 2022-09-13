@@ -95,9 +95,12 @@ StereoHandler::StereoHandler(std::shared_ptr<rclcpp::Node> &node)
   ;
 
   // Publishers to other robots local descriptors subscribers
-  std::string topic = "/local_descriptors";
+  std::string local_descriptors_topic = "/local_descriptors";
   local_descriptors_publisher_ = node_->create_publisher<
-      cslam_loop_detection_interfaces::msg::LocalImageDescriptors>(topic, 100);
+      cslam_loop_detection_interfaces::msg::LocalImageDescriptors>(local_descriptors_topic, 100);
+  std::string viz_topic = "/viz/local_descriptors";
+  visualization_local_descriptors_publisher_ = node_->create_publisher<
+      cslam_loop_detection_interfaces::msg::LocalImageDescriptors>(viz_topic, 100);
 
   // Subscriber for local descriptors
   local_descriptors_subscriber_ = node->create_subscription<
@@ -397,7 +400,7 @@ void StereoHandler::process_new_sensor_data() {
 
       if (generate_new_keyframe(sensor_data.first))
       {
-        send_keyframe(rgb, sensor_data.second, sensor_data.first->id());
+        send_keyframe(rgb, sensor_data);
       }
     }
   }
@@ -516,22 +519,36 @@ void StereoHandler::receive_local_image_descriptors(
   }
 }
 
-void StereoHandler::send_keyframe(
-    const rtabmap::SensorData &data,
-    const nav_msgs::msg::Odometry::ConstSharedPtr odom, const int id) {
+void StereoHandler::send_keyframe(const rtabmap::SensorData &rgb,
+                     const std::pair<std::shared_ptr<rtabmap::SensorData>, std::shared_ptr<const nav_msgs::msg::Odometry>>& keypoints_data) {
   // Image message
   std_msgs::msg::Header header;
   header.stamp = node_->now();
   cv_bridge::CvImage image_bridge = cv_bridge::CvImage(
-      header, sensor_msgs::image_encodings::RGB8, data.imageRaw());
+      header, sensor_msgs::image_encodings::RGB8, rgb.imageRaw());
   cslam_common_interfaces::msg::KeyframeRGB keyframe_msg;
   image_bridge.toImageMsg(keyframe_msg.image);
-  keyframe_msg.id = id;
+  keyframe_msg.id = keypoints_data.first->id();
 
   keyframe_data_publisher_->publish(keyframe_msg);
 
+  // Odometry message
   cslam_common_interfaces::msg::KeyframeOdom odom_msg;
-  odom_msg.id = id;
-  odom_msg.odom = *odom;
+  odom_msg.id = keypoints_data.first->id();
+  odom_msg.odom = *keypoints_data.second;
   keyframe_odom_publisher_->publish(odom_msg);
+
+  // visualization message
+  if (visualization_local_descriptors_publisher_->get_subscription_count() > 0)
+  {
+    cslam_loop_detection_interfaces::msg::LocalImageDescriptors features_msg;
+    sensor_data_to_rgbd_msg(keypoints_data.first,
+                            features_msg.data);
+    features_msg.image_id = keypoints_data.first->id();
+    features_msg.robot_id = robot_id_;
+    features_msg.data.key_points.clear();
+
+    // Publish local descriptors
+    visualization_local_descriptors_publisher_->publish(features_msg);
+  }
 }

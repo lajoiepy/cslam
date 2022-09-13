@@ -136,12 +136,11 @@ public:
    * @brief Function to send the image to the python node
    * TODO: Move to parent class
    *
-   * @param data keyframe data
-   * @param id keyframe id
+   * @param rgb RGB keyframe data
+   * @param keypoints_data keyframe keypoints data
    */
-  void send_keyframe(const rtabmap::SensorData &data,
-                     const nav_msgs::msg::Odometry::ConstSharedPtr odom,
-                     const int id);
+  void send_keyframe(const rtabmap::SensorData &rgb,
+                     const std::pair<std::shared_ptr<rtabmap::SensorData>, std::shared_ptr<const nav_msgs::msg::Odometry>>& keypoints_data);
 
   /**
    * @brief Callback receiving sync data from camera
@@ -191,7 +190,7 @@ private:
 
   rclcpp::Publisher<
       cslam_loop_detection_interfaces::msg::LocalImageDescriptors>::SharedPtr
-      local_descriptors_publisher_;
+      local_descriptors_publisher_, visualization_local_descriptors_publisher_;
 
   rclcpp::Publisher<cslam_common_interfaces::msg::KeyframeRGB>::SharedPtr
       keyframe_data_publisher_;

@@ -648,13 +648,6 @@ void DecentralizedPGO::update_transform_to_origin(const gtsam::Pose3 &pose)
   origin_to_first_pose_.child_frame_id = MAP_FRAME_ID(robot_id_);
 
   origin_to_first_pose_.transform = gtsam_pose_to_transform_msg(pose);
-  if (origin_to_first_pose_.header.frame_id !=
-      origin_to_first_pose_.child_frame_id)
-  {
-    RCLCPP_INFO(node_->get_logger(), "UPDATING tf from %s to %s",
-                origin_to_first_pose_.header.frame_id.c_str(),
-                origin_to_first_pose_.child_frame_id.c_str());
-  }
 
   // Update the reference frame
   // This is the key info for many tasks since it allows conversions from
