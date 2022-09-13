@@ -712,7 +712,7 @@ void DecentralizedPGO::broadcast_tf_callback()
   current_pose_msg.header.stamp = now;
   current_pose_msg.header.frame_id = LATEST_OPTIMIZED_FRAME_ID(robot_id_);
   current_pose_msg.child_frame_id = CURRENT_FRAME_ID(robot_id_);
-  gtsam::Pose3 current_pose3 = latest_local_pose_ * local_pose_at_latest_optimization_.inverse();
+  gtsam::Pose3 current_pose3 = local_pose_at_latest_optimization_.inverse() * latest_local_pose_;
   current_pose_msg.transform = gtsam_pose_to_transform_msg(current_pose3);
   tf_broadcaster_->sendTransform(current_pose_msg);
 }
