@@ -131,7 +131,7 @@ public:
    *
    * @param msg
    */
-  void print_current_estimates_callback(
+  void write_current_estimates_callback(
       const std_msgs::msg::String::ConstSharedPtr msg);
 
   /**
@@ -270,7 +270,8 @@ private:
   bool enable_log_optimization_files_;
 
   unsigned int pose_graph_optimization_start_period_ms_,
-      pose_graph_optimization_loop_period_ms_;
+      pose_graph_optimization_loop_period_ms_,
+      visualization_period_ms_;
 
   gtsam::SharedNoiseModel default_noise_model_;
   float rotation_default_noise_std_, translation_default_noise_std_;
@@ -338,7 +339,7 @@ private:
       pose_graph_subscriber_;
 
   rclcpp::Subscription<std_msgs::msg::String>::SharedPtr
-      print_current_estimates_subscriber_;
+      write_current_estimates_subscriber_;
 
   rclcpp::Publisher<cslam_common_interfaces::msg::PoseGraph>::SharedPtr
       pose_graph_publisher_;

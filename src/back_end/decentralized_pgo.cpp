@@ -41,10 +41,10 @@ DecentralizedPGO::DecentralizedPGO(std::shared_ptr<rclcpp::Node> &node)
       std::bind(&DecentralizedPGO::inter_robot_loop_closure_callback, this,
                 std::placeholders::_1));
 
-  print_current_estimates_subscriber_ =
+  write_current_estimates_subscriber_ =
       node->create_subscription<std_msgs::msg::String>(
           "print_current_estimates", 100,
-          std::bind(&DecentralizedPGO::print_current_estimates_callback, this,
+          std::bind(&DecentralizedPGO::write_current_estimates_callback, this,
                     std::placeholders::_1));
 
   rotation_default_noise_std_ = 0.01;
@@ -68,9 +68,13 @@ DecentralizedPGO::DecentralizedPGO(std::shared_ptr<rclcpp::Node> &node)
       std::bind(&DecentralizedPGO::optimization_loop_callback, this));
 
   if (visualization_period_ms_ > 1e-6) {
+    RCLCPP_INFO(node_->get_logger(), "Visualization enabled.");
     visualization_timer_ = node_->create_wall_timer(
         std::chrono::milliseconds(visualization_period_ms_),
         std::bind(&DecentralizedPGO::visualization_callback, this));
+  }
+  else{
+    RCLCPP_INFO(node_->get_logger(), "Visualization disabled.");
   }
 
   // Publishers for optimization result
@@ -256,7 +260,7 @@ void DecentralizedPGO::inter_robot_loop_closure_callback(
   }
 }
 
-void DecentralizedPGO::print_current_estimates_callback(
+void DecentralizedPGO::write_current_estimates_callback(
     const std_msgs::msg::String::ConstSharedPtr msg) {
   gtsam::writeG2o(*pose_graph_, *current_pose_estimates_, msg->data);
 }
@@ -518,29 +522,31 @@ void DecentralizedPGO::heartbeat_timer_callback() {
 }
 
 void DecentralizedPGO::visualization_callback() {
-  cslam_common_interfaces::msg::PoseGraph out_msg;
-  out_msg.robot_id = robot_id_;
-  out_msg.values = gtsam_values_to_msg(odometry_pose_estimates_);
-  auto graph = boost::make_shared<gtsam::NonlinearFactorGraph>();
-  graph->push_back(pose_graph_->begin(), pose_graph_->end());
+  if (visualization_pose_graph_publisher_->get_subscription_count() > 0) {
+    cslam_common_interfaces::msg::PoseGraph out_msg;
+    out_msg.robot_id = robot_id_;
+    out_msg.values = gtsam_values_to_msg(current_pose_estimates_);
+    auto graph = boost::make_shared<gtsam::NonlinearFactorGraph>();
+    graph->push_back(pose_graph_->begin(), pose_graph_->end());
 
-  for (unsigned int i = 0; i < nb_robots_; i++) {
-    for (unsigned int j = i + 1; j < nb_robots_; j++) {
-      unsigned int min_robot_id = std::min(i, j);
-      unsigned int max_robot_id = std::max(i, j);
-      if (inter_robot_loop_closures_[{min_robot_id, max_robot_id}].size() > 0 &&
-          (min_robot_id == robot_id_ || max_robot_id == robot_id_)) {
-        if (min_robot_id == robot_id_) {
-          graph->push_back(
-              inter_robot_loop_closures_[{min_robot_id, max_robot_id}].begin(),
-              inter_robot_loop_closures_[{min_robot_id, max_robot_id}].end());
+    for (unsigned int i = 0; i < nb_robots_; i++) {
+      for (unsigned int j = i + 1; j < nb_robots_; j++) {
+        unsigned int min_robot_id = std::min(i, j);
+        unsigned int max_robot_id = std::max(i, j);
+        if (inter_robot_loop_closures_[{min_robot_id, max_robot_id}].size() > 0 &&
+            (min_robot_id == robot_id_ || max_robot_id == robot_id_)) {
+          if (min_robot_id == robot_id_) {
+            graph->push_back(
+                inter_robot_loop_closures_[{min_robot_id, max_robot_id}].begin(),
+                inter_robot_loop_closures_[{min_robot_id, max_robot_id}].end());
+          }
         }
       }
     }
-  }
 
-  out_msg.edges = gtsam_factors_to_msg(graph);
-  visualization_pose_graph_publisher_->publish(out_msg);
+    out_msg.edges = gtsam_factors_to_msg(graph);
+    visualization_pose_graph_publisher_->publish(out_msg);
+  }
 }
 
 void DecentralizedPGO::update_transform_to_origin(const gtsam::Pose3 &pose) {

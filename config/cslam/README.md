@@ -10,7 +10,7 @@
 
 `inter_robot_loop_closure_budget`: Maximum number of loop closures that can be geometrically verified every detection periods.
 
-`inter_robot_detection_period`: Period (in seconds) for inter-robot loop closure detection.
+`inter_robot_detection_period_sec`: Period (in seconds) for inter-robot loop closure detection.
 
 `max_keyframe_queue_size`: Maximum number of keyframe to store in buffer for processing.
 

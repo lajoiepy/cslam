@@ -8,7 +8,7 @@
     sensor_base_frame_id: "camera_link"
     frontend:
       inter_robot_loop_closure_budget: 5
-      inter_robot_detection_period: 5
+      inter_robot_detection_period_sec: 5
       max_keyframe_queue_size: 10
       similarity_threshold: 0.1
       global_descriptor_topic: "/global_descriptors"

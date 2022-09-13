@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 # Loop Closure Detection service
 # Abstraction to support multiple implementations of loop closure detection for benchmarking
 
@@ -22,7 +23,7 @@ class LoopClosureDetection(Node):
                         ('frontend.pca_checkpoint', None), ('frontend.nn_checkpoint', None),
                         ('robot_id', None), ('nb_robots', None),
                         ('frontend.inter_robot_loop_closure_budget', 5),
-                        ('frontend.inter_robot_detection_period', 5),
+                        ('frontend.inter_robot_detection_period_sec', 5),
                         ('nb_best_matches', 10), ('frontend.image_crop_size', None),
                         ('frontend.intra_loop_min_inbetween_keyframes', 10),
                         ('neighbor_management.max_heartbeat_delay_sec', 5),
@@ -50,8 +51,8 @@ class LoopClosureDetection(Node):
             'frontend.inter_robot_loop_closure_budget').value
         self.params['frontend.enable_intra_robot_loop_closures'] = self.get_parameter(
             'frontend.enable_intra_robot_loop_closures').value
-        self.params['frontend.inter_robot_detection_period'] = self.get_parameter(
-            'frontend.inter_robot_detection_period').value
+        self.params['frontend.inter_robot_detection_period_sec'] = self.get_parameter(
+            'frontend.inter_robot_detection_period_sec').value
         self.params["frontend.image_crop_size"] = self.get_parameter(
             'frontend.image_crop_size').value
         self.params["neighbor_management.enable_neighbor_monitoring"] = self.get_parameter(
@@ -72,7 +73,7 @@ class LoopClosureDetection(Node):
         self.glcd = GlobalImageDescriptorLoopClosureDetection(
             self.params, self)
         self.inter_robot_detection_timer = self.create_timer(
-            self.params['frontend.inter_robot_detection_period'],
+            self.params['frontend.inter_robot_detection_period_sec'],
             self.glcd.detect_inter)
 
 
