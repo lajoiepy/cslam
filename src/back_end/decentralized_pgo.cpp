@@ -16,6 +16,8 @@ DecentralizedPGO::DecentralizedPGO(std::shared_ptr<rclcpp::Node> &node)
                       enable_log_optimization_files_);
   node->get_parameter("backend.log_optimization_files_path",
                       log_optimization_files_path_);
+  node_->get_parameter("backend.visualization_period_ms",
+                       visualization_period_ms_);
 
   int max_waiting_param;
   node_->get_parameter("backend.max_waiting_time_sec", max_waiting_param);
@@ -64,6 +66,12 @@ DecentralizedPGO::DecentralizedPGO(std::shared_ptr<rclcpp::Node> &node)
   optimization_loop_timer_ = node_->create_wall_timer(
       std::chrono::milliseconds(pose_graph_optimization_loop_period_ms_),
       std::bind(&DecentralizedPGO::optimization_loop_callback, this));
+
+  if (visualization_period_ms_ > 1e-6) {
+    visualization_timer_ = node_->create_wall_timer(
+        std::chrono::milliseconds(visualization_period_ms_),
+        std::bind(&DecentralizedPGO::visualization_callback, this));
+  }
 
   // Publishers for optimization result
   debug_optimization_result_publisher_ =
@@ -131,6 +139,10 @@ DecentralizedPGO::DecentralizedPGO(std::shared_ptr<rclcpp::Node> &node)
           "/pose_graph", 100,
           std::bind(&DecentralizedPGO::pose_graph_callback, this,
                     std::placeholders::_1));
+
+  visualization_pose_graph_publisher_ =
+      node->create_publisher<cslam_common_interfaces::msg::PoseGraph>(
+          "/viz/pose_graph", 100);
 
   // Optimizer
   optimizer_state_ = OptimizerState::IDLE;
@@ -392,7 +404,7 @@ bool DecentralizedPGO::check_waiting_timeout() {
   if ((node_->now() - start_waiting_time_) > max_waiting_time_sec_) {
     end_waiting();
     optimizer_state_ = OptimizerState::IDLE;
-    RCLCPP_INFO(node_->get_logger(), "Time out: " + std::to_string(robot_id_));
+    RCLCPP_INFO(node_->get_logger(), "Timeout: " + std::to_string(robot_id_));
   }
   return is_waiting();
 }
@@ -503,6 +515,32 @@ void DecentralizedPGO::heartbeat_timer_callback() {
   std_msgs::msg::UInt32 msg;
   msg.data = origin_robot_id_;
   heartbeat_publisher_->publish(msg);
+}
+
+void DecentralizedPGO::visualization_callback() {
+  cslam_common_interfaces::msg::PoseGraph out_msg;
+  out_msg.robot_id = robot_id_;
+  out_msg.values = gtsam_values_to_msg(odometry_pose_estimates_);
+  auto graph = boost::make_shared<gtsam::NonlinearFactorGraph>();
+  graph->push_back(pose_graph_->begin(), pose_graph_->end());
+
+  for (unsigned int i = 0; i < nb_robots_; i++) {
+    for (unsigned int j = i + 1; j < nb_robots_; j++) {
+      unsigned int min_robot_id = std::min(i, j);
+      unsigned int max_robot_id = std::max(i, j);
+      if (inter_robot_loop_closures_[{min_robot_id, max_robot_id}].size() > 0 &&
+          (min_robot_id == robot_id_ || max_robot_id == robot_id_)) {
+        if (min_robot_id == robot_id_) {
+          graph->push_back(
+              inter_robot_loop_closures_[{min_robot_id, max_robot_id}].begin(),
+              inter_robot_loop_closures_[{min_robot_id, max_robot_id}].end());
+        }
+      }
+    }
+  }
+
+  out_msg.edges = gtsam_factors_to_msg(graph);
+  visualization_pose_graph_publisher_->publish(out_msg);
 }
 
 void DecentralizedPGO::update_transform_to_origin(const gtsam::Pose3 &pose) {

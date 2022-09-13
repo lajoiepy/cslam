@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 # Loop Closure Detection service
 # Abstraction to support multiple implementations of loop closure detection for benchmarking
 

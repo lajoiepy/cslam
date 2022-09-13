@@ -233,6 +233,12 @@ public:
   void heartbeat_timer_callback();
 
   /**
+   * @brief Publish heartbeat message periodically
+   *
+   */
+  void visualization_callback();
+
+  /**
    * @brief Check if the local robot is the optimizer according to the specified
    * priority rule Default priority rule: lowest ID
    *
@@ -337,6 +343,9 @@ private:
   rclcpp::Publisher<cslam_common_interfaces::msg::PoseGraph>::SharedPtr
       pose_graph_publisher_;
 
+  rclcpp::Publisher<cslam_common_interfaces::msg::PoseGraph>::SharedPtr
+      visualization_pose_graph_publisher_;
+
   cslam_common_interfaces::msg::RobotIdsAndOrigin current_neighbors_ids_;
 
   OptimizerState optimizer_state_;
@@ -361,7 +370,8 @@ private:
 
   std::unique_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster_;
 
-  rclcpp::TimerBase::SharedPtr heartbeat_timer_, tf_broadcaster_timer_;
+  rclcpp::TimerBase::SharedPtr heartbeat_timer_, tf_broadcaster_timer_,
+                            visualization_timer_;
 
   geometry_msgs::msg::TransformStamped origin_to_first_pose_;
 
