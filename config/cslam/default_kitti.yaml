@@ -35,3 +35,4 @@
       enable_log_optimization_files: true
       log_optimization_files_path: "build/cslam_tests"
       visualization_period_ms: 1000
+      broadcast_tf_frames: true

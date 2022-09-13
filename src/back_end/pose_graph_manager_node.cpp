@@ -24,6 +24,7 @@ int main(int argc, char **argv) {
   node->declare_parameter<bool>("backend.enable_log_optimization_files", false);
   node->declare_parameter<std::string>("backend.log_optimization_files_path", "");
   node->declare_parameter<int>("backend.visualization_period_ms", 0);
+  node->declare_parameter<bool>("backend.broadcast_tf_frames", false);
 
   DecentralizedPGO manager(node);
 
