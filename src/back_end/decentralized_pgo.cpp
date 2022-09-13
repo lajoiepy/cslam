@@ -1,5 +1,9 @@
 #include "cslam/back_end/decentralized_pgo.h"
 
+#define MAP_FRAME_ID(id) "robot" + std::to_string(id) + "_map"
+#define CURRENT_FRAME_ID(id) "robot" + std::to_string(id) + "_current_pose"
+#define LATEST_OPTIMIZED_FRAME_ID(id) "robot" + std::to_string(id) + "_latest_optimized_pose"
+
 using namespace cslam;
 
 DecentralizedPGO::DecentralizedPGO(std::shared_ptr<rclcpp::Node> &node)
@@ -525,6 +529,7 @@ void DecentralizedPGO::visualization_callback() {
   if (visualization_pose_graph_publisher_->get_subscription_count() > 0) {
     cslam_common_interfaces::msg::PoseGraph out_msg;
     out_msg.robot_id = robot_id_;
+    out_msg.origin_robot_id = origin_robot_id_;
     out_msg.values = gtsam_values_to_msg(current_pose_estimates_);
     auto graph = boost::make_shared<gtsam::NonlinearFactorGraph>();
     graph->push_back(pose_graph_->begin(), pose_graph_->end());
@@ -552,24 +557,31 @@ void DecentralizedPGO::visualization_callback() {
 void DecentralizedPGO::update_transform_to_origin(const gtsam::Pose3 &pose) {
   rclcpp::Time now = node_->get_clock()->now();
   origin_to_first_pose_.header.stamp = now;
-  origin_to_first_pose_.header.frame_id =
-      "robot_" + std::to_string(origin_robot_id_);
-  origin_to_first_pose_.child_frame_id = "robot_" + std::to_string(robot_id_);
+  origin_to_first_pose_.header.frame_id = MAP_FRAME_ID(origin_robot_id_);
+  origin_to_first_pose_.child_frame_id = MAP_FRAME_ID(robot_id_);
 
   origin_to_first_pose_.transform = gtsam_pose_to_transform_msg(pose);
+  if (origin_to_first_pose_.header.frame_id !=
+      origin_to_first_pose_.child_frame_id) {
+    RCLCPP_INFO(node_->get_logger(), "UPDATING tf from %s to %s",
+                origin_to_first_pose_.header.frame_id.c_str(),
+                origin_to_first_pose_.child_frame_id.c_str());
+      }
 
   // Update the reference frame
   // This is the key info for many tasks since it allows conversions from
   // one robot reference frame to another.
-  for (auto i : current_neighbors_ids_.robots.ids) {
-    reference_frame_per_robot_[i] = origin_to_first_pose_;
-  }
+  // for (auto i : current_neighbors_ids_.robots.ids) { TODO: remove?
+  //   reference_frame_per_robot_[i] = origin_to_first_pose_;
+  // }
   if (reference_frame_per_robot_publisher_->get_subscription_count() > 0) {
     cslam_common_interfaces::msg::ReferenceFrames msg;
-    for (const auto &ref : reference_frame_per_robot_) {
-      msg.robots.ids.push_back(ref.first);
-      msg.reference_frames.push_back(ref.second);
-    }
+    // for (const auto &ref : reference_frame_per_robot_) { TODO: remove?
+    //   msg.robots.ids.push_back(ref.first);
+    //   msg.reference_frames.push_back(ref.second);
+    // }
+    msg.robots.ids.push_back(robot_id_);
+    msg.reference_frames.push_back(origin_to_first_pose_);
     reference_frame_per_robot_publisher_->publish(msg);
   }
 }
@@ -578,9 +590,13 @@ void DecentralizedPGO::broadcast_tf_callback() {
   rclcpp::Time now = node_->get_clock()->now();
   origin_to_first_pose_.header.stamp = now;
   // Useful for visualization.
-  // For tasks purposes use reference_frame_per_robot_ instead
+  // For tasks purposes you might want to use reference_frame_per_robot_ instead
+  // Since it is updated only when a new optimization is performed. 
   if (origin_to_first_pose_.header.frame_id !=
       origin_to_first_pose_.child_frame_id) {
+    RCLCPP_INFO(node_->get_logger(), "Broadcasting tf from %s to %s",
+                origin_to_first_pose_.header.frame_id.c_str(),
+                origin_to_first_pose_.child_frame_id.c_str());
     tf_broadcaster_->sendTransform(origin_to_first_pose_);
   }
 }
