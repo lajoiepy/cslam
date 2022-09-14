@@ -291,7 +291,11 @@ void DecentralizedPGO::inter_robot_loop_closure_callback(
 void DecentralizedPGO::write_current_estimates_callback(
     const std_msgs::msg::String::ConstSharedPtr msg)
 {
-  gtsam::writeG2o(*pose_graph_, *current_pose_estimates_, msg->data);
+  try{
+    gtsam::writeG2o(*pose_graph_, *current_pose_estimates_, msg->data);
+  } catch (const std::exception &e) {
+    RCLCPP_ERROR(node_->get_logger(), "Error while writing estimates: %s", e.what());
+  }
 }
 
 void DecentralizedPGO::current_neighbors_callback(
@@ -705,10 +709,19 @@ gtsam::Values
 DecentralizedPGO::optimize(const gtsam::NonlinearFactorGraph::shared_ptr &graph,
                            const gtsam::Values::shared_ptr &initial)
 {
-  gtsam::GncParams<gtsam::LevenbergMarquardtParams> params;
-  gtsam::GncOptimizer<gtsam::GncParams<gtsam::LevenbergMarquardtParams>>
-      optimizer(*graph, *initial, params);
-  return optimizer.optimize();
+  gtsam::Values result;
+  try{
+    gtsam::GncParams<gtsam::LevenbergMarquardtParams> params;
+    gtsam::GncOptimizer<gtsam::GncParams<gtsam::LevenbergMarquardtParams>>
+        optimizer(*graph, *initial, params);
+    result = optimizer.optimize();
+  }
+  catch (const std::exception &e)
+  {
+    RCLCPP_ERROR(node_->get_logger(), "Optimization failed: %s", e.what());
+    result = *initial;
+  }
+  return result;
 }
 
 void DecentralizedPGO::start_optimization()
@@ -718,10 +731,14 @@ void DecentralizedPGO::start_optimization()
 
   if (enable_log_optimization_files_)
   {
-    gtsam::writeG2o(*aggregate_pose_graph_.first, *aggregate_pose_graph_.second,
-                    log_optimization_files_path_ + "/" +
-                        std::to_string(optimization_count_) + "_robot" +
-                        std::to_string(robot_id_) + "_before_optimization.g2o");
+    try{
+      gtsam::writeG2o(*aggregate_pose_graph_.first, *aggregate_pose_graph_.second,
+                      log_optimization_files_path_ + "/" +
+                          std::to_string(optimization_count_) + "_robot" +
+                          std::to_string(robot_id_) + "_before_optimization.g2o");
+    } catch (const std::exception& e) {
+      RCLCPP_ERROR(node_->get_logger(), "Error writing g2o file: %s", e.what());
+    }
   }
 
   // Add prior
@@ -760,10 +777,14 @@ void DecentralizedPGO::check_result_and_finish_optimization()
 
     if (enable_log_optimization_files_)
     {
-      gtsam::writeG2o(
-          *aggregate_pose_graph_.first, result,
-          log_optimization_files_path_ + "/" + std::to_string(optimization_count_) +
-              "_robot" + std::to_string(robot_id_) + "_after_optimization.g2o");
+      try{
+        gtsam::writeG2o(
+            *aggregate_pose_graph_.first, result,
+            log_optimization_files_path_ + "/" + std::to_string(optimization_count_) +
+                "_robot" + std::to_string(robot_id_) + "_after_optimization.g2o");
+      } catch (const std::exception& e) {
+        RCLCPP_ERROR(node_->get_logger(), "Error writing g2o file: %s", e.what());
+      }
     }
 
     // Publish result info for monitoring
