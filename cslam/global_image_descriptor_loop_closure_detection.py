@@ -40,17 +40,16 @@ class GlobalImageDescriptorLoopClosureDetection(object):
         self.lcm = LoopClosureSparseMatching(params)
 
         # Place Recognition network setup
+        pkg_folder = dirname(realpath(__file__)) + "/.."
+        self.params['frontend.nn_checkpoint'] = join(pkg_folder, self.params['frontend.nn_checkpoint'])
         if self.params['frontend.global_descriptor_technique'].lower(
-        ) == 'netvlad':
-            self.params['frontend.pca_checkpoint'] = dirname(realpath(
-                __file__)) + "/../" + self.node.get_parameter(
-                    'frontend.pca_checkpoint').value
-            self.global_descriptor = NetVLAD(self.params)
+        ) == 'cosplace':
+            pass
         else:
-            self.node.get_logger().err(
-                'ERROR: Unknown technique. Using NetVLAD as default.')
-            self.params['frontend.pca_checkpoint'] = self.node.get_parameter(
-                'frontend.pca_checkpoint').value
+            self.node.get_logger().info(
+                'Using NetVLAD (default).')
+            self.params['frontend.pca_checkpoint'] = join(pkg_folder, self.node.get_parameter(
+                'frontend.pca_checkpoint').value)
             self.global_descriptor = NetVLAD(self.params)
 
         # ROS 2 objects setup
