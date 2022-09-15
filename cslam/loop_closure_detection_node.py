@@ -20,7 +20,7 @@ class LoopClosureDetection(Node):
             namespace='',
             parameters=[('frontend.similarity_threshold', None),
                         ('frontend.global_descriptor_technique', None),
-                        ('frontend.pca_checkpoint', None), ('frontend.nn_checkpoint', None),
+                        ('frontend.netvlad.pca_checkpoint', None), ('frontend.nn_checkpoint', None),
                         ('robot_id', None), ('nb_robots', None),
                         ('frontend.inter_robot_loop_closure_budget', 5),
                         ('frontend.inter_robot_detection_period_sec', 5),
@@ -33,7 +33,9 @@ class LoopClosureDetection(Node):
                          10), ('neighbor_management.enable_neighbor_monitoring', False),
                         ('frontend.enable_intra_robot_loop_closures', False),
                         ('frontend.global_descriptor_topic', None),
-                        ('frontend.use_vertex_cover_selection', True)])
+                        ('frontend.use_vertex_cover_selection', True),
+                        ('frontend.cosplace.descriptor_dim', 512),
+                        ('frontend.cosplace.backbone', "resnet101"),])
         self.params = {}
         self.params['frontend.similarity_threshold'] = self.get_parameter(
             'frontend.similarity_threshold').value
@@ -69,6 +71,10 @@ class LoopClosureDetection(Node):
                 'frontend.global_descriptor_publication_max_elems_per_msg').value
         self.params["frontend.use_vertex_cover_selection"] = self.get_parameter(
             'frontend.use_vertex_cover_selection').value
+        self.params["frontend.cosplace.descriptor_dim"] = self.get_parameter(
+            'frontend.cosplace.descriptor_dim').value
+        self.params["frontend.cosplace.backbone"] = self.get_parameter(
+            'frontend.cosplace.backbone').value
 
         self.glcd = GlobalImageDescriptorLoopClosureDetection(
             self.params, self)

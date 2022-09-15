@@ -133,13 +133,14 @@ class NetVLAD(object):
     """NetVLAD matcher
     """
 
-    def __init__(self, params):
+    def __init__(self, params, node):
         """Initialization
 
         Args:
             params (dict): parameters
         """
         self.params = params
+        self.node = node
 
         self.enable = self.params['frontend.nn_checkpoint'].lower() != 'disable'
         if self.enable:
@@ -187,19 +188,14 @@ class NetVLAD(object):
                 print("Error: Checkpoint path is incorrect")
 
             self.model.eval()
-            with torch.no_grad():
-                print('====> Extracting Features')
-                pool_size = encoder_dim
-                pool_size *= 64
-
-                self.transform = transforms.Compose([
-                    transforms.CenterCrop(self.params["frontend.image_crop_size"]),
-                    transforms.Resize(224, interpolation=3),
-                    transforms.ToTensor(),
-                    transforms.Normalize(IMAGENET_DEFAULT_MEAN,
-                                        IMAGENET_DEFAULT_STD),
-                ])
-            self.pca = pickle.load(open(self.params['frontend.pca_checkpoint'], 'rb'))
+            self.transform = transforms.Compose([
+                transforms.CenterCrop(self.params["frontend.image_crop_size"]),
+                transforms.Resize(224, interpolation=3),
+                transforms.ToTensor(),
+                transforms.Normalize(IMAGENET_DEFAULT_MEAN,
+                                    IMAGENET_DEFAULT_STD),
+            ])
+            self.pca = pickle.load(open(self.params['frontend.netvlad.pca_checkpoint'], 'rb'))
 
     def compute_embedding(self, keyframe):
         """Load image to device and extract the global image descriptor

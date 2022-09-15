@@ -12,10 +12,7 @@
       max_keyframe_queue_size: 10
       similarity_threshold: 0.1
       global_descriptor_topic: "/global_descriptors"
-      global_descriptor_technique: "netvlad"
       image_crop_size: 376
-      nn_checkpoint: "models/netvlad.pth.tar"
-      pca_checkpoint: "models/netvlad_pca.pkl"
       pnp_min_inliers: 6
       global_descriptor_publication_period_sec: 1.0
       global_descriptor_publication_max_elems_per_msg: 10
@@ -24,6 +21,10 @@
       keyframe_generation_ratio: 1.0
       use_vertex_cover_selection: true
       map_manager_process_period_ms: 100
+      global_descriptor_technique: "netvlad"
+      nn_checkpoint: "models/netvlad.pth.tar"
+      netvlad:
+        pca_checkpoint: "models/netvlad_pca.pkl"
     neighbor_management:
       enable_neighbor_monitoring: true
       max_heartbeat_delay_sec: 5.0

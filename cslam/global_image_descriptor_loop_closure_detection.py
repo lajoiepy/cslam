@@ -7,7 +7,8 @@ import os
 from os.path import join, exists, isfile, realpath, dirname
 import numpy as np
 
-from cslam.netvlad import NetVLAD
+from cslam.vpr.netvlad import NetVLAD
+from cslam.vpr.cosplace import CosPlace
 from cslam.loop_closure_sparse_matching import LoopClosureSparseMatching
 from cslam.broker import Broker
 
@@ -42,15 +43,16 @@ class GlobalImageDescriptorLoopClosureDetection(object):
         # Place Recognition network setup
         pkg_folder = dirname(realpath(__file__)) + "/.."
         self.params['frontend.nn_checkpoint'] = join(pkg_folder, self.params['frontend.nn_checkpoint'])
-        if self.params['frontend.global_descriptor_technique'].lower(
-        ) == 'cosplace':
-            pass
+        if self.params['frontend.global_descriptor_technique'].lower() == 'cosplace':
+            self.node.get_logger().info(
+                'Using CosPlace.')
+            self.global_descriptor = CosPlace(self.params, self.node)            
         else:
             self.node.get_logger().info(
                 'Using NetVLAD (default).')
-            self.params['frontend.pca_checkpoint'] = join(pkg_folder, self.node.get_parameter(
-                'frontend.pca_checkpoint').value)
-            self.global_descriptor = NetVLAD(self.params)
+            self.params['frontend.netvlad.pca_checkpoint'] = join(pkg_folder, self.node.get_parameter(
+                'frontend.netvlad.pca_checkpoint').value)
+            self.global_descriptor = NetVLAD(self.params, self.node)
 
         # ROS 2 objects setup
         self.params[
@@ -90,6 +92,8 @@ class GlobalImageDescriptorLoopClosureDetection(object):
         self.global_descriptors_timer = self.node.create_timer(
             self.params['frontend.global_descriptor_publication_period_sec'],
             self.global_descriptors_timer_callback)
+        self.node.get_logger().info(
+                'End global.') # TODO: remove
 
     def add_global_descriptor_to_map(self, embedding, kf_id):
         """ Add global descriptor to matching list
@@ -225,9 +229,15 @@ class GlobalImageDescriptorLoopClosureDetection(object):
         bridge = CvBridge()
         cv_image = bridge.imgmsg_to_cv2(msg.image,
                                         desired_encoding='passthrough')
+        self.node.get_logger().info(
+                'Receive Image.') # TODO: remove
         embedding = self.global_descriptor.compute_embedding(cv_image)
+        self.node.get_logger().info(
+                'Computed descriptor.') # TODO: remove
 
         self.add_global_descriptor_to_map(embedding, msg.id)
+        self.node.get_logger().info(
+                'Added descriptor to map.') # TODO: remove
 
     def global_descriptor_callback(self, msg):
         """Callback for descriptors received from other robots.
