@@ -171,6 +171,7 @@ install(DIRECTORY include/${PROJECT_NAME}/
 install(DIRECTORY 
    launch 
    config
+   models
    DESTINATION share/${PROJECT_NAME}/
 )
 

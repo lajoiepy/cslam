@@ -24,6 +24,7 @@ from rclpy.node import Node
 from cslam.neighbors_manager import NeighborManager
 from cslam.utils.utils import list_chunks
 
+
 class GlobalImageDescriptorLoopClosureDetection(object):
     """ Global Image descriptor matching """
 
@@ -36,13 +37,14 @@ class GlobalImageDescriptorLoopClosureDetection(object):
         """
         self.params = params
         self.node = node
-
         self.lcm = LoopClosureSparseMatching(params)
 
         # Place Recognition network setup
-        if self.params['frontend.global_descriptor_technique'].lower() == 'netvlad':
-            self.params['frontend.pca_checkpoint'] = self.node.get_parameter(
-                'frontend.pca_checkpoint').value
+        if self.params['frontend.global_descriptor_technique'].lower(
+        ) == 'netvlad':
+            self.params['frontend.pca_checkpoint'] = dirname(realpath(
+                __file__)) + "/../" + self.node.get_parameter(
+                    'frontend.pca_checkpoint').value
             self.global_descriptor = NetVLAD(self.params)
         else:
             self.node.get_logger().err(
@@ -52,13 +54,15 @@ class GlobalImageDescriptorLoopClosureDetection(object):
             self.global_descriptor = NetVLAD(self.params)
 
         # ROS 2 objects setup
-        self.params['frontend.global_descriptor_topic'] = self.node.get_parameter(
-            'frontend.global_descriptor_topic').value
+        self.params[
+            'frontend.global_descriptor_topic'] = self.node.get_parameter(
+                'frontend.global_descriptor_topic').value
         self.global_descriptor_publisher = self.node.create_publisher(
-            GlobalImageDescriptors, self.params['frontend.global_descriptor_topic'],
-            100)
+            GlobalImageDescriptors,
+            self.params['frontend.global_descriptor_topic'], 100)
         self.global_descriptor_subscriber = self.node.create_subscription(
-            GlobalImageDescriptors, self.params['frontend.global_descriptor_topic'],
+            GlobalImageDescriptors,
+            self.params['frontend.global_descriptor_topic'],
             self.global_descriptor_callback, 100)
         self.receive_keyframe_subscriber = self.node.create_subscription(
             KeyframeRGB, 'keyframe_data', self.receive_keyframe, 100)
@@ -130,7 +134,9 @@ class GlobalImageDescriptorLoopClosureDetection(object):
             msgs = list_chunks(
                 self.global_descriptors_buffer,
                 from_kf_id - self.global_descriptors_buffer[0].image_id,
-                self.params['frontend.global_descriptor_publication_max_elems_per_msg'])
+                self.params[
+                    'frontend.global_descriptor_publication_max_elems_per_msg']
+            )
 
             for m in msgs:
                 global_descriptors = GlobalImageDescriptors()
@@ -157,7 +163,6 @@ class GlobalImageDescriptorLoopClosureDetection(object):
                 msg.keyframe1_id = kf_match
                 self.local_match_publisher.publish(msg)
 
-
     def detect_inter(self):
         """ Detect inter-robot loop closures
 
@@ -171,7 +176,8 @@ class GlobalImageDescriptorLoopClosureDetection(object):
                ) > 0 and self.neighbor_manager.local_robot_is_broker():
             # Find matches that maximize the algebraic connectivity
             selection = self.lcm.select_candidates(
-                self.params["frontend.inter_robot_loop_closure_budget"], neighbors_is_in_range)
+                self.params["frontend.inter_robot_loop_closure_budget"],
+                neighbors_is_in_range)
 
             # Extract and publish local descriptors
             vertices_info = self.edge_list_to_vertices(selection)

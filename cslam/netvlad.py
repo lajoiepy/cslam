@@ -138,7 +138,6 @@ class NetVLAD(object):
 
         Args:
             params (dict): parameters
-            node (ROS 2 node handle): node handle
         """
         self.params = params
 
@@ -200,7 +199,6 @@ class NetVLAD(object):
                     transforms.Normalize(IMAGENET_DEFAULT_MEAN,
                                         IMAGENET_DEFAULT_STD),
                 ])
-
             self.pca = pickle.load(open(self.params['frontend.pca_checkpoint'], 'rb'))
 
     def compute_embedding(self, keyframe):
