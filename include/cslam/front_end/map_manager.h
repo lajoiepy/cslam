@@ -6,8 +6,19 @@
 #include <chrono>
 
 #include "cslam/front_end/stereo_handler.h"
+#include "cslam/front_end/rgbd_handler.h"
 
 namespace cslam {
+
+/**
+ * @brief Map management interface class 
+ *
+ */
+class IMapManager {
+  public:
+    virtual ~IMapManager() {};
+};
+
 /**
  * @brief Loop Closure Detection Management
  * - Receives keyframes from RTAB-map
@@ -18,7 +29,7 @@ namespace cslam {
  * @tparam DataHandlerType Depends on the type of input data (stereo, rgbd,
  * etc.)
  */
-template <class DataHandlerType> class MapManager {
+template <class DataHandlerType> class MapManager: public IMapManager {
 public:
   /**
    * @brief Initialization of parameters and ROS 2 objects
@@ -48,5 +59,6 @@ private:
 
 // List possible data types for C++ linker
 template class MapManager<StereoHandler>;
+template class MapManager<RGBDHandler>;
 } // namespace cslam
 #endif

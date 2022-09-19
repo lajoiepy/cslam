@@ -92,7 +92,7 @@ def generate_launch_description():
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(
                 os.path.join(get_package_share_directory('cslam'), 'launch',
-                             'slam', 'rtabmap_odometry.launch.py')),
+                             'odometry', 'rtabmap_odometry.launch.py')),
             launch_arguments={
                 'log_level': LaunchConfiguration('log_level'),
                 "robot_id": LaunchConfiguration('robot_id'),

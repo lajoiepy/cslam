@@ -131,6 +131,7 @@ add_executable(map_manager
   src/front_end/map_manager.cpp 
   src/front_end/map_manager_node.cpp 
   src/front_end/stereo_handler.cpp 
+  src/front_end/rgbd_handler.cpp 
   src/front_end/sensor_msg_utils.cpp)
 add_dependencies(map_manager  
   map_manager

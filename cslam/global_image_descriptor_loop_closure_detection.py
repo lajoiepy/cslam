@@ -21,6 +21,7 @@ from cslam_loop_detection_interfaces.msg import (GlobalImageDescriptor,
 
 import rclpy
 from rclpy.node import Node
+from ament_index_python.packages import get_package_share_directory
 
 from cslam.neighbors_manager import NeighborManager
 from cslam.utils.utils import list_chunks
@@ -41,7 +42,7 @@ class GlobalImageDescriptorLoopClosureDetection(object):
         self.lcm = LoopClosureSparseMatching(params)
 
         # Place Recognition network setup
-        pkg_folder = dirname(realpath(__file__)) + "/.."
+        pkg_folder = get_package_share_directory("cslam")
         self.params['frontend.nn_checkpoint'] = join(pkg_folder, self.params['frontend.nn_checkpoint'])
         if self.params['frontend.global_descriptor_technique'].lower() == 'cosplace':
             self.node.get_logger().info(
@@ -92,8 +93,6 @@ class GlobalImageDescriptorLoopClosureDetection(object):
         self.global_descriptors_timer = self.node.create_timer(
             self.params['frontend.global_descriptor_publication_period_sec'],
             self.global_descriptors_timer_callback)
-        self.node.get_logger().info(
-                'End global.') # TODO: remove
 
     def add_global_descriptor_to_map(self, embedding, kf_id):
         """ Add global descriptor to matching list
@@ -229,15 +228,9 @@ class GlobalImageDescriptorLoopClosureDetection(object):
         bridge = CvBridge()
         cv_image = bridge.imgmsg_to_cv2(msg.image,
                                         desired_encoding='passthrough')
-        self.node.get_logger().info(
-                'Receive Image.') # TODO: remove
         embedding = self.global_descriptor.compute_embedding(cv_image)
-        self.node.get_logger().info(
-                'Computed descriptor.') # TODO: remove
 
         self.add_global_descriptor_to_map(embedding, msg.id)
-        self.node.get_logger().info(
-                'Added descriptor to map.') # TODO: remove
 
     def global_descriptor_callback(self, msg):
         """Callback for descriptors received from other robots.

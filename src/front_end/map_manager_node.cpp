@@ -20,8 +20,23 @@ int main(int argc, char **argv) {
   node->declare_parameter<int>("nb_robots", 1);
   node->declare_parameter<int>("robot_id", 0);
   node->declare_parameter<int>("frontend.map_manager_process_period_ms", 100);
+  node->declare_parameter<std::string>("frontend.sensor_type", "stereo");
 
-  auto lcd = std::make_shared<MapManager<StereoHandler>>(node);
+  std::string sensor_type;
+  node->get_parameter("frontend.sensor_type", sensor_type);
+
+  std::shared_ptr<IMapManager> handler;       
+  if (sensor_type == "stereo") {
+    handler = std::make_shared<MapManager<StereoHandler>>(node);
+  } 
+  else if (sensor_type == "rgbd") {
+    handler = std::make_shared<MapManager<RGBDHandler>>(node);
+  } 
+  else {
+    RCLCPP_ERROR(node->get_logger(), "Sensor type not supported: %s",
+                 sensor_type.c_str());
+    return -1;
+  }
 
   rclcpp::spin(node);
 

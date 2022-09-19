@@ -1,11 +1,9 @@
-#ifndef _STEREOHANDLER_H_
-#define _STEREOHANDLER_H_
+#ifndef _RGBDHANDLER_H_
+#define _RGBDHANDLER_H_
 
 #include <rclcpp/rclcpp.hpp>
 
 #include <rtabmap_ros/msg/rgbd_image.hpp>
-#include <rtabmap_ros/srv/add_link.hpp>
-#include <rtabmap_ros/srv/get_map.hpp>
 
 #include <rtabmap/core/Compression.h>
 #include <rtabmap/core/Memory.h>
@@ -51,7 +49,7 @@
 namespace cslam
 {
 
-    class StereoHandler : public ISensorHandler
+    class RGBDHandler: public ISensorHandler
     {
     public:
         /**
@@ -59,8 +57,8 @@ namespace cslam
          *
          * @param node ROS 2 node handle
          */
-        StereoHandler(std::shared_ptr<rclcpp::Node> &node);
-        ~StereoHandler(){};
+        RGBDHandler(std::shared_ptr<rclcpp::Node> &node);
+        ~RGBDHandler(){};
 
         /**
          * @brief Processes Latest received image
@@ -148,20 +146,19 @@ namespace cslam
         /**
          * @brief Callback receiving sync data from camera
          *
-         * @param imageRectLeft
-         * @param imageRectRight
-         * @param cameraInfoLeft
-         * @param cameraInfoRight
+         * @param image_rgb
+         * @param image_depth
+         * @param camera_info_rgb
+         * @param camera_info_depth
          * @param odom
          */
-        void stereo_callback(
-            const sensor_msgs::msg::Image::ConstSharedPtr imageRectLeft,
-            const sensor_msgs::msg::Image::ConstSharedPtr imageRectRight,
-            const sensor_msgs::msg::CameraInfo::ConstSharedPtr cameraInfoLeft,
-            const sensor_msgs::msg::CameraInfo::ConstSharedPtr cameraInfoRight,
+        void rgbd_callback(
+            const sensor_msgs::msg::Image::ConstSharedPtr image_rect_rgb,
+            const sensor_msgs::msg::Image::ConstSharedPtr image_rect_depth,
+            const sensor_msgs::msg::CameraInfo::ConstSharedPtr camera_info_rgb,
             const nav_msgs::msg::Odometry::ConstSharedPtr odom);
 
-    private:
+    protected:
         std::deque<std::pair<std::shared_ptr<rtabmap::SensorData>,
                              nav_msgs::msg::Odometry::ConstSharedPtr>>
             received_data_queue_;
@@ -175,17 +172,7 @@ namespace cslam
         unsigned int min_inliers_, nb_robots_, robot_id_, max_queue_size_,
             nb_local_keyframes_;
 
-        image_transport::SubscriberFilter image_rect_left_;
-        image_transport::SubscriberFilter image_rect_right_;
-        message_filters::Subscriber<sensor_msgs::msg::CameraInfo> camera_info_left_;
-        message_filters::Subscriber<sensor_msgs::msg::CameraInfo> camera_info_right_;
-        message_filters::Subscriber<nav_msgs::msg::Odometry> odometry_;
-        typedef message_filters::sync_policies::ApproximateTime<
-            sensor_msgs::msg::Image, sensor_msgs::msg::Image,
-            sensor_msgs::msg::CameraInfo, sensor_msgs::msg::CameraInfo,
-            nav_msgs::msg::Odometry>
-            SyncPolicy;
-        message_filters::Synchronizer<SyncPolicy> *sync_policy_;
+        message_filters::Subscriber<nav_msgs::msg::Odometry> sub_odometry_;
 
         rclcpp::Subscription<
             cslam_loop_detection_interfaces::msg::LocalDescriptorsRequest>::SharedPtr
@@ -226,6 +213,18 @@ namespace cslam
         std::string base_frame_id_;
         float keyframe_generation_ratio_;
         bool generate_new_keyframes_based_on_inliers_ratio_;
+
+    private:
+        image_transport::SubscriberFilter sub_image_color_;
+        message_filters::Subscriber<sensor_msgs::msg::CameraInfo> sub_camera_info_color_;
+        image_transport::SubscriberFilter sub_image_depth_;
+        message_filters::Subscriber<sensor_msgs::msg::CameraInfo> sub_camera_info_depth_;
+        typedef message_filters::sync_policies::ApproximateTime<
+            sensor_msgs::msg::Image, sensor_msgs::msg::Image,
+            sensor_msgs::msg::CameraInfo,
+            nav_msgs::msg::Odometry>
+            RGBDSyncPolicy;
+        message_filters::Synchronizer<RGBDSyncPolicy> *rgbd_sync_policy_;
     };
 } // namespace cslam
 #endif

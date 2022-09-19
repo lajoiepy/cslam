@@ -1,12 +1,13 @@
 /**:
   ros__parameters:
-    left_image_topic: "stereo_camera/left/image_rect_color"
-    right_image_topic: "stereo_camera/right/image_rect_color"
-    left_camera_info_topic: "stereo_camera/left/camera_info"
-    right_camera_info_topic: "stereo_camera/right/camera_info"
-    odom_topic: "odom"
-    sensor_base_frame_id: "camera_link"
     frontend:
+      left_image_topic: "stereo_camera/left/image_rect_color"
+      right_image_topic: "stereo_camera/right/image_rect_color"
+      left_camera_info_topic: "stereo_camera/left/camera_info"
+      right_camera_info_topic: "stereo_camera/right/camera_info"
+      odom_topic: "odom"
+      sensor_base_frame_id: "camera_link"
+      sensor_type: "stereo"
       inter_robot_loop_closure_budget: 5
       inter_robot_detection_period_sec: 5
       max_keyframe_queue_size: 10
