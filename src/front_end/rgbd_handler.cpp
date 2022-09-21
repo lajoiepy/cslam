@@ -11,13 +11,13 @@ RGBDHandler::RGBDHandler(std::shared_ptr<rclcpp::Node> &node)
   node_->declare_parameter<std::string>("frontend.color_camera_info_topic",
                                         "color/camera_info");
   node->declare_parameter<std::string>("frontend.odom_topic", "odom");
-  node->declare_parameter<float>("frontend.keyframe_generation_ratio", 0.0);
+  node->declare_parameter<float>("frontend.keyframe_generation_ratio_threshold", 0.0);
   node->declare_parameter<std::string>("frontend.sensor_base_frame_id", "camera_link");
   node_->get_parameter("frontend.max_keyframe_queue_size", max_queue_size_);
-  node_->get_parameter("frontend.keyframe_generation_ratio", keyframe_generation_ratio_);
+  node_->get_parameter("frontend.keyframe_generation_ratio_threshold", keyframe_generation_ratio_threshold_);
   node_->get_parameter("frontend.sensor_base_frame_id", base_frame_id_);
 
-  if (keyframe_generation_ratio_ > 0.99) {
+  if (keyframe_generation_ratio_threshold_ > 0.99) {
     generate_new_keyframes_based_on_inliers_ratio_ = false;
   } else {
     generate_new_keyframes_based_on_inliers_ratio_ = true;
@@ -98,17 +98,17 @@ RGBDHandler::RGBDHandler(std::shared_ptr<rclcpp::Node> &node)
   // Subscriber for RGBD images
   sub_image_color_.subscribe(
       node_.get(), node_->get_parameter("frontend.color_image_topic").as_string(), "raw",
-      rclcpp::QoS(10)
+      rclcpp::QoS(max_queue_size_)
           .reliability((rmw_qos_reliability_policy_t)2)
           .get_rmw_qos_profile());
   sub_image_depth_.subscribe(
       node_.get(), node_->get_parameter("frontend.depth_image_topic").as_string(), "raw",
-      rclcpp::QoS(10)
+      rclcpp::QoS(max_queue_size_)
           .reliability((rmw_qos_reliability_policy_t)2)
           .get_rmw_qos_profile());
   sub_camera_info_color_.subscribe(
       node_.get(), node_->get_parameter("frontend.color_camera_info_topic").as_string(),
-      rclcpp::QoS(10)
+      rclcpp::QoS(max_queue_size_)
           .reliability((rmw_qos_reliability_policy_t)2)
           .get_rmw_qos_profile());
 
@@ -131,11 +131,11 @@ void RGBDHandler::rgbd_callback(
   int image_height = image_rect_rgb->height;
   int depth_width = image_rect_depth->width;
   int depth_height = image_rect_depth->height;
-
+  
   cv::Mat rgb;
   cv::Mat depth;
   pcl::PointCloud<pcl::PointXYZ> scanCloud;
-  std::vector<CameraModel> cameraModels;
+  std::vector<CameraModel> camera_models;
 
   if (!(image_rect_rgb->encoding.compare(sensor_msgs::image_encodings::TYPE_8UC1) == 0 ||
         image_rect_rgb->encoding.compare(sensor_msgs::image_encodings::MONO8) == 0 ||
@@ -155,7 +155,7 @@ void RGBDHandler::rgbd_callback(
                  image_rect_depth->encoding.c_str());
     return;
   }
-
+  
   rclcpp::Time stamp = rtabmap_ros::timestampFromROS(image_rect_rgb->header.stamp) > rtabmap_ros::timestampFromROS(image_rect_depth->header.stamp) ? image_rect_rgb->header.stamp : image_rect_depth->header.stamp;
 
   Transform localTransform = rtabmap_ros::getTransform(base_frame_id_, image_rect_rgb->header.frame_id, stamp, *tf_buffer_, 0.1);
@@ -191,32 +191,12 @@ void RGBDHandler::rgbd_callback(
     depth = cv::Mat(depth_height, depth_width, subDepth.type());
   }
 
-  if (ptr_image->image.type() == rgb.type())
-  {
-    ptr_image->image.copyTo(cv::Mat(rgb, cv::Rect(image_width, 0, image_width, image_height)));
-  }
-  else
-  {
-    RCLCPP_ERROR(node_->get_logger(), "Some RGB images are not the same type!");
-    return;
-  }
-
-  if (subDepth.type() == depth.type())
-  {
-    subDepth.copyTo(cv::Mat(depth, cv::Rect(depth_width, 0, depth_width, depth_height)));
-  }
-  else
-  {
-    RCLCPP_ERROR(node_->get_logger(), "Some Depth images are not the same type! %d vs %d", subDepth.type(), depth.type());
-    return;
-  }
-
-  cameraModels.push_back(rtabmap_ros::cameraModelFromROS(*camera_info_rgb, localTransform));
+  camera_models.push_back(rtabmap_ros::cameraModelFromROS(*camera_info_rgb, localTransform));
 
   auto data = std::make_shared<rtabmap::SensorData>(
       rgb,
       depth,
-      cameraModels,
+      camera_models,
       0,
       rtabmap_ros::timestampFromROS(stamp));
 
@@ -284,15 +264,23 @@ bool RGBDHandler::generate_new_keyframe(std::shared_ptr<rtabmap::SensorData> & k
   if (generate_new_keyframes_based_on_inliers_ratio_) {
     if (nb_local_keyframes_ > 0)
     {
-      rtabmap::RegistrationInfo reg_info;
-      rtabmap::Transform t = registration_.computeTransformation(
-          *keyframe, *previous_keyframe_, rtabmap::Transform(), &reg_info);
-      if (!t.isNull()){
-        if(float(reg_info.inliers) >
-            keyframe_generation_ratio_ *
-                float(previous_keyframe_->keypoints().size())) {
-          generate_new_keyframe = false;
+      try{
+        rtabmap::RegistrationInfo reg_info;
+        rtabmap::Transform t = registration_.computeTransformation(
+            *keyframe, *previous_keyframe_, rtabmap::Transform(), &reg_info);
+        if (!t.isNull()){
+          if(float(reg_info.inliers) >
+              keyframe_generation_ratio_threshold_ *
+                  float(previous_keyframe_->keypoints().size())) {
+            generate_new_keyframe = false;
+          }
         }
+      }
+      catch (std::exception &e) {
+        RCLCPP_ERROR(
+              node_->get_logger(),
+              "Could not compute transformation for keyframe generation: %s",
+              e.what());
       }
     }
     if (generate_new_keyframe){
@@ -357,24 +345,33 @@ void RGBDHandler::local_descriptors_request(
 void RGBDHandler::receive_local_keyframe_match(
     cslam_loop_detection_interfaces::msg::LocalKeyframeMatch::ConstSharedPtr
         msg) {
-  auto keyframe0 = local_descriptors_map_.at(msg->keyframe0_id);
-  keyframe0->uncompressData();
-  auto keyframe1 = local_descriptors_map_.at(msg->keyframe1_id);
-  keyframe1->uncompressData();
-  rtabmap::RegistrationInfo reg_info;
-  rtabmap::Transform t = registration_.computeTransformation(
-      *keyframe0, *keyframe1, rtabmap::Transform(), &reg_info);
+  try{
+    auto keyframe0 = local_descriptors_map_.at(msg->keyframe0_id);
+    keyframe0->uncompressData();
+    auto keyframe1 = local_descriptors_map_.at(msg->keyframe1_id);
+    keyframe1->uncompressData();
+    rtabmap::RegistrationInfo reg_info;
+    rtabmap::Transform t = registration_.computeTransformation(
+        *keyframe0, *keyframe1, rtabmap::Transform(), &reg_info);
 
-  cslam_loop_detection_interfaces::msg::IntraRobotLoopClosure lc;
-  lc.keyframe0_id = msg->keyframe0_id;
-  lc.keyframe1_id = msg->keyframe1_id;
-  if (!t.isNull()) {
-    lc.success = true;
-    rtabmap_ros::transformToGeometryMsg(t, lc.transform);
-  } else {
-    lc.success = false;
+    cslam_loop_detection_interfaces::msg::IntraRobotLoopClosure lc;
+    lc.keyframe0_id = msg->keyframe0_id;
+    lc.keyframe1_id = msg->keyframe1_id;
+    if (!t.isNull()) {
+      lc.success = true;
+      rtabmap_ros::transformToGeometryMsg(t, lc.transform);
+    } else {
+      lc.success = false;
+    }
+    intra_robot_loop_closure_publisher_->publish(lc);
   }
-  intra_robot_loop_closure_publisher_->publish(lc);
+  catch (std::exception &e) {
+    RCLCPP_ERROR(
+          node_->get_logger(),
+          "Could not compute local transformation between %d and %d: %s",
+          msg->keyframe0_id, msg->keyframe1_id,
+          e.what());
+  }
 }
 
 void RGBDHandler::local_descriptors_msg_to_sensor_data(
@@ -411,36 +408,45 @@ void RGBDHandler::receive_local_image_descriptors(
   }
 
   for (auto local_image_id : image_ids) {
-    rtabmap::SensorData tmp_to;
-    local_descriptors_msg_to_sensor_data(msg, tmp_to);
+    try {
+      rtabmap::SensorData tmp_to;
+      local_descriptors_msg_to_sensor_data(msg, tmp_to);
 
-    // Compute transformation
-    //  Registration params
-    rtabmap::RegistrationInfo reg_info;
-    auto tmp_from = local_descriptors_map_.at(local_image_id);
-    tmp_from->uncompressData();
-    rtabmap::Transform t = registration_.computeTransformation(
-        *tmp_from, tmp_to, rtabmap::Transform(), &reg_info);
+      // Compute transformation
+      //  Registration params
+      rtabmap::RegistrationInfo reg_info;
+      auto tmp_from = local_descriptors_map_.at(local_image_id);
+      tmp_from->uncompressData();
+      rtabmap::Transform t = registration_.computeTransformation(
+          *tmp_from, tmp_to, rtabmap::Transform(), &reg_info);
 
-    // Store using pairs (robot_id, image_id)
-    cslam_loop_detection_interfaces::msg::InterRobotLoopClosure lc;
-    lc.robot0_id = robot_id_;
-    lc.robot0_image_id = local_image_id;
-    lc.robot1_id = msg->robot_id;
-    lc.robot1_image_id = msg->image_id;
-    if (!t.isNull()) {
-      lc.success = true;
-      rtabmap_ros::transformToGeometryMsg(t, lc.transform);
-      inter_robot_loop_closure_publisher_->publish(lc);
-    } else {
+      // Store using pairs (robot_id, image_id)
+      cslam_loop_detection_interfaces::msg::InterRobotLoopClosure lc;
+      lc.robot0_id = robot_id_;
+      lc.robot0_image_id = local_image_id;
+      lc.robot1_id = msg->robot_id;
+      lc.robot1_image_id = msg->image_id;
+      if (!t.isNull()) {
+        lc.success = true;
+        rtabmap_ros::transformToGeometryMsg(t, lc.transform);
+        inter_robot_loop_closure_publisher_->publish(lc);
+      } else {
+        RCLCPP_ERROR(
+            node_->get_logger(),
+            "Could not compute transformation between (%d,%d) and (%d,%d): %s",
+            robot_id_, local_image_id, msg->robot_id, msg->image_id,
+            reg_info.rejectedMsg.c_str());
+        lc.success = false;
+        inter_robot_loop_closure_publisher_->publish(lc);
+      }
+    } catch (std::exception &e) {
       RCLCPP_ERROR(
-          node_->get_logger(),
-          "Could not compute transformation between (%d,%d) and (%d,%d): %s",
-          robot_id_, local_image_id, msg->robot_id, msg->image_id,
-          reg_info.rejectedMsg.c_str());
-      lc.success = false;
-      inter_robot_loop_closure_publisher_->publish(lc);
+            node_->get_logger(),
+            "Could not compute transformation between (%d,%d) and (%d,%d): %s",
+            robot_id_, local_image_id, msg->robot_id, msg->image_id,
+            e.what());
     }
+    
   }
 }
 

@@ -99,30 +99,28 @@ class NeighborManager():
         """
         self.neighbors_monitors[other_robot_id].last_keyframe_received = kf_id
 
-    def get_unknown_range(self, start_id, end_id, other_robot_id):
+    def get_unknown_range(self, descriptors):
         """_summary_
 
         Args:
-            start_id (int): first keyframe id received
-            end_id (int): last keyframe id received
-            robot_id (int): other robot id
+            descriptors (list): list of descriptors with ids info
 
         Returns:
             range: indexes in list to process
         """
-        if self.neighbors_monitors[
-                other_robot_id].last_keyframe_received >= end_id:
-            list_index_range = range(0)
-        else:
-            s = max(
-                0,
-                self.neighbors_monitors[other_robot_id].last_keyframe_received
-                - start_id)
-            list_index_range = range(s, end_id - start_id + 1)
+        other_robot_id = descriptors[0].robot_id
+        kf_ids = [d.image_id for d in descriptors]
+        last_id = max(kf_ids)
+
+        list_index_range = [
+            i for i in range(len(descriptors)) if descriptors[i].image_id >
+            self.neighbors_monitors[other_robot_id].last_keyframe_received
+        ]
+
         self.update_received_kf_id(
             other_robot_id,
             max(self.neighbors_monitors[other_robot_id].last_keyframe_received,
-                end_id))
+                last_id))
         return list_index_range
 
     def get_current_neighbors_callback(self, msg):

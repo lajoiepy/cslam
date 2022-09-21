@@ -19,7 +19,7 @@
       global_descriptor_publication_max_elems_per_msg: 10
       enable_intra_robot_loop_closures: true
       intra_loop_min_inbetween_keyframes: 20
-      keyframe_generation_ratio: 1.0
+      keyframe_generation_ratio_threshold: 1.0
       use_vertex_cover_selection: true
       map_manager_process_period_ms: 100
       global_descriptor_technique: "netvlad"

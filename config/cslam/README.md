@@ -36,7 +36,7 @@
 
 `intra_loop_min_inbetween_keyframes`: Minimum number of keyframes between matches for intra-robot loop closures. Aims to avoid matching subsequent images. 
 
-`keyframe_generation_ratio`: Generate a new keyframe if the number of inlier matches between the current frame and the previous keyframe is below the specified ratio. If set to 1.0, all frames are keyframes.
+`keyframe_generation_ratio_threshold`: Generate a new keyframe if the number of inlier matches between the current frame and the previous keyframe is below the specified ratio. If set to 1.0, all frames are keyframes.
 
 `use_vertex_cover_selection`: Use vertex cover computation to minimize communication of keyframe data.
 

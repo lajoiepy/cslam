@@ -211,7 +211,7 @@ namespace cslam
         std::shared_ptr<tf2_ros::TransformListener> tf_listener_;
 
         std::string base_frame_id_;
-        float keyframe_generation_ratio_;
+        float keyframe_generation_ratio_threshold_;
         bool generate_new_keyframes_based_on_inliers_ratio_;
 
     private:

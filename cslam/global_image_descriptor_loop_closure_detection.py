@@ -240,8 +240,7 @@ class GlobalImageDescriptorLoopClosureDetection(object):
         """
         if msg.descriptors[0].robot_id != self.params['robot_id']:
             unknown_range = self.neighbor_manager.get_unknown_range(
-                msg.descriptors[0].image_id, msg.descriptors[-1].image_id,
-                msg.descriptors[0].robot_id)
+                msg.descriptors)
             for i in unknown_range:
                 self.lcm.add_other_robot_global_descriptor(msg.descriptors[i])
 
