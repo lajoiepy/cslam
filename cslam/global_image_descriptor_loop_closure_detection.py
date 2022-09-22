@@ -179,7 +179,7 @@ class GlobalImageDescriptorLoopClosureDetection(object):
             # Find matches that maximize the algebraic connectivity
             selection = self.lcm.select_candidates(
                 self.params["frontend.inter_robot_loop_closure_budget"],
-                neighbors_is_in_range)
+                neighbors_is_in_range)          
 
             # Extract and publish local descriptors
             vertices_info = self.edge_list_to_vertices(selection)

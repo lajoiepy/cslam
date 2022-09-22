@@ -222,3 +222,25 @@ void StereoHandler::stereo_callback(
     RCLCPP_WARN(node_->get_logger(), "Odom: input images empty?!");
   }
 }
+
+void StereoHandler::local_descriptors_msg_to_sensor_data(
+    const std::shared_ptr<
+        cslam_loop_detection_interfaces::msg::LocalImageDescriptors>
+        msg,
+    rtabmap::SensorData &sensor_data) {
+  // Fill descriptors
+  rtabmap::StereoCameraModel stereo_model =
+      rtabmap_ros::stereoCameraModelFromROS(msg->data.rgb_camera_info,
+                                            msg->data.depth_camera_info,
+                                            rtabmap::Transform::getIdentity());
+  sensor_data = rtabmap::SensorData(
+      cv::Mat(), cv::Mat(), stereo_model, 0,
+      rtabmap_ros::timestampFromROS(msg->data.header.stamp));
+
+  std::vector<cv::KeyPoint> kpts;
+  rtabmap_ros::keypointsFromROS(msg->data.key_points, kpts);
+  std::vector<cv::Point3f> kpts3D;
+  rtabmap_ros::points3fFromROS(msg->data.points, kpts3D);
+  auto descriptors = rtabmap::uncompressData(msg->data.descriptors);
+  sensor_data.setFeatures(kpts, kpts3D, descriptors);
+}

@@ -680,9 +680,6 @@ void DecentralizedPGO::broadcast_tf_callback()
   if (origin_to_first_pose_.header.frame_id !=
       origin_to_first_pose_.child_frame_id)
   {
-    RCLCPP_INFO(node_->get_logger(), "Broadcasting tf from %s to %s",
-                origin_to_first_pose_.header.frame_id.c_str(),
-                origin_to_first_pose_.child_frame_id.c_str());
     tf_broadcaster_->sendTransform(origin_to_first_pose_);
   }
 

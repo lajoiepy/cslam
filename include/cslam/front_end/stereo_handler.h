@@ -33,6 +33,16 @@ namespace cslam
             const sensor_msgs::msg::CameraInfo::ConstSharedPtr camera_info_right,
             const nav_msgs::msg::Odometry::ConstSharedPtr odom);
 
+        /**
+         * @brief converts descriptors to sensore data
+         *
+         * @param msg local descriptors
+         * @return rtabmap::SensorData&
+         */
+        virtual void local_descriptors_msg_to_sensor_data(
+            const std::shared_ptr<cslam_loop_detection_interfaces::msg::LocalImageDescriptors> msg,
+            rtabmap::SensorData &sensor_data);
+
     private:
         image_transport::SubscriberFilter sub_image_rect_left_;
         image_transport::SubscriberFilter sub_image_rect_right_;

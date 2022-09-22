@@ -62,7 +62,7 @@ class LoopClosureSparseMatching(object):
 
     def match_local_loop_closures(self, descriptor, kf_id):
         kfs, similarities = self.local_nnsm.search(descriptor,
-                                         k=self.params['nb_best_matches'])
+                                         k=self.params['frontend.nb_best_matches'])
 
         if len(kfs) > 0 and kfs[0] == kf_id:
             kfs, similarities = kfs[1:], similarities[1:]

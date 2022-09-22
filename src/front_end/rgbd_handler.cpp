@@ -132,11 +132,6 @@ void RGBDHandler::rgbd_callback(
   int depth_width = image_rect_depth->width;
   int depth_height = image_rect_depth->height;
   
-  cv::Mat rgb;
-  cv::Mat depth;
-  pcl::PointCloud<pcl::PointXYZ> scanCloud;
-  std::vector<CameraModel> camera_models;
-
   if (!(image_rect_rgb->encoding.compare(sensor_msgs::image_encodings::TYPE_8UC1) == 0 ||
         image_rect_rgb->encoding.compare(sensor_msgs::image_encodings::MONO8) == 0 ||
         image_rect_rgb->encoding.compare(sensor_msgs::image_encodings::MONO16) == 0 ||
@@ -158,8 +153,8 @@ void RGBDHandler::rgbd_callback(
   
   rclcpp::Time stamp = rtabmap_ros::timestampFromROS(image_rect_rgb->header.stamp) > rtabmap_ros::timestampFromROS(image_rect_depth->header.stamp) ? image_rect_rgb->header.stamp : image_rect_depth->header.stamp;
 
-  Transform localTransform = rtabmap_ros::getTransform(base_frame_id_, image_rect_rgb->header.frame_id, stamp, *tf_buffer_, 0.1);
-  if (localTransform.isNull())
+  Transform local_transform = rtabmap_ros::getTransform(base_frame_id_, image_rect_rgb->header.frame_id, stamp, *tf_buffer_, 0.1);
+  if (local_transform.isNull())
   {
     return;
   }
@@ -178,25 +173,18 @@ void RGBDHandler::rgbd_callback(
     }
   }
 
-  cv_bridge::CvImageConstPtr ptrDepth = cv_bridge::toCvShare(image_rect_depth);
-  cv::Mat subDepth = ptrDepth->image;
+  cv_bridge::CvImageConstPtr ptr_depth = cv_bridge::toCvShare(image_rect_depth);
 
-  // initialize
-  if (rgb.empty())
-  {
-    rgb = cv::Mat(image_height, image_width, ptr_image->image.type());
-  }
-  if (depth.empty())
-  {
-    depth = cv::Mat(depth_height, depth_width, subDepth.type());
-  }
+  CameraModel camera_model = rtabmap_ros::cameraModelFromROS(*camera_info_rgb, local_transform);
 
-  camera_models.push_back(rtabmap_ros::cameraModelFromROS(*camera_info_rgb, localTransform));
+  // copy data
+  cv::Mat rgb, depth;
+  ptr_image->image.copyTo(rgb);
+  ptr_depth->image.copyTo(depth);
 
   auto data = std::make_shared<rtabmap::SensorData>(
-      rgb,
-      depth,
-      camera_models,
+      rgb, depth,
+      camera_model,
       0,
       rtabmap_ros::timestampFromROS(stamp));
 
@@ -303,16 +291,18 @@ void RGBDHandler::process_new_sensor_data() {
     received_data_queue_.pop_front();
 
     if (sensor_data.first->isValid()) {
+      // Save rgb temporarily for visual place recognition
       cv::Mat rgb;
-      // rtabmap::LaserScan scan;
       sensor_data.first->uncompressDataConst(&rgb, 0);
-      // pcl::PointCloud<pcl::PointXYZ>::Ptr cloud =
-      // rtabmap::util3d::laserScanToPointCloud(scan, scan.localTransform());
-      // Send keyframe for loop detection
+      // Compute local descriptors
       compute_local_descriptors(sensor_data.first);
 
       if (generate_new_keyframe(sensor_data.first))
       {
+        // rtabmap::LaserScan scan;
+        // pcl::PointCloud<pcl::PointXYZ>::Ptr cloud =
+        // rtabmap::util3d::laserScanToPointCloud(scan, scan.local_transform());
+        // Send keyframe for loop detection
         send_keyframe(rgb, sensor_data);
       }
     }
@@ -380,12 +370,11 @@ void RGBDHandler::local_descriptors_msg_to_sensor_data(
         msg,
     rtabmap::SensorData &sensor_data) {
   // Fill descriptors
-  rtabmap::StereoCameraModel stereo_model =
-      rtabmap_ros::stereoCameraModelFromROS(msg->data.rgb_camera_info,
-                                            msg->data.depth_camera_info,
-                                            rtabmap::Transform::getIdentity());
+  rtabmap::CameraModel camera_model =
+      rtabmap_ros::cameraModelFromROS(msg->data.rgb_camera_info,
+                                      rtabmap::Transform::getIdentity());
   sensor_data = rtabmap::SensorData(
-      cv::Mat(), cv::Mat(), stereo_model, 0,
+      cv::Mat(), cv::Mat(), camera_model, 0,
       rtabmap_ros::timestampFromROS(msg->data.header.stamp));
 
   std::vector<cv::KeyPoint> kpts;

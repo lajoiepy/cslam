@@ -108,7 +108,7 @@ namespace cslam
          * @param msg local descriptors
          * @return rtabmap::SensorData&
          */
-        void local_descriptors_msg_to_sensor_data(
+        virtual void local_descriptors_msg_to_sensor_data(
             const std::shared_ptr<
                 cslam_loop_detection_interfaces::msg::LocalImageDescriptors>
                 msg,
