@@ -71,6 +71,12 @@ class TestSparseMatching(unittest.TestCase):
             self.assertTrue(np.all(sims[:-1] >= sims[1:]))
             # Check if same order as distance
             for j in range(k):
+                id_d = ns_dist[j]
+                id_s = ns_sim[j]
+                if (id_d != id_s):
+                    # If the distance or similarity are the same than the order does not matter.
+                    if (abs(sims[id_d] - sims[id_s]) < 1e-6) or (abs(ds[id_d] - ds[id_s]) < 1e-6):
+                        continue
                 self.assertEqual(ns_dist[j], ns_sim[j])
             ns_sim_best, sim_best = nnsm.search_best(query)     
             self.assertEqual(ns_dist[0], ns_sim_best)   
