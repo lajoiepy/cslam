@@ -21,10 +21,12 @@ DecentralizedPGO::DecentralizedPGO(std::shared_ptr<rclcpp::Node> &node)
                       enable_log_optimization_files_);
   node->get_parameter("backend.log_optimization_files_path",
                       log_optimization_files_path_);
-  node_->get_parameter("backend.visualization_period_ms",
+  node_->get_parameter("visualization.enable",
+                       enable_visualization_);
+  node_->get_parameter("visualization.publishing_period_ms",
                        visualization_period_ms_);
-  node_->get_parameter("backend.broadcast_tf_frames",
-                       broadcast_tf_frames_);
+  node_->get_parameter("backend.enable_broadcast_tf_frames",
+                       enable_broadcast_tf_frames_);
 
   int max_waiting_param;
   node_->get_parameter("backend.max_waiting_time_sec", max_waiting_param);
@@ -74,7 +76,7 @@ DecentralizedPGO::DecentralizedPGO(std::shared_ptr<rclcpp::Node> &node)
       std::chrono::milliseconds(pose_graph_optimization_loop_period_ms_),
       std::bind(&DecentralizedPGO::optimization_loop_callback, this));
 
-  if (visualization_period_ms_ > 1e-6)
+  if (enable_visualization_)
   {
     RCLCPP_INFO(node_->get_logger(), "Visualization enabled.");
     visualization_timer_ = node_->create_wall_timer(
@@ -167,7 +169,7 @@ DecentralizedPGO::DecentralizedPGO(std::shared_ptr<rclcpp::Node> &node)
   // Initialize the transform broadcaster
   tf_broadcaster_ = std::make_unique<tf2_ros::TransformBroadcaster>(*node_);
 
-  if (broadcast_tf_frames_)
+  if (enable_broadcast_tf_frames_)
   {
     tf_broadcaster_timer_ = node_->create_wall_timer(
         std::chrono::milliseconds(pose_graph_optimization_loop_period_ms_),

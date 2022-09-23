@@ -20,9 +20,11 @@ import pickle
 import sklearn
 from sklearn.neighbors import NearestNeighbors
 from cslam.vpr.cosplace_utils.network import GeoLocalizationNet
+from ament_index_python.packages import get_package_share_directory
 
 IMAGENET_DEFAULT_MEAN = (0.485, 0.456, 0.406)
 IMAGENET_DEFAULT_STD = (0.229, 0.224, 0.225)
+
 
 class CosPlace(object):
     """CosPlace matcher
@@ -37,22 +39,30 @@ class CosPlace(object):
         self.params = params
         self.node = node
 
-        self.enable = self.params['frontend.nn_checkpoint'].lower() != 'disable'
+        self.enable = self.params['frontend.nn_checkpoint'].lower(
+        ) != 'disable'
         if self.enable:
+            pkg_folder = get_package_share_directory("cslam")
+            self.params['frontend.nn_checkpoint'] = join(
+                pkg_folder, self.params['frontend.nn_checkpoint'])
+
             if torch.cuda.is_available():
                 self.device = torch.device("cuda")
             else:
                 self.device = torch.device("cpu")
 
-            self.descriptor_dim = self.params['frontend.cosplace.descriptor_dim']
-            self.model = GeoLocalizationNet(self.params['frontend.cosplace.backbone'], self.descriptor_dim, node)
+            self.descriptor_dim = self.params[
+                'frontend.cosplace.descriptor_dim']
+            self.model = GeoLocalizationNet(
+                self.params['frontend.cosplace.backbone'], self.descriptor_dim,
+                node)
 
             resume_ckpt = self.params['frontend.nn_checkpoint']
             if isfile(resume_ckpt):
                 print("loading checkpoint '{}'".format(resume_ckpt))
-                checkpoint = torch.load(resume_ckpt,
-                                        map_location=lambda storage, loc: storage)
-                
+                checkpoint = torch.load(
+                    resume_ckpt, map_location=lambda storage, loc: storage)
+
                 self.model.load_state_dict(checkpoint)
                 self.model = self.model.to(self.device)
             else:
@@ -65,7 +75,7 @@ class CosPlace(object):
                 transforms.Resize(224, interpolation=3),
                 transforms.ToTensor(),
                 transforms.Normalize(IMAGENET_DEFAULT_MEAN,
-                                    IMAGENET_DEFAULT_STD),
+                                     IMAGENET_DEFAULT_STD),
             ])
 
     def compute_embedding(self, keyframe):
@@ -85,7 +95,6 @@ class CosPlace(object):
                 input = input.to(self.device)
 
                 image_encoding = self.model.forward(input)
-
 
                 output = image_encoding[0].detach().cpu().numpy()
                 del input, image_encoding, image

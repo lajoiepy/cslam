@@ -276,6 +276,8 @@ namespace cslam
             pose_graph_optimization_loop_period_ms_,
             visualization_period_ms_;
 
+        bool enable_visualization_;
+
         gtsam::SharedNoiseModel default_noise_model_;
         float rotation_default_noise_std_, translation_default_noise_std_;
 
@@ -380,7 +382,7 @@ namespace cslam
 
         geometry_msgs::msg::TransformStamped origin_to_first_pose_;
 
-        bool broadcast_tf_frames_;
+        bool enable_broadcast_tf_frames_;
 
         rclcpp::Publisher<cslam_common_interfaces::msg::ReferenceFrames>::SharedPtr
             reference_frame_per_robot_publisher_;

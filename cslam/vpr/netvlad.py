@@ -19,6 +19,7 @@ import sys
 import pickle
 import sklearn
 from sklearn.neighbors import NearestNeighbors
+from ament_index_python.packages import get_package_share_directory
 
 IMAGENET_DEFAULT_MEAN = (0.485, 0.456, 0.406)
 IMAGENET_DEFAULT_STD = (0.229, 0.224, 0.225)
@@ -142,8 +143,17 @@ class NetVLAD(object):
         self.params = params
         self.node = node
 
-        self.enable = self.params['frontend.nn_checkpoint'].lower() != 'disable'
+        self.enable = self.params['frontend.nn_checkpoint'].lower(
+        ) != 'disable'
         if self.enable:
+            pkg_folder = get_package_share_directory("cslam")
+            self.params['frontend.nn_checkpoint'] = join(
+                pkg_folder, self.params['frontend.nn_checkpoint'])
+            self.params['frontend.netvlad.pca_checkpoint'] = join(
+                pkg_folder,
+                self.node.get_parameter(
+                    'frontend.netvlad.pca_checkpoint').value)
+
             if torch.cuda.is_available():
                 self.device = torch.device("cuda")
             else:
@@ -162,12 +172,13 @@ class NetVLAD(object):
             self.model = nn.Module()
             self.model.add_module('encoder', encoder)
             netvlad_layer = NetVLADLayer(num_clusters=64,
-                                        dim=encoder_dim,
-                                        vladv2=False)
+                                         dim=encoder_dim,
+                                         vladv2=False)
             self.model.add_module('pool', netvlad_layer)
 
             self.isParallel = False
-            print('=> Number of CUDA devices = ' + str(torch.cuda.device_count()))
+            print('=> Number of CUDA devices = ' +
+                  str(torch.cuda.device_count()))
             if torch.cuda.device_count() > 1:
                 self.model.encoder = nn.DataParallel(self.model.encoder)
                 self.model.pool = nn.DataParallel(self.model.pool)
@@ -176,8 +187,8 @@ class NetVLAD(object):
             resume_ckpt = self.params['frontend.nn_checkpoint']
             if isfile(resume_ckpt):
                 print("=> loading checkpoint '{}'".format(resume_ckpt))
-                checkpoint = torch.load(resume_ckpt,
-                                        map_location=lambda storage, loc: storage)
+                checkpoint = torch.load(
+                    resume_ckpt, map_location=lambda storage, loc: storage)
                 start_epoch = checkpoint['epoch']
                 best_metric = checkpoint['best_score']
                 self.model.load_state_dict(checkpoint['state_dict'])
@@ -193,9 +204,10 @@ class NetVLAD(object):
                 transforms.Resize(224, interpolation=3),
                 transforms.ToTensor(),
                 transforms.Normalize(IMAGENET_DEFAULT_MEAN,
-                                    IMAGENET_DEFAULT_STD),
+                                     IMAGENET_DEFAULT_STD),
             ])
-            self.pca = pickle.load(open(self.params['frontend.netvlad.pca_checkpoint'], 'rb'))
+            self.pca = pickle.load(
+                open(self.params['frontend.netvlad.pca_checkpoint'], 'rb'))
 
     def compute_embedding(self, keyframe):
         """Load image to device and extract the global image descriptor

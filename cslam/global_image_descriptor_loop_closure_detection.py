@@ -21,7 +21,6 @@ from cslam_loop_detection_interfaces.msg import (GlobalImageDescriptor,
 
 import rclpy
 from rclpy.node import Node
-from ament_index_python.packages import get_package_share_directory
 
 from cslam.neighbors_manager import NeighborManager
 from cslam.utils.utils import list_chunks
@@ -42,17 +41,12 @@ class GlobalImageDescriptorLoopClosureDetection(object):
         self.lcm = LoopClosureSparseMatching(params)
 
         # Place Recognition network setup
-        pkg_folder = get_package_share_directory("cslam")
-        self.params['frontend.nn_checkpoint'] = join(pkg_folder, self.params['frontend.nn_checkpoint'])
-        if self.params['frontend.global_descriptor_technique'].lower() == 'cosplace':
-            self.node.get_logger().info(
-                'Using CosPlace.')
-            self.global_descriptor = CosPlace(self.params, self.node)            
+        if self.params['frontend.global_descriptor_technique'].lower(
+        ) == 'cosplace':
+            self.node.get_logger().info('Using CosPlace.')
+            self.global_descriptor = CosPlace(self.params, self.node)
         else:
-            self.node.get_logger().info(
-                'Using NetVLAD (default).')
-            self.params['frontend.netvlad.pca_checkpoint'] = join(pkg_folder, self.node.get_parameter(
-                'frontend.netvlad.pca_checkpoint').value)
+            self.node.get_logger().info('Using NetVLAD (default)')
             self.global_descriptor = NetVLAD(self.params, self.node)
 
         # ROS 2 objects setup
@@ -179,7 +173,7 @@ class GlobalImageDescriptorLoopClosureDetection(object):
             # Find matches that maximize the algebraic connectivity
             selection = self.lcm.select_candidates(
                 self.params["frontend.inter_robot_loop_closure_budget"],
-                neighbors_is_in_range)          
+                neighbors_is_in_range)
 
             # Extract and publish local descriptors
             vertices_info = self.edge_list_to_vertices(selection)

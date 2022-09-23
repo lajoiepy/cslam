@@ -143,6 +143,8 @@ namespace cslam
         void send_keyframe(const rtabmap::SensorData &rgb,
                            const std::pair<std::shared_ptr<rtabmap::SensorData>, std::shared_ptr<const nav_msgs::msg::Odometry>> &keypoints_data);
 
+        void send_visualization_keypoints(const std::pair<std::shared_ptr<rtabmap::SensorData>, std::shared_ptr<const nav_msgs::msg::Odometry>>& keypoints_data);
+
         /**
          * @brief Callback receiving sync data from camera
          *
@@ -213,6 +215,9 @@ namespace cslam
         std::string base_frame_id_;
         float keyframe_generation_ratio_threshold_;
         bool generate_new_keyframes_based_on_inliers_ratio_;
+
+        unsigned int visualization_period_ms_;
+        bool enable_visualization_;
 
     private:
         image_transport::SubscriberFilter sub_image_color_;

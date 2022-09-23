@@ -21,6 +21,8 @@ int main(int argc, char **argv) {
   node->declare_parameter<int>("robot_id", 0);
   node->declare_parameter<int>("frontend.map_manager_process_period_ms", 100);
   node->declare_parameter<std::string>("frontend.sensor_type", "stereo");
+  node->declare_parameter<bool>("visualization.enable", false);
+  node->declare_parameter<int>("visualization.publishing_period_ms", 0);
 
   std::string sensor_type;
   node->get_parameter("frontend.sensor_type", sensor_type);

@@ -16,6 +16,10 @@ RGBDHandler::RGBDHandler(std::shared_ptr<rclcpp::Node> &node)
   node_->get_parameter("frontend.max_keyframe_queue_size", max_queue_size_);
   node_->get_parameter("frontend.keyframe_generation_ratio_threshold", keyframe_generation_ratio_threshold_);
   node_->get_parameter("frontend.sensor_base_frame_id", base_frame_id_);
+  node_->get_parameter("visualization.enable",
+                       enable_visualization_);
+  node_->get_parameter("visualization.publishing_period_ms",
+                       visualization_period_ms_);
 
   if (keyframe_generation_ratio_threshold_ > 0.99) {
     generate_new_keyframes_based_on_inliers_ratio_ = false;
@@ -65,9 +69,13 @@ RGBDHandler::RGBDHandler(std::shared_ptr<rclcpp::Node> &node)
   std::string local_descriptors_topic = "/local_descriptors";
   local_descriptors_publisher_ = node_->create_publisher<
       cslam_loop_detection_interfaces::msg::LocalImageDescriptors>(local_descriptors_topic, 100);
-  std::string viz_topic = "/viz/local_descriptors";
-  visualization_local_descriptors_publisher_ = node_->create_publisher<
-      cslam_loop_detection_interfaces::msg::LocalImageDescriptors>(viz_topic, 100);
+  
+  if (enable_visualization_)
+  {
+    std::string viz_topic = "/viz/local_descriptors";
+    visualization_local_descriptors_publisher_ = node_->create_publisher<
+        cslam_loop_detection_interfaces::msg::LocalImageDescriptors>(viz_topic, 100);
+  }
 
   // Subscriber for local descriptors
   local_descriptors_subscriber_ = node->create_subscription<
@@ -458,17 +466,22 @@ void RGBDHandler::send_keyframe(const rtabmap::SensorData &rgb,
   odom_msg.odom = *keypoints_data.second;
   keyframe_odom_publisher_->publish(odom_msg);
 
-  // visualization message
-  if (visualization_local_descriptors_publisher_->get_subscription_count() > 0)
+  if (enable_visualization_)
   {
-    cslam_loop_detection_interfaces::msg::LocalImageDescriptors features_msg;
-    sensor_data_to_rgbd_msg(keypoints_data.first,
-                            features_msg.data);
-    features_msg.image_id = keypoints_data.first->id();
-    features_msg.robot_id = robot_id_;
-    features_msg.data.key_points.clear();
-
-    // Publish local descriptors
-    visualization_local_descriptors_publisher_->publish(features_msg);
+    send_visualization_keypoints(keypoints_data);
   }
+}
+
+void RGBDHandler::send_visualization_keypoints(const std::pair<std::shared_ptr<rtabmap::SensorData>, std::shared_ptr<const nav_msgs::msg::Odometry>>& keypoints_data)
+{
+  // visualization message
+  cslam_loop_detection_interfaces::msg::LocalImageDescriptors features_msg;
+  sensor_data_to_rgbd_msg(keypoints_data.first,
+                          features_msg.data);
+  features_msg.image_id = keypoints_data.first->id();
+  features_msg.robot_id = robot_id_;
+  features_msg.data.key_points.clear();
+
+  // Publish local descriptors
+  visualization_local_descriptors_publisher_->publish(features_msg);
 }
