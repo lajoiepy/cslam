@@ -31,6 +31,7 @@
 #include <chrono>
 #include <cslam_common_interfaces/msg/keyframe_odom.hpp>
 #include <cslam_common_interfaces/msg/keyframe_rgb.hpp>
+#include <cslam_common_interfaces/msg/keyframe_point_cloud.hpp>
 #include <cslam_loop_detection_interfaces/msg/inter_robot_loop_closure.hpp>
 #include <cslam_loop_detection_interfaces/msg/local_descriptors_request.hpp>
 #include <cslam_loop_detection_interfaces/msg/local_image_descriptors.hpp>
@@ -45,11 +46,12 @@
 
 #include "cslam/front_end/sensor_msg_utils.h"
 #include "cslam/front_end/sensor_handler_interface.h"
+#include "cslam/front_end/visualization_utils.h"
 
 namespace cslam
 {
 
-    class RGBDHandler: public ISensorHandler
+    class RGBDHandler : public ISensorHandler
     {
     public:
         /**
@@ -140,10 +142,21 @@ namespace cslam
          * @param rgb RGB keyframe data
          * @param keypoints_data keyframe keypoints data
          */
-        void send_keyframe(const rtabmap::SensorData &rgb,
-                           const std::pair<std::shared_ptr<rtabmap::SensorData>, std::shared_ptr<const nav_msgs::msg::Odometry>> &keypoints_data);
+        void send_keyframe(const std::pair<std::shared_ptr<rtabmap::SensorData>, std::shared_ptr<const nav_msgs::msg::Odometry>> &keypoints_data);
 
-        void send_visualization_keypoints(const std::pair<std::shared_ptr<rtabmap::SensorData>, std::shared_ptr<const nav_msgs::msg::Odometry>>& keypoints_data);
+        /**
+         * @brief Send keypoints for visualizations
+         * 
+         * @param keypoints_data keyframe keypoints data
+         */
+        void send_visualization_keypoints(const std::pair<std::shared_ptr<rtabmap::SensorData>, std::shared_ptr<const nav_msgs::msg::Odometry>> &keypoints_data);
+
+        /**
+         * @brief Send colored pointcloud for visualizations
+         * 
+         * @param sensor_data RGBD image
+         */
+        void send_visualization_pointcloud(const std::shared_ptr<rtabmap::SensorData> & sensor_data);
 
         /**
          * @brief Callback receiving sync data from camera
@@ -159,6 +172,13 @@ namespace cslam
             const sensor_msgs::msg::Image::ConstSharedPtr image_rect_depth,
             const sensor_msgs::msg::CameraInfo::ConstSharedPtr camera_info_rgb,
             const nav_msgs::msg::Odometry::ConstSharedPtr odom);
+
+        /**
+         * @brief Clear images and large data fields in sensor data
+         * 
+         * @param sensor_data frame data
+         */
+        void clear_sensor_data(std::shared_ptr<rtabmap::SensorData>& sensor_data);
 
     protected:
         std::deque<std::pair<std::shared_ptr<rtabmap::SensorData>,
@@ -190,6 +210,9 @@ namespace cslam
 
         rclcpp::Publisher<cslam_common_interfaces::msg::KeyframeOdom>::SharedPtr
             keyframe_odom_publisher_;
+
+        rclcpp::Publisher<cslam_common_interfaces::msg::KeyframePointCloud>::SharedPtr
+            keyframe_pointcloud_publisher_;
 
         rclcpp::Subscription<
             cslam_loop_detection_interfaces::msg::LocalKeyframeMatch>::SharedPtr
@@ -230,6 +253,8 @@ namespace cslam
             nav_msgs::msg::Odometry>
             RGBDSyncPolicy;
         message_filters::Synchronizer<RGBDSyncPolicy> *rgbd_sync_policy_;
+
+        sensor_msgs::msg::PointCloud2::SharedPtr cloud_msg_;
     };
 } // namespace cslam
 #endif
