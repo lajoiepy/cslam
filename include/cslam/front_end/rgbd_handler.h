@@ -143,6 +143,13 @@ namespace cslam
          * @param keypoints_data keyframe keypoints data
          */
         void send_keyframe(const std::pair<std::shared_ptr<rtabmap::SensorData>, std::shared_ptr<const nav_msgs::msg::Odometry>> &keypoints_data);
+        
+        /**
+         * @brief Send keypoints for visualizations
+         * 
+         * @param keypoints_data keyframe keypoints data
+         */
+        virtual void send_visualization(const std::pair<std::shared_ptr<rtabmap::SensorData>, std::shared_ptr<const nav_msgs::msg::Odometry>> &keypoints_data);
 
         /**
          * @brief Send keypoints for visualizations

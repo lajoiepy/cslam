@@ -43,6 +43,13 @@ namespace cslam
             const std::shared_ptr<cslam_loop_detection_interfaces::msg::LocalImageDescriptors> msg,
             rtabmap::SensorData &sensor_data);
 
+        /**
+         * @brief Send keypoints for visualizations
+         * 
+         * @param keypoints_data keyframe keypoints data
+         */
+        virtual void send_visualization(const std::pair<std::shared_ptr<rtabmap::SensorData>, std::shared_ptr<const nav_msgs::msg::Odometry>> &keypoints_data);
+
     private:
         image_transport::SubscriberFilter sub_image_rect_left_;
         image_transport::SubscriberFilter sub_image_rect_right_;

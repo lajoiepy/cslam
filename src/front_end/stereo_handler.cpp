@@ -244,3 +244,8 @@ void StereoHandler::local_descriptors_msg_to_sensor_data(
   auto descriptors = rtabmap::uncompressData(msg->data.descriptors);
   sensor_data.setFeatures(kpts, kpts3D, descriptors);
 }
+
+void StereoHandler::send_visualization(const std::pair<std::shared_ptr<rtabmap::SensorData>, std::shared_ptr<const nav_msgs::msg::Odometry>> &keypoints_data)
+{
+  send_visualization_keypoints(keypoints_data);
+}

@@ -504,9 +504,14 @@ void RGBDHandler::send_keyframe(const std::pair<std::shared_ptr<rtabmap::SensorD
 
   if (enable_visualization_)
   {
-    send_visualization_keypoints(keypoints_data);
-    send_visualization_pointcloud(keypoints_data.first);
+    send_visualization(keypoints_data);
   }
+}
+
+void RGBDHandler::send_visualization(const std::pair<std::shared_ptr<rtabmap::SensorData>, std::shared_ptr<const nav_msgs::msg::Odometry>> &keypoints_data)
+{
+  send_visualization_keypoints(keypoints_data);
+  send_visualization_pointcloud(keypoints_data.first);
 }
 
 void RGBDHandler::clear_sensor_data(std::shared_ptr<rtabmap::SensorData>& sensor_data)
