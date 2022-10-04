@@ -1,5 +1,6 @@
 import numpy as np
 from cslam.nns_matching import NearestNeighborsMatching
+from cslam.lidar_pr.scancontext_matching import ScanContextMatching
 from cslam.algebraic_connectivity_maximization import AlgebraicConnectivityMaximization, EdgeInterRobot
 
 
@@ -18,6 +19,7 @@ class LoopClosureSparseMatching(object):
         # Extract params
         self.params = params
         # Initialize matching structs
+        # TODO: check param to select scan context version
         self.local_nnsm = NearestNeighborsMatching()
         self.other_robots_nnsm = {}
         for i in range(self.params['nb_robots']):
@@ -48,7 +50,7 @@ class LoopClosureSparseMatching(object):
         """ Add keyframe global descriptor info from other robot
 
         Args:
-            msg (cslam_loop_detection_interfaces.msg.GlobalImageDescriptor): global descriptor info
+            msg (cslam_loop_detection_interfaces.msg.GlobalDescriptor): global descriptor info
         """
         self.other_robots_nnsm[msg.robot_id].add_item(
             np.asarray(msg.descriptor), msg.image_id)

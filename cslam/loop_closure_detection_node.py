@@ -6,7 +6,7 @@ import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import Image
 
-from cslam.global_image_descriptor_loop_closure_detection import GlobalImageDescriptorLoopClosureDetection
+from cslam.global_descriptor_loop_closure_detection import GlobalDescriptorLoopClosureDetection
 
 
 class LoopClosureDetection(Node):
@@ -76,7 +76,7 @@ class LoopClosureDetection(Node):
         self.params["frontend.cosplace.backbone"] = self.get_parameter(
             'frontend.cosplace.backbone').value
 
-        self.glcd = GlobalImageDescriptorLoopClosureDetection(
+        self.glcd = GlobalDescriptorLoopClosureDetection(
             self.params, self)
         self.inter_robot_detection_timer = self.create_timer(
             self.params['frontend.inter_robot_detection_period_sec'],

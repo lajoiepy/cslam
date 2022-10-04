@@ -9,12 +9,13 @@ import numpy as np
 
 from cslam.vpr.netvlad import NetVLAD
 from cslam.vpr.cosplace import CosPlace
+from cslam.lidar_pr.scancontext import ScanContext
 from cslam.loop_closure_sparse_matching import LoopClosureSparseMatching
 from cslam.broker import Broker
 
-from cslam_common_interfaces.msg import KeyframeRGB
-from cslam_loop_detection_interfaces.msg import (GlobalImageDescriptor,
-                                                 GlobalImageDescriptors,
+from cslam_common_interfaces.msg import KeyframeRGB, KeyframePointCloud
+from cslam_loop_detection_interfaces.msg import (GlobalDescriptor,
+                                                 GlobalDescriptors,
                                                  InterRobotLoopClosure,
                                                  LocalDescriptorsRequest,
                                                  LocalKeyframeMatch)
@@ -26,8 +27,8 @@ from cslam.neighbors_manager import NeighborManager
 from cslam.utils.utils import list_chunks
 
 
-class GlobalImageDescriptorLoopClosureDetection(object):
-    """ Global Image descriptor matching """
+class GlobalDescriptorLoopClosureDetection(object):
+    """ Global descriptor matching """
 
     def __init__(self, params, node):
         """Initialization
@@ -45,23 +46,37 @@ class GlobalImageDescriptorLoopClosureDetection(object):
         ) == 'cosplace':
             self.node.get_logger().info('Using CosPlace.')
             self.global_descriptor = CosPlace(self.params, self.node)
+            self.keyframe_type = "rgb"
+        elif self.params['frontend.global_descriptor_technique'].lower(
+        ) == 'scancontext':
+            self.node.get_logger().info('Using ScanContext.')
+            self.global_descriptor = ScanContext(self.params, self.node)
+            self.keyframe_type = "pointcloud"
         else:
             self.node.get_logger().info('Using NetVLAD (default)')
             self.global_descriptor = NetVLAD(self.params, self.node)
+            self.keyframe_type = "rgb"
 
         # ROS 2 objects setup
         self.params[
             'frontend.global_descriptor_topic'] = self.node.get_parameter(
                 'frontend.global_descriptor_topic').value
         self.global_descriptor_publisher = self.node.create_publisher(
-            GlobalImageDescriptors,
+            GlobalDescriptors,
             self.params['frontend.global_descriptor_topic'], 100)
         self.global_descriptor_subscriber = self.node.create_subscription(
-            GlobalImageDescriptors,
+            GlobalDescriptors,
             self.params['frontend.global_descriptor_topic'],
             self.global_descriptor_callback, 100)
-        self.receive_keyframe_subscriber = self.node.create_subscription(
-            KeyframeRGB, 'keyframe_data', self.receive_keyframe, 100)
+        
+        if self.keyframe_type == "rgb":
+            self.receive_keyframe_subscriber = self.node.create_subscription(
+                KeyframeRGB, 'keyframe_data', self.receive_keyframe, 100)
+        elif self.keyframe_type == "pointcloud":
+            self.receive_keyframe_subscriber = self.node.create_subscription(
+                KeyframePointCloud, 'keyframe_data', self.receive_keyframe, 100)
+        else:  
+            se;f.node.get_logger().error("Unknown keyframe type")
 
         self.local_match_publisher = self.node.create_publisher(
             LocalKeyframeMatch, 'local_keyframe_match', 100)
@@ -101,7 +116,7 @@ class GlobalImageDescriptorLoopClosureDetection(object):
         self.detect_intra(embedding, kf_id)
 
         # Store global descriptor
-        msg = GlobalImageDescriptor()
+        msg = GlobalDescriptor()
         msg.image_id = kf_id
         msg.robot_id = self.params['robot_id']
         msg.descriptor = embedding.tolist()
@@ -135,7 +150,7 @@ class GlobalImageDescriptorLoopClosureDetection(object):
             )
 
             for m in msgs:
-                global_descriptors = GlobalImageDescriptors()
+                global_descriptors = GlobalDescriptors()
                 global_descriptors.descriptors = m
                 self.global_descriptor_publisher.publish(global_descriptors)
 
@@ -216,13 +231,18 @@ class GlobalImageDescriptorLoopClosureDetection(object):
         """Callback to add a keyframe 
 
         Args:
-            msg (cslam_common_interfaces::msg::KeyframeRGB): Keyframe data
+            msg (cslam_common_interfaces::msg::KeyframeRGB or KeyframePointCloud): Keyframe data
         """
-        # Netvlad processing
-        bridge = CvBridge()
-        cv_image = bridge.imgmsg_to_cv2(msg.image,
-                                        desired_encoding='passthrough')
-        embedding = self.global_descriptor.compute_embedding(cv_image)
+        # Place recognition descriptor processing
+        embedding = []
+        if self.keyframe_type == "rgb":
+            bridge = CvBridge()
+            cv_image = bridge.imgmsg_to_cv2(msg.image,
+                                            desired_encoding='passthrough')
+            embedding = self.global_descriptor.compute_embedding(cv_image)
+        elif self.keyframe_type == "pointcloud":
+            embedding = self.global_descriptor.compute_embedding(
+                msg.pointcloud)
 
         self.add_global_descriptor_to_map(embedding, msg.id)
 
@@ -230,7 +250,7 @@ class GlobalImageDescriptorLoopClosureDetection(object):
         """Callback for descriptors received from other robots.
 
         Args:
-            msg (cslam_loop_detection_interfaces::msg::GlobalImageDescriptors): descriptors
+            msg (cslam_loop_detection_interfaces::msg::GlobalDescriptors): descriptors
         """
         if msg.descriptors[0].robot_id != self.params['robot_id']:
             unknown_range = self.neighbor_manager.get_unknown_range(
