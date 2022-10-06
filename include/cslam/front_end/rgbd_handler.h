@@ -31,7 +31,7 @@
 #include <chrono>
 #include <cslam_common_interfaces/msg/keyframe_odom.hpp>
 #include <cslam_common_interfaces/msg/keyframe_rgb.hpp>
-#include <cslam_common_interfaces/msg/keyframe_point_cloud.hpp>
+#include <cslam_common_interfaces/msg/viz_point_cloud.hpp>
 #include <cslam_loop_detection_interfaces/msg/inter_robot_loop_closure.hpp>
 #include <cslam_loop_detection_interfaces/msg/local_descriptors_request.hpp>
 #include <cslam_loop_detection_interfaces/msg/local_image_descriptors.hpp>
@@ -218,7 +218,7 @@ namespace cslam
         rclcpp::Publisher<cslam_common_interfaces::msg::KeyframeOdom>::SharedPtr
             keyframe_odom_publisher_;
 
-        rclcpp::Publisher<cslam_common_interfaces::msg::KeyframePointCloud>::SharedPtr
+        rclcpp::Publisher<cslam_common_interfaces::msg::VizPointCloud>::SharedPtr
             keyframe_pointcloud_publisher_;
 
         rclcpp::Subscription<

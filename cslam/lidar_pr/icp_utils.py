@@ -7,6 +7,7 @@ from sensor_msgs.msg import PointCloud2, PointField
 import numpy as np
 import teaserpp_python
 import open3d
+from scipy.spatial import cKDTree
 
 FIELDS_XYZ = [
     PointField(name='x', offset=0, datatype=PointField.FLOAT32, count=1),
@@ -31,7 +32,7 @@ def extract_fpfh(pcd, voxel_size):
 
 def find_knn_cpu(feat0, feat1, knn=1, return_distance=False):
   feat1tree = cKDTree(feat1)
-  dists, nn_inds = feat1tree.query(feat0, k=knn, n_jobs=-1)
+  dists, nn_inds = feat1tree.query(feat0, k=knn, workers=-1)
   if return_distance:
     return nn_inds, dists
   else:
@@ -100,31 +101,33 @@ def solve_teaser(src, dst, voxel_size):
 
     solution = solver.getSolution()
 
-    if solution.valid:
+    valid = len(solver.getInlierMaxClique()) > 1
+
+    if valid:
         # ICP refinement
         T_teaser = Rt2T(solution.rotation, solution.translation)
-        icp_sol = open3d.registration.registration_icp(
+        icp_sol = open3d.pipelines.registration.registration_icp(
                 src, dst, voxel_size, T_teaser,
-            open3d.registration.TransformationEstimationPointToPoint(),
-            open3d.registration.ICPConvergenceCriteria(max_iteration=100))
+            open3d.pipelines.registration.TransformationEstimationPointToPoint(),
+            open3d.pipelines.registration.ICPConvergenceCriteria(max_iteration=100))
         T_icp = icp_sol.transformation
         solution.translation = T_icp[:3,3]
-        solution.rotation = T[:3,:3]
+        solution.rotation = T_icp[:3,:3]
 
-    return solution.valid, solution.translation, solution.rotation
+    return valid, solution.translation, solution.rotation
 
 def to_transform_msg(translation, rotation):
-    t = Transform()
-    t.translation.x = translation[0]
-    t.translation.y = translation[1]
-    t.translation.z = translation[2]
-    rotation = R.from_matrix(rotation)
-    q = rotation.as_quat()
-    t.rotation.x = q[0]
-    t.rotation.y = q[1]
-    t.rotation.z = q[2]
-    t.rotation.w = q[3]
-    return t
+    T = Transform()
+    T.translation.x = translation[0]
+    T.translation.y = translation[1]
+    T.translation.z = translation[2]
+    rotation_matrix = R.from_matrix(np.array(rotation))
+    q = rotation_matrix.as_quat()
+    T.rotation.x = q[0]
+    T.rotation.y = q[1]
+    T.rotation.z = q[2]
+    T.rotation.w = q[3]
+    return T
 
 def open3d_to_ros(open3d_cloud):
     header = Header()
@@ -135,7 +138,7 @@ def open3d_to_ros(open3d_cloud):
 def ros_to_open3d(msg):
     points = ros_pointcloud_to_points(msg)
     open3d_cloud = open3d.geometry.PointCloud()
-    open3d_cloud.points = open3d.cpu.pybind.utility.Vector3dVector(points)
+    open3d_cloud.points = open3d.utility.Vector3dVector(points)
     return open3d_cloud
 
 def ros_pointcloud_to_points(pc_msg):
@@ -145,8 +148,9 @@ def downsample_ros_pointcloud(pc_msg, voxel_size):
     points = ros_pointcloud_to_points(pc_msg)
     return downsample(points, voxel_size)
 
+# TODO: document
 def compute_transform(src, dst, voxel_size):
     valid, translation, rotation = solve_teaser(src, dst, voxel_size)
     success = valid
     transform = to_transform_msg(translation, rotation)
-    return success, transform
+    return transform, success

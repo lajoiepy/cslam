@@ -1,4 +1,6 @@
 import cslam.lidar_pr.scancontext_utils as sc_utils
+import numpy as np
+from scipy import spatial
 
 class ScanContextMatching(object):
     """Nearest Neighbor matching of description vectors
@@ -13,23 +15,33 @@ class ScanContextMatching(object):
         self.num_candidates = num_candidates
         self.threshold = threshold
 
-        self.max_length = 80 # recommended but other (e.g., 100m) is also ok.
+        self.scancontexts = np.zeros((1000, self.shape[0], self.shape[1]))
+        self.ringkeys = np.zeros((1000, self.shape[0]))
+        self.items = dict()
+        self.nb_items = 0
 
-        self.ENOUGH_LARGE = 15000 # capable of up to ENOUGH_LARGE number of nodes 
-        self.scancontexts = [None] * self.ENOUGH_LARGE
-        self.ringkeys = [None] * self.ENOUGH_LARGE
-
-    def add_item(self, sc, item):
+    def add_item(self, descriptor, item):
         """Add item to the matching list
 
         Args:
-            sc (np.array): descriptor
+            descriptor (np.array): descriptor
             item: identification info (e.g., int)
         """
+        sc = descriptor.reshape(self.shape)
+
+        if self.nb_items >= len(self.ringkeys):
+            self.scancontexts.resize((2 * len(self.scancontexts), self.shape[0], self.shape[1]),
+                                 refcheck=False)
+            self.ringkeys.resize((2 * len(self.ringkeys), self.shape[0]),
+                                 refcheck=False)
+                                 
         rk = sc_utils.sc2rk(sc)
 
-        self.scancontexts[node_idx] = sc
-        self.ringkeys[node_idx] = rk
+        self.scancontexts[self.nb_items] = sc
+        self.ringkeys[self.nb_items] = rk
+        self.items[self.nb_items] = item
+
+        self.nb_items = self.nb_items + 1
 
     def search(self, query, k):
         """Search for nearest neighbors
@@ -41,25 +53,25 @@ class ScanContextMatching(object):
         Returns:
             list(int, np.array): best matches
         """
-        if len(self.scancontexts) < 1:
+        if self.nb_items < 1:
             return [], []
+
         # step 1
-        ringkey_history = np.array(self.ringkeys)
+        ringkey_history = np.array(self.ringkeys[:self.nb_items])
         ringkey_tree = spatial.KDTree(ringkey_history)
 
-        ringkey_query = sc_utils.sc2rk(query)
+        query_sc = query.reshape(self.shape)
+        ringkey_query = sc_utils.sc2rk(query_sc)
         _, nncandidates_idx = ringkey_tree.query(ringkey_query, k=self.num_candidates)
 
-        # step 2
-        query_sc = query
-        
+        # step 2        
         nn_dist = 1.0 # initialize with the largest value of distance
         nn_idx = None
         nn_yawdiff = None
         for ith in range(self.num_candidates):
             candidate_idx = nncandidates_idx[ith]
             candidate_sc = self.scancontexts[candidate_idx]
-            dist, yaw_diff = distance_sc(candidate_sc, query_sc)
+            dist, yaw_diff = sc_utils.distance_sc(candidate_sc, query_sc)
             if(dist < nn_dist):
                 nn_dist = dist
                 nn_yawdiff = yaw_diff
@@ -68,9 +80,9 @@ class ScanContextMatching(object):
         if(nn_dist < self.threshold):
             nn_yawdiff_deg = nn_yawdiff * (360/self.shape[1])
             similarity = 1 - nn_dist # For now we return only 1 match
-            return [nn_idx], [similarity]
+            return [self.items[nn_idx]], [similarity]
         else:
-            return [], []
+            return [None], [None]
 
     def search_best(self, query):
         """Search for the nearest neighbor
@@ -82,8 +94,8 @@ class ScanContextMatching(object):
         Returns:
             int, np.array: best match
         """
-        if len(self.scancontexts) < 1:
+        if self.nb_items < 1:
             return None, None
             
-        idxs, sims = self.search(query)
+        idxs, sims = self.search(query, 1)
         return idxs[0], sims[0]

@@ -3,7 +3,7 @@ import numpy as np
 from message_filters import TimeSynchronizer, Subscriber
 from sensor_msgs.msg import PointCloud2, PointField
 from nav_msgs.msg import Odometry
-from cslam_common_interfaces.msg import KeyframeOdom
+from cslam_common_interfaces.msg import KeyframeOdom, KeyframePointCloud
 from cslam_loop_detection_interfaces.msg import LocalDescriptorsRequest, LocalPointCloudDescriptors, InterRobotLoopClosure, IntraRobotLoopClosure, LocalKeyframeMatch
 import cslam.lidar_pr.icp_utils as icp_utils
 import rclpy
@@ -19,6 +19,8 @@ class LidarHandler: # TODO: document
         tss.registerCallback(self.lidar_callback)
 
         self.keyframe_odom_publisher = self.node.create_publisher(KeyframeOdom, "keyframe_odom", 100)
+
+        self.keyframe_pointcloud_publisher = self.node.create_publisher(KeyframePointCloud, "keyframe_data", 100)
 
         self.send_local_descriptors_subscriber = self.node.create_subscription(LocalDescriptorsRequest,
                                                                             "local_descriptors_request", self.send_local_descriptors_request, 100)
@@ -98,8 +100,13 @@ class LidarHandler: # TODO: document
             data = self.received_data[0]
             self.received_data.pop(0)
             if self.generate_new_keyframe(data):
-                self.node.get_logger().info("Received lidar data 2")
                 self.local_descriptors_map[self.nb_local_keyframes] = icp_utils.downsample_ros_pointcloud(data[0], self.params["frontend.voxel_size"])
+                # Publish pointcloud
+                msg_pointcloud = KeyframePointCloud()
+                msg_pointcloud.id = self.nb_local_keyframes
+                msg_pointcloud.pointcloud = icp_utils.open3d_to_ros(self.local_descriptors_map[self.nb_local_keyframes])
+                self.keyframe_pointcloud_publisher.publish(msg_pointcloud)
+                # Publish odom
                 msg_odom = KeyframeOdom()
                 msg_odom.id = self.nb_local_keyframes
                 msg_odom.odom = data[1]

@@ -9,5 +9,6 @@ class ScanContext:
         self.max_length = 80 # Same as in ScanContext paper
 
     def compute_embedding(self, keyframe):
-        return sc_utils.ptcloud2sc(keyframe.points, self.shape, self.max_length)
+        desc = sc_utils.ptcloud2sc(keyframe, self.shape, self.max_length)
+        return desc.reshape(-1)
         

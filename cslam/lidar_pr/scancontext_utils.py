@@ -75,7 +75,7 @@ def sc2rk(sc):
 def distance_sc(sc1, sc2):
     num_sectors = sc1.shape[1]
 
-    # repeate to move 1 columns
+    # repeat to move 1 columns
     _one_step = 1 # const
     sim_for_each_cols = np.zeros(num_sectors)
     for i in range(num_sectors):
@@ -99,7 +99,10 @@ def distance_sc(sc1, sc2):
             num_col_engaged = num_col_engaged + 1
 
         # save 
-        sim_for_each_cols[i] = sum_of_cossim / num_col_engaged
+        if num_col_engaged == 0:
+            sim_for_each_cols[i] = 0.0
+        else:
+            sim_for_each_cols[i] = sum_of_cossim / num_col_engaged
 
     yaw_diff = np.argmax(sim_for_each_cols) + 1 # because python starts with 0 
     sim = np.max(sim_for_each_cols)

@@ -10,6 +10,7 @@ import numpy as np
 from cslam.vpr.netvlad import NetVLAD
 from cslam.vpr.cosplace import CosPlace
 from cslam.lidar_pr.scancontext import ScanContext
+import cslam.lidar_pr.icp_utils as icp_utils
 from cslam.loop_closure_sparse_matching import LoopClosureSparseMatching
 from cslam.broker import Broker
 
@@ -241,8 +242,7 @@ class GlobalDescriptorLoopClosureDetection(object):
                                             desired_encoding='passthrough')
             embedding = self.global_descriptor.compute_embedding(cv_image)
         elif self.keyframe_type == "pointcloud":
-            embedding = self.global_descriptor.compute_embedding(
-                msg.pointcloud)
+            embedding = self.global_descriptor.compute_embedding(icp_utils.ros_pointcloud_to_points(msg.pointcloud))
 
         self.add_global_descriptor_to_map(embedding, msg.id)
 

@@ -81,7 +81,7 @@ RGBDHandler::RGBDHandler(std::shared_ptr<rclcpp::Node> &node)
     visualization_local_descriptors_publisher_ = node_->create_publisher<
         cslam_loop_detection_interfaces::msg::LocalImageDescriptors>("/viz/local_descriptors", 100);
 
-    keyframe_pointcloud_publisher_ = node_->create_publisher<cslam_common_interfaces::msg::KeyframePointCloud>(
+    keyframe_pointcloud_publisher_ = node_->create_publisher<cslam_common_interfaces::msg::VizPointCloud>(
         "/viz/keyframe_pointcloud", 100);
   }
 
@@ -537,7 +537,7 @@ void RGBDHandler::send_visualization_keypoints(const std::pair<std::shared_ptr<r
 
 void RGBDHandler::send_visualization_pointcloud(const std::shared_ptr<rtabmap::SensorData> & sensor_data)
 {
-  cslam_common_interfaces::msg::KeyframePointCloud keyframe_pointcloud_msg;
+  cslam_common_interfaces::msg::VizPointCloud keyframe_pointcloud_msg;
   keyframe_pointcloud_msg.robot_id = robot_id_;
   keyframe_pointcloud_msg.keyframe_id = sensor_data->id();
   std_msgs::msg::Header header;
