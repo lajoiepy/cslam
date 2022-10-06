@@ -20,11 +20,17 @@ class LoopClosureSparseMatching(object):
         self.params = params
         # Initialize matching structs
         # TODO: check param to select scan context version
-        self.local_nnsm = NearestNeighborsMatching()
+        if self.params["frontend.sensor_type"] == "lidar":
+            self.local_nnsm = ScanContextMatching()
+        else:
+            self.local_nnsm = NearestNeighborsMatching()
         self.other_robots_nnsm = {}
         for i in range(self.params['nb_robots']):
             if i != self.params['robot_id']:
-                self.other_robots_nnsm[i] = NearestNeighborsMatching()
+                if self.params["frontend.sensor_type"] == "lidar":
+                    self.other_robots_nnsm[i] = ScanContextMatching()
+                else:
+                    self.other_robots_nnsm[i] = NearestNeighborsMatching()
         # Initialize candidate selection algorithm
         self.candidate_selector = AlgebraicConnectivityMaximization(
             self.params['robot_id'], self.params['nb_robots'])

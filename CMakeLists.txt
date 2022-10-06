@@ -171,8 +171,6 @@ install(DIRECTORY include/${PROJECT_NAME}/
 )
 
 install(DIRECTORY 
-   launch 
-   config
    models
    DESTINATION share/${PROJECT_NAME}/
 )
@@ -188,6 +186,7 @@ ament_python_install_package(${PROJECT_NAME})
 
 install(PROGRAMS 
 cslam/loop_closure_detection_node.py 
+cslam/lidar_handler_node.py 
 DESTINATION lib/${PROJECT_NAME})
 
 # Add tests

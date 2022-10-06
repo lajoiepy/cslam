@@ -1,8 +1,8 @@
-from cslam.lidar_pr.ICP import icp
 import cslam.utils.point_cloud2 as pc2_utils
 from geometry_msgs.msg import Transform
 from scipy.spatial.transform import Rotation as R
 from std_msgs.msg import Header
+from sensor_msgs.msg import PointCloud2, PointField
 
 import numpy as np
 import teaserpp_python
@@ -79,8 +79,8 @@ def Rt2T(R,t):
     return T 
 
 def downsample(points, voxel_size):
-    open3d_cloud = open3d.PointCloud()
-    open3d_cloud.points = open3d.Vector3dVector(points)
+    open3d_cloud = open3d.geometry.PointCloud()
+    open3d_cloud.points = open3d.utility.Vector3dVector(points)
     return open3d_cloud.voxel_down_sample(voxel_size=voxel_size)
 
 def solve_teaser(src, dst, voxel_size):
@@ -134,8 +134,8 @@ def open3d_to_ros(open3d_cloud):
 
 def ros_to_open3d(msg):
     points = ros_pointcloud_to_points(msg)
-    open3d_cloud = open3d.PointCloud()
-    open3d_cloud.points = open3d.Vector3dVector(points)
+    open3d_cloud = open3d.geometry.PointCloud()
+    open3d_cloud.points = open3d.cpu.pybind.utility.Vector3dVector(points)
     return open3d_cloud
 
 def ros_pointcloud_to_points(pc_msg):

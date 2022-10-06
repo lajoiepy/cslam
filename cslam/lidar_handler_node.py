@@ -1,18 +1,21 @@
+#!/usr/bin/env python3
 import numpy as np
 from message_filters import TimeSynchronizer, Subscriber
-from sensor_msgs.msg import PointCloud2
+from sensor_msgs.msg import PointCloud2, PointField
 from nav_msgs.msg import Odometry
 from cslam_common_interfaces.msg import KeyframeOdom
 from cslam_loop_detection_interfaces.msg import LocalDescriptorsRequest, LocalPointCloudDescriptors, InterRobotLoopClosure, IntraRobotLoopClosure, LocalKeyframeMatch
 import cslam.lidar_pr.icp_utils as icp_utils
+import rclpy
+from rclpy.node import Node
 
-class LidarHandler:
+class LidarHandler: # TODO: document
     def __init__(self, node, params):
         self.node = node
         self.params = params
 
-        tss = TimeSynchronizer( Subscriber(self.node, self.params["frontend.pointcloud_topic"], PointCloud2),
-                                Subscriber(self.node, self.params["frontend.odom_topic"], Odometry) )
+        tss = TimeSynchronizer( [ Subscriber(self.node, PointCloud2, self.params["frontend.pointcloud_topic"]),
+                                  Subscriber(self.node, Odometry, self.params["frontend.odom_topic"])], 100 )
         tss.registerCallback(self.lidar_callback)
 
         self.keyframe_odom_publisher = self.node.create_publisher(KeyframeOdom, "keyframe_odom", 100)
@@ -95,9 +98,38 @@ class LidarHandler:
             data = self.received_data[0]
             self.received_data.pop(0)
             if self.generate_new_keyframe(data):
+                self.node.get_logger().info("Received lidar data 2")
                 self.local_descriptors_map[self.nb_local_keyframes] = icp_utils.downsample_ros_pointcloud(data[0], self.params["frontend.voxel_size"])
                 msg_odom = KeyframeOdom()
                 msg_odom.id = self.nb_local_keyframes
                 msg_odom.odom = data[1]
                 self.keyframe_odom_publisher.publish(msg_odom)
                 self.nb_local_keyframes = self.nb_local_keyframes + 1
+
+if __name__ == '__main__':
+
+    rclpy.init(args=None)
+    node = Node("map_manager")
+    node.declare_parameters(
+            namespace='',
+            parameters=[('frontend.pointcloud_topic', None),
+                        ('frontend.odom_topic', None),
+                        ('frontend.map_manager_process_period_ms', None),
+                        ('frontend.voxel_size', None),
+                        ('robot_id', None),                        
+                        ])
+    params = {}
+    params['frontend.pointcloud_topic'] = node.get_parameter(
+        'frontend.pointcloud_topic').value
+    params['frontend.odom_topic'] = node.get_parameter(
+        'frontend.odom_topic').value
+    params['frontend.map_manager_process_period_ms'] = node.get_parameter(
+        'frontend.map_manager_process_period_ms').value
+    params['frontend.voxel_size'] = node.get_parameter(
+        'frontend.voxel_size').value
+    params['robot_id'] = node.get_parameter(
+        'robot_id').value
+    lidar_handler = LidarHandler(node, params)
+    node.get_logger().info('Initialization done.')
+    rclpy.spin(node)
+    rclpy.shutdown()
