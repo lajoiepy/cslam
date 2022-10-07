@@ -23,6 +23,7 @@ def build_graph_and_extract_selection(nb_poses, nb_candidate_edges, nb_robots,
     params['robot_id'] = robot_id
     params['nb_robots'] = nb_robots
     params['frontend.similarity_threshold'] = 0.0  # Doesn't change anything
+    params['frontend.sensor_type'] = 'stereo'
     lcsm = LoopClosureSparseMatching(params)
     lcsm.candidate_selector.set_graph(fixed_edges_list, candidate_edges_list)
 

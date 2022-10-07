@@ -17,6 +17,7 @@ def set_params():
     params = {}
     params['robot_id'] = 0
     params['nb_robots'] = 2
+    params['frontend.sensor_type'] = 'stereo'
     params['frontend.similarity_threshold'] = 0.0
     return params
 
