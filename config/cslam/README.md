@@ -58,6 +58,6 @@
 
 `max_waiting_time_sec`: Maximum waiting time during PGO before going back to an idle state. Prevents being lock in an intermediate state in case of disconnections or failures.
 
-`enable_log_optimization_files`: Enable logging of optimization result files.
+`enable_logs`: Enable logging of optimization result files.
 
-`log_optimization_files_path`: Path where to store the logged optimization files.
+`log_folder`: Path where to store the logged optimization files.

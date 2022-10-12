@@ -34,9 +34,10 @@
       pose_graph_optimization_start_period_ms: 500
       pose_graph_optimization_loop_period_ms: 100
       max_waiting_time_sec: 60
-      enable_log_optimization_files: true
-      log_optimization_files_path: "build/cslam_tests"
       enable_broadcast_tf_frames: true
     visualization:
       enable: false
       publishing_period_ms: 1000
+    evaluation:
+      enable_logs: false
+      log_folder: ""

@@ -37,6 +37,7 @@ class LoopClosureDetection(Node):
                         ('frontend.cosplace.descriptor_dim', 512),
                         ('frontend.cosplace.backbone', "resnet101"),
                         ('frontend.sensor_type', "stereo"),
+                        ('evaluation.enable_logs', False),
                         ])
         self.params = {}
         self.params['frontend.similarity_threshold'] = self.get_parameter(
@@ -79,6 +80,8 @@ class LoopClosureDetection(Node):
             'frontend.cosplace.backbone').value
         self.params["frontend.sensor_type"] = self.get_parameter(
             'frontend.sensor_type').value.lower()
+        self.params["evaluation.enable_logs"] = self.get_parameter(
+            'evaluation.enable_logs').value
 
         self.glcd = GlobalDescriptorLoopClosureDetection(
             self.params, self)

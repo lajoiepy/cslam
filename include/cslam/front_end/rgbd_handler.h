@@ -37,6 +37,7 @@
 #include <cslam_loop_detection_interfaces/msg/local_image_descriptors.hpp>
 #include <cslam_loop_detection_interfaces/msg/local_keyframe_match.hpp>
 #include <cslam_loop_detection_interfaces/msg/intra_robot_loop_closure.hpp>
+#include <diagnostic_msgs/msg/key_value.hpp>
 #include <deque>
 #include <functional>
 #include <nav_msgs/msg/odometry.hpp>
@@ -143,27 +144,27 @@ namespace cslam
          * @param keypoints_data keyframe keypoints data
          */
         void send_keyframe(const std::pair<std::shared_ptr<rtabmap::SensorData>, std::shared_ptr<const nav_msgs::msg::Odometry>> &keypoints_data);
-        
+
         /**
          * @brief Send keypoints for visualizations
-         * 
+         *
          * @param keypoints_data keyframe keypoints data
          */
         virtual void send_visualization(const std::pair<std::shared_ptr<rtabmap::SensorData>, std::shared_ptr<const nav_msgs::msg::Odometry>> &keypoints_data);
 
         /**
          * @brief Send keypoints for visualizations
-         * 
+         *
          * @param keypoints_data keyframe keypoints data
          */
         void send_visualization_keypoints(const std::pair<std::shared_ptr<rtabmap::SensorData>, std::shared_ptr<const nav_msgs::msg::Odometry>> &keypoints_data);
 
         /**
          * @brief Send colored pointcloud for visualizations
-         * 
+         *
          * @param sensor_data RGBD image
          */
-        void send_visualization_pointcloud(const std::shared_ptr<rtabmap::SensorData> & sensor_data);
+        void send_visualization_pointcloud(const std::shared_ptr<rtabmap::SensorData> &sensor_data);
 
         /**
          * @brief Callback receiving sync data from camera
@@ -182,10 +183,10 @@ namespace cslam
 
         /**
          * @brief Clear images and large data fields in sensor data
-         * 
+         *
          * @param sensor_data frame data
          */
-        void clear_sensor_data(std::shared_ptr<rtabmap::SensorData>& sensor_data);
+        void clear_sensor_data(std::shared_ptr<rtabmap::SensorData> &sensor_data);
 
     protected:
         std::deque<std::pair<std::shared_ptr<rtabmap::SensorData>,
@@ -239,7 +240,14 @@ namespace cslam
             cslam_loop_detection_interfaces::msg::IntraRobotLoopClosure>::SharedPtr
             intra_robot_loop_closure_publisher_;
 
-        std::shared_ptr<tf2_ros::Buffer> tf_buffer_;
+        rclcpp::Publisher<
+            diagnostic_msgs::msg::KeyValue>::SharedPtr
+            log_publisher_;
+        unsigned int log_total_local_descriptors_cumulative_communication_;
+        bool enable_logs_;
+
+        std::shared_ptr<tf2_ros::Buffer>
+                tf_buffer_;
         std::shared_ptr<tf2_ros::TransformListener> tf_listener_;
 
         std::string base_frame_id_;

@@ -23,6 +23,7 @@
 #include <geometry_msgs/msg/transform_stamped.hpp>
 #include <std_msgs/msg/string.hpp>
 #include <std_msgs/msg/u_int32.hpp>
+#include <diagnostic_msgs/msg/key_value.hpp>
 
 #include <tf2_ros/transform_broadcaster.h>
 
@@ -33,6 +34,7 @@
 #include <thread>
 
 #include "cslam/back_end/gtsam_utils.h"
+#include "cslam/back_end/utils/logger.h"
 
 namespace cslam
 {
@@ -105,12 +107,33 @@ namespace cslam
                 msg);
 
         /**
+         * @brief Fill a PoseGraph message with the local data
+         *
+         * @return cslam_common_interfaces::msg::PoseGraph
+         */
+        cslam_common_interfaces::msg::PoseGraph fill_pose_graph_msg();
+
+        /**
+         * @brief Fill a PoseGraph message with the local data
+         *
+         * @return cslam_common_interfaces::msg::PoseGraph
+         */
+        cslam_common_interfaces::msg::PoseGraph fill_pose_graph_msg(const cslam_common_interfaces::msg::RobotIds &msg);
+
+        /**
          * @brief Receives request for pose graph
          *
          * @param msg
          */
         void get_pose_graph_callback(
             const cslam_common_interfaces::msg::RobotIds::ConstSharedPtr msg);
+
+        /**
+         * @brief Receive log messages
+         * 
+         * @param msg 
+         */
+        void log_callback(const diagnostic_msgs::msg::KeyValue::ConstSharedPtr msg);
 
         /**
          * @brief Receives pose graph
@@ -270,7 +293,7 @@ namespace cslam
         std::shared_ptr<rclcpp::Node> node_;
 
         unsigned int nb_robots_, robot_id_, optimization_count_;
-        bool enable_log_optimization_files_;
+        bool enable_logs_;
 
         unsigned int pose_graph_optimization_start_period_ms_,
             pose_graph_optimization_loop_period_ms_,
@@ -289,8 +312,8 @@ namespace cslam
                                          gtsam::Values::shared_ptr>>
             other_robots_graph_and_estimates_;
 
-        gtsam::Pose3 latest_local_pose_, local_pose_at_latest_optimization_, 
-                    tentative_local_pose_at_latest_optimization_, latest_optimized_pose_;
+        gtsam::Pose3 latest_local_pose_, local_pose_at_latest_optimization_,
+            tentative_local_pose_at_latest_optimization_, latest_optimized_pose_;
         gtsam::LabeledSymbol latest_local_symbol_;
 
         std::map<std::pair<unsigned int, unsigned int>,
@@ -366,7 +389,7 @@ namespace cslam
 
         bool is_waiting_;
 
-        std::string log_optimization_files_path_;
+        std::string log_folder_;
 
         rclcpp::Time start_waiting_time_;
         rclcpp::Duration max_waiting_time_sec_;
@@ -386,6 +409,14 @@ namespace cslam
 
         rclcpp::Publisher<cslam_common_interfaces::msg::ReferenceFrames>::SharedPtr
             reference_frame_per_robot_publisher_;
+
+        rclcpp::Subscription<diagnostic_msgs::msg::KeyValue>::SharedPtr
+            logger_subscriber_;
+
+        std::shared_ptr<Logger> logger_;
+
+        unsigned int log_nb_matches_, log_nb_failed_matches_, log_nb_vertices_transmitted_, log_global_descriptors_cumulative_communication_, log_local_descriptors_cumulative_communication_;
+        float log_sparsification_cumulative_computation_time_;
     };
 } // namespace cslam
 #endif

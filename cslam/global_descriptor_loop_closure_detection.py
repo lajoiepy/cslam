@@ -20,6 +20,8 @@ from cslam_loop_detection_interfaces.msg import (GlobalDescriptor,
                                                  InterRobotLoopClosure,
                                                  LocalDescriptorsRequest,
                                                  LocalKeyframeMatch)
+from diagnostic_msgs.msg import KeyValue
+import time
 
 import rclpy
 from rclpy.node import Node
@@ -63,21 +65,21 @@ class GlobalDescriptorLoopClosureDetection(object):
             'frontend.global_descriptor_topic'] = self.node.get_parameter(
                 'frontend.global_descriptor_topic').value
         self.global_descriptor_publisher = self.node.create_publisher(
-            GlobalDescriptors,
-            self.params['frontend.global_descriptor_topic'], 100)
+            GlobalDescriptors, self.params['frontend.global_descriptor_topic'],
+            100)
         self.global_descriptor_subscriber = self.node.create_subscription(
-            GlobalDescriptors,
-            self.params['frontend.global_descriptor_topic'],
+            GlobalDescriptors, self.params['frontend.global_descriptor_topic'],
             self.global_descriptor_callback, 100)
-        
+
         if self.keyframe_type == "rgb":
             self.receive_keyframe_subscriber = self.node.create_subscription(
                 KeyframeRGB, 'keyframe_data', self.receive_keyframe, 100)
         elif self.keyframe_type == "pointcloud":
             self.receive_keyframe_subscriber = self.node.create_subscription(
-                KeyframePointCloud, 'keyframe_data', self.receive_keyframe, 100)
-        else:  
-            se;f.node.get_logger().error("Unknown keyframe type")
+                KeyframePointCloud, 'keyframe_data', self.receive_keyframe,
+                100)
+        else:
+            self.node.get_logger().error("Unknown keyframe type")
 
         self.local_match_publisher = self.node.create_publisher(
             LocalKeyframeMatch, 'local_keyframe_match', 100)
@@ -103,6 +105,15 @@ class GlobalDescriptorLoopClosureDetection(object):
         self.global_descriptors_timer = self.node.create_timer(
             self.params['frontend.global_descriptor_publication_period_sec'],
             self.global_descriptors_timer_callback)
+
+        if self.params["evaluation.enable_logs"]:
+            self.log_publisher = self.node.create_publisher(
+                KeyValue, 'log_info', 100)
+            self.log_total_matches = 0
+            self.log_total_failed_matches = 0
+            self.log_total_vertices_transmitted = 0
+            self.log_global_descriptors_cumulative_communication = 0
+            self.log_total_sparsification_computation_time = 0.0
 
     def add_global_descriptor_to_map(self, embedding, kf_id):
         """ Add global descriptor to matching list
@@ -154,8 +165,14 @@ class GlobalDescriptorLoopClosureDetection(object):
                 global_descriptors = GlobalDescriptors()
                 global_descriptors.descriptors = m
                 self.global_descriptor_publisher.publish(global_descriptors)
+                if self.params["evaluation.enable_logs"]:
+                    self.log_global_descriptors_cumulative_communication += len(global_descriptors.descriptors) * len(global_descriptors.descriptors[0].descriptor) * 4 # bytes
 
             self.delete_useless_descriptors()
+            if self.params["evaluation.enable_logs"]:
+                self.log_publisher.publish(
+                    KeyValue(key="global_descriptors_cumulative_communication",
+                             value=str(self.log_global_descriptors_cumulative_communication)))
 
     def detect_intra(self, embedding, kf_id):
         """ Detect intra-robot loop closures
@@ -186,6 +203,7 @@ class GlobalDescriptorLoopClosureDetection(object):
         # Check if the robot is the broker
         if len(neighbors_in_range_list
                ) > 0 and self.neighbor_manager.local_robot_is_broker():
+            if self.params["evaluation.enable_logs"]: start_time = time.time()
             # Find matches that maximize the algebraic connectivity
             selection = self.lcm.select_candidates(
                 self.params["frontend.inter_robot_loop_closure_budget"],
@@ -204,6 +222,20 @@ class GlobalDescriptorLoopClosureDetection(object):
                     msg.matches_image_id = vertices_info[v][1]
                     self.local_descriptors_request_publishers[v[0]].publish(
                         msg)
+                if self.params["evaluation.enable_logs"]:
+                    self.log_total_vertices_transmitted += len(
+                        selected_vertices_set)
+            if self.params["evaluation.enable_logs"]:
+                stop_time = time.time()
+                self.log_total_sparsification_computation_time += stop_time - start_time
+                self.log_publisher.publish(
+                    KeyValue(
+                        key="sparsification_cumulative_computation_time",
+                        value=str(
+                            self.log_total_sparsification_computation_time)))
+                self.log_publisher.publish(
+                    KeyValue(key="nb_vertices_transmitted",
+                             value=str(self.log_total_vertices_transmitted)))
 
     def edge_list_to_vertices(self, selection):
         """Extracts the vertices in a list of edges
@@ -242,7 +274,8 @@ class GlobalDescriptorLoopClosureDetection(object):
                                             desired_encoding='passthrough')
             embedding = self.global_descriptor.compute_embedding(cv_image)
         elif self.keyframe_type == "pointcloud":
-            embedding = self.global_descriptor.compute_embedding(icp_utils.ros_pointcloud_to_points(msg.pointcloud))
+            embedding = self.global_descriptor.compute_embedding(
+                icp_utils.ros_pointcloud_to_points(msg.pointcloud))
 
         self.add_global_descriptor_to_map(embedding, msg.id)
 
@@ -287,12 +320,19 @@ class GlobalDescriptorLoopClosureDetection(object):
             # If geo verif succeeds, move from candidate to fixed edge in the graph
             self.lcm.candidate_selector.candidate_edges_to_fixed(
                 [self.inter_robot_loop_closure_msg_to_edge(msg)])
+
+            if self.params["evaluation.enable_logs"]:
+                self.log_total_matches += 1
+                self.log_publisher.publish(
+                    KeyValue(key="nb_matches",
+                             value=str(self.log_total_matches)))
         else:
-            self.node.get_logger().info(
-                'Failed inter-robot loop closure measurement: (' +
-                str(msg.robot0_id) + ',' + str(msg.robot0_image_id) +
-                ') -> (' + str(msg.robot1_id) + ',' +
-                str(msg.robot1_image_id) + ')')
             # If geo verif fails, remove candidate
             self.lcm.candidate_selector.remove_candidate_edges(
                 [self.inter_robot_loop_closure_msg_to_edge(msg)])
+
+            if self.params["evaluation.enable_logs"]:
+                self.log_total_failed_matches += 1
+                self.log_publisher.publish(
+                    KeyValue(key="nb_failed_matches",
+                             value=str(self.log_total_failed_matches)))

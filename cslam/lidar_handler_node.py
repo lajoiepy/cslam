@@ -8,6 +8,7 @@ from cslam_loop_detection_interfaces.msg import LocalDescriptorsRequest, LocalPo
 import cslam.lidar_pr.icp_utils as icp_utils
 import rclpy
 from rclpy.node import Node
+from diagnostic_msgs.msg import KeyValue
 
 class LidarHandler: # TODO: document
     def __init__(self, node, params):
@@ -44,6 +45,11 @@ class LidarHandler: # TODO: document
         self.nb_local_keyframes = 0
         self.previous_keyframe = None
 
+        if self.params["evaluation.enable_logs"]:
+            self.log_publisher = self.node.create_publisher(
+                KeyValue, 'log_info', 100)
+            self.log_local_descriptors_cumulative_communication = 0
+
     def lidar_callback(self, pc_msg, odom_msg):
         self.received_data.append((pc_msg, odom_msg))
 
@@ -56,6 +62,9 @@ class LidarHandler: # TODO: document
         out_msg.matches_image_id = request.matches_image_id
 
         self.pointcloud_descriptors_publisher.publish(out_msg)
+        if self.params["evaluation.enable_logs"]:
+            self.log_local_descriptors_cumulative_communication += len(out_msg.data)
+            self.log_publisher.publish(KeyValue(key="local_descriptors_cumulative_communication", value=str(self.log_local_descriptors_cumulative_communication)))
     
     def receive_local_descriptors(self, msg):
         frame_ids = []
@@ -123,7 +132,8 @@ if __name__ == '__main__':
                         ('frontend.odom_topic', None),
                         ('frontend.map_manager_process_period_ms', None),
                         ('frontend.voxel_size', None),
-                        ('robot_id', None),                        
+                        ('robot_id', None),           
+                        ('evaluation.enable_logs', False),             
                         ])
     params = {}
     params['frontend.pointcloud_topic'] = node.get_parameter(
@@ -136,6 +146,8 @@ if __name__ == '__main__':
         'frontend.voxel_size').value
     params['robot_id'] = node.get_parameter(
         'robot_id').value
+    params["evaluation.enable_logs"] = node.get_parameter(
+            'evaluation.enable_logs').value
     lidar_handler = LidarHandler(node, params)
     node.get_logger().info('Initialization done.')
     rclpy.spin(node)

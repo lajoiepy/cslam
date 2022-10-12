@@ -16,6 +16,7 @@ RGBDHandler::RGBDHandler(std::shared_ptr<rclcpp::Node> &node)
   node->declare_parameter<std::string>("frontend.odom_topic", "odom");
   node->declare_parameter<float>("frontend.keyframe_generation_ratio_threshold", 0.0);
   node->declare_parameter<std::string>("frontend.sensor_base_frame_id", "camera_link");
+  node->declare_parameter<bool>("evaluation.enable_logs", false);
   node_->get_parameter("frontend.max_keyframe_queue_size", max_queue_size_);
   node_->get_parameter("frontend.keyframe_generation_ratio_threshold", keyframe_generation_ratio_threshold_);
   node_->get_parameter("frontend.sensor_base_frame_id", base_frame_id_);
@@ -23,6 +24,8 @@ RGBDHandler::RGBDHandler(std::shared_ptr<rclcpp::Node> &node)
                        enable_visualization_);
   node_->get_parameter("visualization.publishing_period_ms",
                        visualization_period_ms_);
+  node_->get_parameter("evaluation.enable_logs",
+                       enable_logs_);
 
   if (keyframe_generation_ratio_threshold_ > 0.99)
   {
@@ -135,6 +138,12 @@ RGBDHandler::RGBDHandler(std::shared_ptr<rclcpp::Node> &node)
       std::bind(&RGBDHandler::rgbd_callback, this, std::placeholders::_1,
                 std::placeholders::_2, std::placeholders::_3,
                 std::placeholders::_4));
+
+  if (enable_logs_){
+    log_total_local_descriptors_cumulative_communication_ = 0;
+    log_publisher_ = node_->create_publisher<diagnostic_msgs::msg::KeyValue>(
+        "log_info", 100);
+  }
 }
 
 void RGBDHandler::rgbd_callback(
@@ -355,6 +364,17 @@ void RGBDHandler::local_descriptors_request(
 
   // Publish local descriptors
   local_descriptors_publisher_->publish(msg);
+
+  if (enable_logs_)
+  {
+    log_total_local_descriptors_cumulative_communication_ += msg.data.key_points.size()*28; // bytes
+    log_total_local_descriptors_cumulative_communication_ += msg.data.points.size()*12; // bytes
+    log_total_local_descriptors_cumulative_communication_ += msg.data.descriptors.size(); // bytes
+    diagnostic_msgs::msg::KeyValue log_msg;
+    log_msg.key = "local_descriptors_cumulative_communication";
+    log_msg.value = std::to_string(log_total_local_descriptors_cumulative_communication_);
+    log_publisher_->publish(log_msg);
+  }
 }
 
 void RGBDHandler::receive_local_keyframe_match(

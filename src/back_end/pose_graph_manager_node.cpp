@@ -21,8 +21,8 @@ int main(int argc, char **argv) {
   node->declare_parameter<int>("backend.pose_graph_optimization_loop_period_ms", 100);
   node->declare_parameter<int>("backend.max_waiting_time_sec", 100);
   node->declare_parameter<double>("neighbor_management.heartbeat_period_sec", 1.0);
-  node->declare_parameter<bool>("backend.enable_log_optimization_files", false);
-  node->declare_parameter<std::string>("backend.log_optimization_files_path", "");
+  node->declare_parameter<bool>("evaluation.enable_logs", false);
+  node->declare_parameter<std::string>("evaluation.log_folder", "");
   node->declare_parameter<bool>("visualization.enable", false);
   node->declare_parameter<int>("visualization.publishing_period_ms", 0);
   node->declare_parameter<bool>("backend.enable_broadcast_tf_frames", false);

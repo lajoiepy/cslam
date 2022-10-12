@@ -30,6 +30,7 @@ find_package(nav2_msgs REQUIRED)
 find_package(stereo_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(visualization_msgs REQUIRED)
+find_package(diagnostic_msgs REQUIRED)
 find_package(image_transport REQUIRED)
 find_package(tf2 REQUIRED)
 find_package(tf2_eigen REQUIRED)
@@ -116,6 +117,7 @@ SET(Libraries
    visualization_msgs
    image_geometry
    stereo_msgs
+   diagnostic_msgs
    tf2_geometry_msgs
    pcl_ros
    pcl_msgs
@@ -146,6 +148,7 @@ set_target_properties(map_manager
 add_executable(pose_graph_manager 
   src/back_end/decentralized_pgo.cpp
   src/back_end/pose_graph_manager_node.cpp
+  src/back_end/utils/logger.cpp
   src/back_end/gtsam_utils.cpp)
 add_dependencies(pose_graph_manager  
 pose_graph_manager

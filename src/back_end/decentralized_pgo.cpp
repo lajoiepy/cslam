@@ -17,10 +17,10 @@ DecentralizedPGO::DecentralizedPGO(std::shared_ptr<rclcpp::Node> &node)
   node_->get_parameter("backend.pose_graph_optimization_loop_period_ms",
                        pose_graph_optimization_loop_period_ms_);
   node_->get_parameter("neighbor_management.heartbeat_period_sec", heartbeat_period_sec_);
-  node->get_parameter("backend.enable_log_optimization_files",
-                      enable_log_optimization_files_);
-  node->get_parameter("backend.log_optimization_files_path",
-                      log_optimization_files_path_);
+  node->get_parameter("evaluation.enable_logs",
+                      enable_logs_);
+  node->get_parameter("evaluation.log_folder",
+                      log_folder_);
   node_->get_parameter("visualization.enable",
                        enable_visualization_);
   node_->get_parameter("visualization.publishing_period_ms",
@@ -188,6 +188,15 @@ DecentralizedPGO::DecentralizedPGO(std::shared_ptr<rclcpp::Node> &node)
 
   origin_robot_id_ = robot_id_;
 
+  logger_ = std::make_shared<Logger>(node_, robot_id_, nb_robots_, log_folder_);
+
+  log_nb_matches_ = 0;
+  log_nb_failed_matches_ = 0;
+  log_nb_vertices_transmitted_ = 0;
+  log_global_descriptors_cumulative_communication_ = 0;
+  log_local_descriptors_cumulative_communication_ = 0;
+  log_sparsification_cumulative_computation_time_ = 0.0;
+
   RCLCPP_INFO(node_->get_logger(), "Initialization done.");
 }
 
@@ -339,9 +348,13 @@ bool DecentralizedPGO::is_optimizer()
   return is_optimizer;
 }
 
-void DecentralizedPGO::get_pose_graph_callback(
-    const cslam_common_interfaces::msg::RobotIds::ConstSharedPtr msg)
-{
+cslam_common_interfaces::msg::PoseGraph DecentralizedPGO::fill_pose_graph_msg(){
+  auto current_robots_ids = current_neighbors_ids_;
+  current_robots_ids.robots.ids.push_back(robot_id_);
+  return fill_pose_graph_msg(current_robots_ids.robots);
+}
+
+cslam_common_interfaces::msg::PoseGraph DecentralizedPGO::fill_pose_graph_msg(const cslam_common_interfaces::msg::RobotIds& msg){
   cslam_common_interfaces::msg::PoseGraph out_msg;
   out_msg.robot_id = robot_id_;
   out_msg.values = gtsam_values_to_msg(odometry_pose_estimates_);
@@ -350,12 +363,12 @@ void DecentralizedPGO::get_pose_graph_callback(
 
   std::set<unsigned int> connected_robots;
 
-  for (unsigned int i = 0; i < msg->ids.size(); i++)
+  for (unsigned int i = 0; i < msg.ids.size(); i++)
   {
-    for (unsigned int j = i + 1; j < msg->ids.size(); j++)
+    for (unsigned int j = i + 1; j < msg.ids.size(); j++)
     {
-      unsigned int min_robot_id = std::min(msg->ids[i], msg->ids[j]);
-      unsigned int max_robot_id = std::max(msg->ids[i], msg->ids[j]);
+      unsigned int min_robot_id = std::min(msg.ids[i], msg.ids[j]);
+      unsigned int max_robot_id = std::max(msg.ids[i], msg.ids[j]);
       if (inter_robot_loop_closures_[{min_robot_id, max_robot_id}].size() > 0 &&
           (min_robot_id == robot_id_ || max_robot_id == robot_id_))
       {
@@ -379,6 +392,23 @@ void DecentralizedPGO::get_pose_graph_callback(
       out_msg.connected_robots.ids.push_back(id);
     }
   }
+  
+  // If logging, add extra data
+  if (enable_logs_) {
+    out_msg.nb_matches = log_nb_matches_;
+    out_msg.nb_failed_matches = log_nb_failed_matches_;
+    out_msg.nb_vertices_transmitted = log_nb_vertices_transmitted_;
+    out_msg.front_end_cumulative_communication_bytes = log_global_descriptors_cumulative_communication_ + log_local_descriptors_cumulative_communication_;
+    out_msg.sparsification_cumulative_computation_time = log_sparsification_cumulative_computation_time_;
+  }
+
+  return out_msg;
+}
+
+void DecentralizedPGO::get_pose_graph_callback(
+    const cslam_common_interfaces::msg::RobotIds::ConstSharedPtr msg)
+{
+  auto out_msg = fill_pose_graph_msg(*msg);
   pose_graph_publisher_->publish(out_msg);
   tentative_local_pose_at_latest_optimization_ = latest_local_pose_;
 }
@@ -394,10 +424,17 @@ void DecentralizedPGO::pose_graph_callback(
     received_pose_graphs_[msg->robot_id] = true;
     received_pose_graphs_connectivity_.insert(
         {msg->robot_id, msg->connected_robots.ids});
+      
+    if (enable_logs_){
+      logger_->add_pose_graph_log_info(*msg);
+    }
     if (check_received_pose_graphs())
     {
       end_waiting();
       optimizer_state_ = OptimizerState::START_OPTIMIZATION;
+      if (enable_logs_){
+        logger_->add_pose_graph_log_info(fill_pose_graph_msg());
+      }
     }
   }
 }
@@ -505,6 +542,7 @@ DecentralizedPGO::aggregate_pose_graphs()
   graph->push_back(pose_graph_->begin(), pose_graph_->end());
   estimates->insert(*odometry_pose_estimates_);
   tentative_local_pose_at_latest_optimization_ = latest_local_pose_;
+
   // Add other robots graphs
   for (auto id : current_neighbors_ids_.robots.ids)
   {
@@ -709,6 +747,9 @@ DecentralizedPGO::optimize(const gtsam::NonlinearFactorGraph::shared_ptr &graph,
                            const gtsam::Values::shared_ptr &initial)
 {
   gtsam::Values result;
+  if (enable_logs_){
+    logger_->start_timer();
+  }
   try{
     gtsam::GncParams<gtsam::LevenbergMarquardtParams> params;
     gtsam::GncOptimizer<gtsam::GncParams<gtsam::LevenbergMarquardtParams>>
@@ -720,6 +761,18 @@ DecentralizedPGO::optimize(const gtsam::NonlinearFactorGraph::shared_ptr &graph,
     RCLCPP_ERROR(node_->get_logger(), "Optimization failed: %s", e.what());
     result = *initial;
   }
+  if (enable_logs_){
+    logger_->stop_timer();
+    logger_->log_optimized_global_pose_graph(graph, result, robot_id_);
+    try{
+      logger_->write_logs();
+    }
+    catch (const std::exception &e)
+    {
+      RCLCPP_ERROR(node_->get_logger(), "Writing logs failed: %s", e.what());
+      result = *initial;
+    }
+  }
   return result;
 }
 
@@ -727,18 +780,6 @@ void DecentralizedPGO::start_optimization()
 {
   // Build global pose graph
   aggregate_pose_graph_ = aggregate_pose_graphs();
-
-  if (enable_log_optimization_files_)
-  {
-    try{
-      gtsam::writeG2o(*aggregate_pose_graph_.first, *aggregate_pose_graph_.second,
-                      log_optimization_files_path_ + "/" +
-                          std::to_string(optimization_count_) + "_robot" +
-                          std::to_string(robot_id_) + "_before_optimization.g2o");
-    } catch (const std::exception& e) {
-      RCLCPP_ERROR(node_->get_logger(), "Error writing g2o file: %s", e.what());
-    }
-  }
 
   // Add prior
   // Use first pose of current estimate
@@ -752,6 +793,13 @@ void DecentralizedPGO::start_optimization()
   aggregate_pose_graph_.first->addPrior(
       first_symbol, current_pose_estimates_->at<gtsam::Pose3>(first_symbol),
       default_noise_model_);
+
+  if (enable_logs_){
+    logger_->log_initial_global_pose_graph(aggregate_pose_graph_.first, aggregate_pose_graph_.second);
+    logger_subscriber_ = node_->create_subscription<diagnostic_msgs::msg::KeyValue>(
+        "log_info", 10, std::bind(&DecentralizedPGO::log_callback, this, std::placeholders::_1));
+    // TODO: log GPS
+  }
 
   // Optimize graph
   optimization_result_ =
@@ -773,18 +821,6 @@ void DecentralizedPGO::check_result_and_finish_optimization()
     // Share results
     share_optimized_estimates(result);
     optimizer_state_ = OptimizerState::IDLE;
-
-    if (enable_log_optimization_files_)
-    {
-      try{
-        gtsam::writeG2o(
-            *aggregate_pose_graph_.first, result,
-            log_optimization_files_path_ + "/" + std::to_string(optimization_count_) +
-                "_robot" + std::to_string(robot_id_) + "_after_optimization.g2o");
-      } catch (const std::exception& e) {
-        RCLCPP_ERROR(node_->get_logger(), "Error writing g2o file: %s", e.what());
-      }
-    }
 
     // Publish result info for monitoring
     if (debug_optimization_result_publisher_->get_subscription_count() > 0)
@@ -839,5 +875,24 @@ void DecentralizedPGO::optimization_loop_callback()
     cslam_common_interfaces::msg::OptimizerState state_msg;
     state_msg.state = optimizer_state_;
     optimizer_state_publisher_->publish(state_msg);
+  }
+}
+
+void DecentralizedPGO::log_callback(const diagnostic_msgs::msg::KeyValue::ConstSharedPtr msg)
+{
+  if (msg->key == "nb_matches"){
+    log_nb_matches_ = std::stoul(msg->value);
+  } else if (msg->key == "nb_failed_matches"){
+    log_nb_failed_matches_ = std::stoul(msg->value);
+  } else if (msg->key == "nb_vertices_transmitted"){
+    log_nb_vertices_transmitted_ = std::stoul(msg->value);
+  } else if (msg->key == "global_descriptors_cumulative_communication"){
+    log_global_descriptors_cumulative_communication_ = std::stoul(msg->value);
+  } else if (msg->key == "local_descriptors_cumulative_communication"){
+    log_local_descriptors_cumulative_communication_ = std::stoul(msg->value);
+  } else if (msg->key == "sparsification_cumulative_computation_time"){
+    log_sparsification_cumulative_computation_time_ = std::stof(msg->value);
+  } else {
+    RCLCPP_ERROR(node_->get_logger(), "Unknown log key: %s", msg->key.c_str());
   }
 }
