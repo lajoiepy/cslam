@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import numpy as np
 from message_filters import TimeSynchronizer, Subscriber
-from sensor_msgs.msg import PointCloud2, PointField
+from sensor_msgs.msg import PointCloud2, PointField, NavSatFix
 from nav_msgs.msg import Odometry
 from cslam_common_interfaces.msg import KeyframeOdom, KeyframePointCloud
 from cslam_loop_detection_interfaces.msg import LocalDescriptorsRequest, LocalPointCloudDescriptors, InterRobotLoopClosure, IntraRobotLoopClosure, LocalKeyframeMatch
@@ -50,8 +50,17 @@ class LidarHandler: # TODO: document
                 KeyValue, 'log_info', 100)
             self.log_local_descriptors_cumulative_communication = 0
 
+        if self.params["evaluation.enable_gps_recording"]:
+            self.gps_subscriber = self.node.create_subscription(NavSatFix, self.params["evaluation.gps_topic"], self.gps_callback, 100)
+            self.gps_data = []
+            self.latest_gps = NavSatFix()
+
     def lidar_callback(self, pc_msg, odom_msg):
         self.received_data.append((pc_msg, odom_msg))
+        self.gps_data.append(self.latest_gps)
+
+    def gps_callback(self, gps_msg):
+        self.latest_gps = gps_msg
 
     def send_local_descriptors_request(self, request):
         out_msg = LocalPointCloudDescriptors()
@@ -108,6 +117,10 @@ class LidarHandler: # TODO: document
         if len(self.received_data) > 0:
             data = self.received_data[0]
             self.received_data.pop(0)
+            gps_data = None
+            if self.params["evaluation.enable_gps_recording"]:
+                gps = self.gps_data[0]
+                self.gps_data.pop(0)
             if self.generate_new_keyframe(data):
                 self.local_descriptors_map[self.nb_local_keyframes] = icp_utils.downsample_ros_pointcloud(data[0], self.params["frontend.voxel_size"])
                 # Publish pointcloud
@@ -119,6 +132,8 @@ class LidarHandler: # TODO: document
                 msg_odom = KeyframeOdom()
                 msg_odom.id = self.nb_local_keyframes
                 msg_odom.odom = data[1]
+                if self.params["evaluation.enable_gps_recording"]:
+                    msg_odom.gps = gps
                 self.keyframe_odom_publisher.publish(msg_odom)
                 self.nb_local_keyframes = self.nb_local_keyframes + 1
 
@@ -133,7 +148,9 @@ if __name__ == '__main__':
                         ('frontend.map_manager_process_period_ms', None),
                         ('frontend.voxel_size', None),
                         ('robot_id', None),           
-                        ('evaluation.enable_logs', False),             
+                        ('evaluation.enable_logs', False),  
+                        ('evaluation.enable_gps_recording', False), 
+                        ('evaluation.gps_topic', ""),            
                         ])
     params = {}
     params['frontend.pointcloud_topic'] = node.get_parameter(
@@ -148,6 +165,10 @@ if __name__ == '__main__':
         'robot_id').value
     params["evaluation.enable_logs"] = node.get_parameter(
             'evaluation.enable_logs').value
+    params["evaluation.enable_gps_recording"] = node.get_parameter(
+            'evaluation.enable_gps_recording').value
+    params["evaluation.gps_topic"] = node.get_parameter(
+            'evaluation.gps_topic').value
     lidar_handler = LidarHandler(node, params)
     node.get_logger().info('Initialization done.')
     rclpy.spin(node)

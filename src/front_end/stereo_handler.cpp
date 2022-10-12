@@ -218,6 +218,14 @@ void StereoHandler::stereo_callback(
           "Maximum queue size (%d) exceeded, the oldest element was removed.",
           max_queue_size_);
     }
+
+    if (enable_gps_recording_) {
+        received_gps_queue_.push_back(latest_gps_fix_);
+        if (received_gps_queue_.size() > max_queue_size_)
+        {
+        received_gps_queue_.pop_front();
+        }
+    }
   } else {
     RCLCPP_WARN(node_->get_logger(), "Odom: input images empty?!");
   }

@@ -19,6 +19,7 @@
 
 #include <ctime>
 #include <chrono>
+#include <iomanip>
 
 #include <sensor_msgs/msg/nav_sat_fix.hpp>
 
@@ -41,9 +42,6 @@ namespace cslam
                                              const gtsam::Values &result,
                                              const unsigned int &origin_robot_id);
 
-        void add_gps_values(const unsigned int &robot_id, const std::map<unsigned int, sensor_msgs::msg::NavSatFix> &gps_values);
-
-
         void start_timer();
 
         void stop_timer();
@@ -59,8 +57,6 @@ namespace cslam
 
         std::vector<std::pair<std::pair<gtsam::LabeledSymbol, gtsam::LabeledSymbol>, double>> compute_inter_robot_loop_closure_errors(const gtsam::NonlinearFactorGraph::shared_ptr &graph,
                                                  const gtsam::Values::shared_ptr &result);
-
-        std::string format_gps_values(const std::map<unsigned int, sensor_msgs::msg::NavSatFix>& gps_values);
 
         std::shared_ptr<rclcpp::Node> node_;
 

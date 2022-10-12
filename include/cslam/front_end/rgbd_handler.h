@@ -38,6 +38,7 @@
 #include <cslam_loop_detection_interfaces/msg/local_keyframe_match.hpp>
 #include <cslam_loop_detection_interfaces/msg/intra_robot_loop_closure.hpp>
 #include <diagnostic_msgs/msg/key_value.hpp>
+#include <sensor_msgs/msg/nav_sat_fix.hpp>
 #include <deque>
 #include <functional>
 #include <nav_msgs/msg/odometry.hpp>
@@ -140,10 +141,18 @@ namespace cslam
          * @brief Function to send the image to the python node
          * TODO: Move to parent class
          *
-         * @param rgb RGB keyframe data
          * @param keypoints_data keyframe keypoints data
          */
         void send_keyframe(const std::pair<std::shared_ptr<rtabmap::SensorData>, std::shared_ptr<const nav_msgs::msg::Odometry>> &keypoints_data);
+
+        /**
+         * @brief Function to send the image to the python node
+         * TODO: Move to parent class
+         *
+         * @param keypoints_data keyframe keypoints data
+         * @param gps_data GPS data
+         */
+        void send_keyframe(const std::pair<std::shared_ptr<rtabmap::SensorData>, std::shared_ptr<const nav_msgs::msg::Odometry>> &keypoints_data, const sensor_msgs::msg::NavSatFix& gps_data);
 
         /**
          * @brief Send keypoints for visualizations
@@ -187,6 +196,13 @@ namespace cslam
          * @param sensor_data frame data
          */
         void clear_sensor_data(std::shared_ptr<rtabmap::SensorData> &sensor_data);
+
+        /**
+         * @brief GPS data callback
+         *
+         * @param msg
+         */
+        void gps_callback(const sensor_msgs::msg::NavSatFix::ConstSharedPtr msg);
 
     protected:
         std::deque<std::pair<std::shared_ptr<rtabmap::SensorData>,
@@ -247,7 +263,7 @@ namespace cslam
         bool enable_logs_;
 
         std::shared_ptr<tf2_ros::Buffer>
-                tf_buffer_;
+            tf_buffer_;
         std::shared_ptr<tf2_ros::TransformListener> tf_listener_;
 
         std::string base_frame_id_;
@@ -256,6 +272,13 @@ namespace cslam
 
         unsigned int visualization_period_ms_;
         bool enable_visualization_;
+
+        bool enable_gps_recording_;
+        std::string gps_topic_;
+        rclcpp::Subscription<sensor_msgs::msg::NavSatFix>::SharedPtr gps_subscriber_;
+        sensor_msgs::msg::NavSatFix latest_gps_fix_;
+        std::deque<sensor_msgs::msg::NavSatFix>
+            received_gps_queue_;
 
     private:
         image_transport::SubscriberFilter sub_image_color_;

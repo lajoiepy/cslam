@@ -26,6 +26,10 @@ RGBDHandler::RGBDHandler(std::shared_ptr<rclcpp::Node> &node)
                        visualization_period_ms_);
   node_->get_parameter("evaluation.enable_logs",
                        enable_logs_);
+  node->get_parameter("evaluation.enable_gps_recording",
+                      enable_gps_recording_);
+  node->get_parameter("evaluation.gps_topic",
+                      gps_topic_);
 
   if (keyframe_generation_ratio_threshold_ > 0.99)
   {
@@ -139,6 +143,14 @@ RGBDHandler::RGBDHandler(std::shared_ptr<rclcpp::Node> &node)
                 std::placeholders::_2, std::placeholders::_3,
                 std::placeholders::_4));
 
+  if (enable_gps_recording_)
+  {
+    gps_subscriber_ = node_->create_subscription<sensor_msgs::msg::NavSatFix>(
+        gps_topic_, 100,
+        std::bind(&RGBDHandler::gps_callback, this,
+                  std::placeholders::_1));
+  }
+
   if (enable_logs_){
     log_total_local_descriptors_cumulative_communication_ = 0;
     log_publisher_ = node_->create_publisher<diagnostic_msgs::msg::KeyValue>(
@@ -217,6 +229,14 @@ void RGBDHandler::rgbd_callback(
         node_->get_logger(),
         "Maximum queue size (%d) exceeded, the oldest element was removed.",
         max_queue_size_);
+  }
+
+  if (enable_gps_recording_) {
+    received_gps_queue_.push_back(latest_gps_fix_);
+    if (received_gps_queue_.size() > max_queue_size_)
+    {
+      received_gps_queue_.pop_front();
+    }
   }
 }
 
@@ -314,6 +334,12 @@ void RGBDHandler::process_new_sensor_data()
     auto sensor_data = received_data_queue_.front();
     received_data_queue_.pop_front();
 
+    sensor_msgs::msg::NavSatFix gps_fix;
+    if (enable_gps_recording_) {
+      gps_fix = received_gps_queue_.front();
+      received_gps_queue_.pop_front();
+    }
+
     if (sensor_data.first->isValid())
     {
       // Compute local descriptors
@@ -326,8 +352,12 @@ void RGBDHandler::process_new_sensor_data()
         sensor_data.first->setId(nb_local_keyframes_);
         nb_local_keyframes_++;
 
-        // Send keyframe for loop detection
-        send_keyframe(sensor_data);
+        if (enable_gps_recording_) {
+          send_keyframe(sensor_data, gps_fix);
+        } else {
+          // Send keyframe for loop detection
+          send_keyframe(sensor_data);
+        }
       }
 
       clear_sensor_data(sensor_data.first);
@@ -528,6 +558,35 @@ void RGBDHandler::send_keyframe(const std::pair<std::shared_ptr<rtabmap::SensorD
   }
 }
 
+void RGBDHandler::send_keyframe(const std::pair<std::shared_ptr<rtabmap::SensorData>, std::shared_ptr<const nav_msgs::msg::Odometry>> &keypoints_data, const sensor_msgs::msg::NavSatFix& gps_data)
+{
+  cv::Mat rgb;
+  keypoints_data.first->uncompressDataConst(&rgb, 0);
+
+  // Image message
+  std_msgs::msg::Header header;
+  header.stamp = node_->now();
+  cv_bridge::CvImage image_bridge = cv_bridge::CvImage(
+      header, sensor_msgs::image_encodings::RGB8, rgb);
+  cslam_common_interfaces::msg::KeyframeRGB keyframe_msg;
+  image_bridge.toImageMsg(keyframe_msg.image);
+  keyframe_msg.id = keypoints_data.first->id();
+
+  keyframe_data_publisher_->publish(keyframe_msg);
+
+  // Odometry message
+  cslam_common_interfaces::msg::KeyframeOdom odom_msg;
+  odom_msg.id = keypoints_data.first->id();
+  odom_msg.odom = *keypoints_data.second;
+  odom_msg.gps = gps_data;
+  keyframe_odom_publisher_->publish(odom_msg);
+
+  if (enable_visualization_)
+  {
+    send_visualization(keypoints_data);
+  }
+}
+
 void RGBDHandler::send_visualization(const std::pair<std::shared_ptr<rtabmap::SensorData>, std::shared_ptr<const nav_msgs::msg::Odometry>> &keypoints_data)
 {
   send_visualization_keypoints(keypoints_data);
@@ -566,4 +625,9 @@ void RGBDHandler::send_visualization_pointcloud(const std::shared_ptr<rtabmap::S
   auto pointcloud_msg = create_colored_pointcloud(sensor_data, header);
   keyframe_pointcloud_msg.pointcloud = pointcloud_msg;
   keyframe_pointcloud_publisher_->publish(keyframe_pointcloud_msg);
+}
+
+void RGBDHandler::gps_callback(const sensor_msgs::msg::NavSatFix::ConstSharedPtr msg)
+{
+  latest_gps_fix_ = *msg;
 }

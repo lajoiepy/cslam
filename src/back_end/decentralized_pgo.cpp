@@ -9,7 +9,6 @@ using namespace cslam;
 DecentralizedPGO::DecentralizedPGO(std::shared_ptr<rclcpp::Node> &node)
     : node_(node), max_waiting_time_sec_(60, 0)
 {
-
   node_->get_parameter("nb_robots", nb_robots_);
   node_->get_parameter("robot_id", robot_id_);
   node_->get_parameter("backend.pose_graph_optimization_start_period_ms",
@@ -21,6 +20,8 @@ DecentralizedPGO::DecentralizedPGO(std::shared_ptr<rclcpp::Node> &node)
                       enable_logs_);
   node->get_parameter("evaluation.log_folder",
                       log_folder_);
+  node->get_parameter("evaluation.enable_gps_recording",
+                      enable_gps_recording_);
   node_->get_parameter("visualization.enable",
                        enable_visualization_);
   node_->get_parameter("visualization.publishing_period_ms",
@@ -188,14 +189,17 @@ DecentralizedPGO::DecentralizedPGO(std::shared_ptr<rclcpp::Node> &node)
 
   origin_robot_id_ = robot_id_;
 
-  logger_ = std::make_shared<Logger>(node_, robot_id_, nb_robots_, log_folder_);
+  if (enable_logs_)
+  {
+    logger_ = std::make_shared<Logger>(node_, robot_id_, nb_robots_, log_folder_);
 
-  log_nb_matches_ = 0;
-  log_nb_failed_matches_ = 0;
-  log_nb_vertices_transmitted_ = 0;
-  log_global_descriptors_cumulative_communication_ = 0;
-  log_local_descriptors_cumulative_communication_ = 0;
-  log_sparsification_cumulative_computation_time_ = 0.0;
+    log_nb_matches_ = 0;
+    log_nb_failed_matches_ = 0;
+    log_nb_vertices_transmitted_ = 0;
+    log_global_descriptors_cumulative_communication_ = 0;
+    log_local_descriptors_cumulative_communication_ = 0;
+    log_sparsification_cumulative_computation_time_ = 0.0;
+  }
 
   RCLCPP_INFO(node_->get_logger(), "Initialization done.");
 }
@@ -239,6 +243,11 @@ void DecentralizedPGO::odometry_callback(
     gtsam::BetweenFactor<gtsam::Pose3> factor(latest_local_symbol_, symbol,
                                               odom_diff, default_noise_model_);
     pose_graph_->push_back(factor);
+  }
+
+  if (enable_gps_recording_)
+  {
+    gps_data_.insert({msg->id, msg->gps});
   }
 
   // Update latest pose
@@ -390,6 +399,13 @@ cslam_common_interfaces::msg::PoseGraph DecentralizedPGO::fill_pose_graph_msg(co
     if (id != robot_id_)
     {
       out_msg.connected_robots.ids.push_back(id);
+    }
+  }
+
+  if (enable_gps_recording_) {
+    for (auto gps : gps_data_) {
+      out_msg.gps_values_idx.push_back(gps.first);
+      out_msg.gps_values.push_back(gps.second);
     }
   }
   

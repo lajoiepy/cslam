@@ -23,6 +23,8 @@ int main(int argc, char **argv) {
   node->declare_parameter<std::string>("frontend.sensor_type", "stereo");
   node->declare_parameter<bool>("visualization.enable", false);
   node->declare_parameter<int>("visualization.publishing_period_ms", 0);
+  node->declare_parameter<bool>("evaluation.enable_gps_recording", false);
+  node->declare_parameter<std::string>("evaluation.gps_topic", "");
 
   std::string sensor_type;
   node->get_parameter("frontend.sensor_type", sensor_type);

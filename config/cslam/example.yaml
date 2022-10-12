@@ -41,3 +41,5 @@
     evaluation:
       enable_logs: false
       log_folder: ""
+      enable_gps_recording: false
+      gps_topic: "gps/fix"

@@ -37,14 +37,6 @@ namespace cslam
         origin_robot_id_ = origin_robot_id;
     }
 
-    void Logger::add_gps_values(const unsigned int &robot_id, const std::map<unsigned int, sensor_msgs::msg::NavSatFix> &gps_values)
-    {
-        if (gps_values.size() > 0)
-        {
-            gps_values_[robot_id] = gps_values;
-        }
-    }
-
     void Logger::start_timer()
     {
         start_time_ = std::chrono::steady_clock::now();
@@ -132,12 +124,21 @@ namespace cslam
         pose_graph_log_info_file.close();
 
         // Write gps logs (.csv)
-        for (const auto &gps_values : gps_values_)
+        for (const auto &info : pose_graphs_log_info_)
         {
             std::ofstream gps_log_file;
-            gps_log_file.open(result_folder + "/gps_robot_" + std::to_string(gps_values.first) + ".csv");
+            gps_log_file.open(result_folder + "/gps_robot_" + std::to_string(info.robot_id) + ".csv");
             gps_log_file << "vertice_id,latitude,longitude,altitude" << std::endl;
-            gps_log_file << format_gps_values(gps_values.second);
+
+            for (unsigned int i = 0; i < info.gps_values_idx.size(); i++)
+            {
+                gps_log_file << std::fixed << std::setprecision(10)
+                             << std::to_string(info.gps_values_idx[i]) << ","
+                             << std::to_string(info.gps_values[i].latitude) << ","
+                             << std::to_string(info.gps_values[i].longitude) << ","
+                             << std::to_string(info.gps_values[i].altitude) << std::endl;
+            }
+            
             gps_log_file.close();
         }
 
@@ -237,16 +238,6 @@ namespace cslam
             RCLCPP_ERROR(node_->get_logger(), "Logging: Error while computing graph error: %s", e.what());
         }
         return error;
-    }
-
-    std::string Logger::format_gps_values(const std::map<unsigned int, sensor_msgs::msg::NavSatFix> &gps_values)
-    {
-        std::string gps_values_string = "";
-        for (const auto &gps_value : gps_values)
-        {
-            gps_values_string += std::to_string(gps_value.first) + "," + std::to_string(gps_value.second.latitude) + "," + std::to_string(gps_value.second.longitude) + "," + std::to_string(gps_value.second.altitude) + "\n";
-        }
-        return gps_values_string;
     }
 
 } // namespace cslam
