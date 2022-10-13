@@ -57,7 +57,8 @@ class LidarHandler: # TODO: document
 
     def lidar_callback(self, pc_msg, odom_msg):
         self.received_data.append((pc_msg, odom_msg))
-        self.gps_data.append(self.latest_gps)
+        if self.params["evaluation.enable_gps_recording"]:
+            self.gps_data.append(self.latest_gps)
 
     def gps_callback(self, gps_msg):
         self.latest_gps = gps_msg
