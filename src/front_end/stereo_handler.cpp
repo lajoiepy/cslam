@@ -96,6 +96,9 @@ void StereoHandler::stereo_callback(
   Transform localTransform = rtabmap_ros::getTransform(
       base_frame_id_, image_rect_left->header.frame_id, stamp, *tf_buffer_, 0.1);
   if (localTransform.isNull()) {
+    RCLCPP_ERROR(node_->get_logger(),
+                 "Could not get transform from %s to %s after 0.1 s!",
+                 base_frame_id_.c_str(), image_rect_left->header.frame_id.c_str());
     return;
   }
 

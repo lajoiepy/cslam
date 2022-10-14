@@ -1,8 +1,5 @@
 import unittest
 
-import sys
-sys.path.append('/home/lajoiepy/Documents/projects/c-slam/c-slam-ws/src/cslam') # TODO: remove
-
 from cslam.loop_closure_sparse_matching import LoopClosureSparseMatching
 from cslam.nns_matching import NearestNeighborsMatching
 import random

@@ -227,7 +227,6 @@ bool DecentralizedPGO::check_received_pose_graphs()
 void DecentralizedPGO::odometry_callback(
     const cslam_common_interfaces::msg::KeyframeOdom::ConstSharedPtr msg)
 {
-
   gtsam::Pose3 current_estimate = odometry_msg_to_pose3(msg->odom);
   gtsam::LabeledSymbol symbol(GRAPH_LABEL, ROBOT_LABEL(robot_id_), msg->id);
 
@@ -349,7 +348,7 @@ bool DecentralizedPGO::is_optimizer()
       is_optimizer = false;
     }
   }
-  if (current_neighbors_ids_.robots.ids.size() == 0 ||
+  if (// current_neighbors_ids_.robots.ids.size() == 0 || // TODO remove this condition
       odometry_pose_estimates_->size() == 0)
   {
     is_optimizer = false;
@@ -779,8 +778,8 @@ DecentralizedPGO::optimize(const gtsam::NonlinearFactorGraph::shared_ptr &graph,
   }
   if (enable_logs_){
     logger_->stop_timer();
-    logger_->log_optimized_global_pose_graph(graph, result, robot_id_);
     try{
+      logger_->log_optimized_global_pose_graph(graph, result, robot_id_);
       logger_->write_logs();
     }
     catch (const std::exception &e)
@@ -814,7 +813,6 @@ void DecentralizedPGO::start_optimization()
     logger_->log_initial_global_pose_graph(aggregate_pose_graph_.first, aggregate_pose_graph_.second);
     logger_subscriber_ = node_->create_subscription<diagnostic_msgs::msg::KeyValue>(
         "log_info", 10, std::bind(&DecentralizedPGO::log_callback, this, std::placeholders::_1));
-    // TODO: log GPS
   }
 
   // Optimize graph
@@ -869,7 +867,7 @@ void DecentralizedPGO::optimization_loop_callback()
       }
       else
       {
-        optimizer_state_ = OptimizerState::IDLE;
+        optimizer_state_ = OptimizerState::START_OPTIMIZATION;
       }
     }
     else if (optimizer_state_ == OptimizerState::START_OPTIMIZATION)
