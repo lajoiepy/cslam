@@ -54,7 +54,7 @@ class ScanContextMatching(object):
             list(int, np.array): best matches
         """
         if self.nb_items < 1:
-            return [], []
+            return [None], [None]
 
         # step 1
         ringkey_history = np.array(self.ringkeys[:self.nb_items])
@@ -77,12 +77,9 @@ class ScanContextMatching(object):
                 nn_yawdiff = yaw_diff
                 nn_idx = candidate_idx
 
-        if(nn_dist < self.threshold):
-            nn_yawdiff_deg = nn_yawdiff * (360/self.shape[1])
-            similarity = 1 - nn_dist # For now we return only 1 match
-            return [self.items[nn_idx]], [similarity]
-        else:
-            return [None], [None]
+        nn_yawdiff_deg = nn_yawdiff * (360/self.shape[1])
+        similarity = 1 - nn_dist # For now we return only 1 match, but we could return the n best matches
+        return [self.items[nn_idx]], [similarity]
 
     def search_best(self, query):
         """Search for the nearest neighbor

@@ -78,11 +78,11 @@ namespace cslam
         }
 
         // Write other logs (.csv)
-        std::ofstream pose_graph_log_info_file;
-        pose_graph_log_info_file.open(result_folder + "/log.csv");
-        pose_graph_log_info_file << "robot_id," << std::to_string(robot_id_) << std::endl;
-        pose_graph_log_info_file << "origin_robot_id," << std::to_string(origin_robot_id_) << std::endl;
-        pose_graph_log_info_file << "nb_robots," << std::to_string(nb_robots_) << std::endl;
+        std::ofstream optimization_log_file;
+        optimization_log_file.open(result_folder + "/log.csv");
+        optimization_log_file << "robot_id," << std::to_string(robot_id_) << std::endl;
+        optimization_log_file << "origin_robot_id," << std::to_string(origin_robot_id_) << std::endl;
+        optimization_log_file << "nb_robots," << std::to_string(nb_robots_) << std::endl;
         unsigned int total_nb_matches = 0;
         unsigned int total_nb_failed_matches = 0;
         unsigned int total_nb_vertices_transmitted = 0;
@@ -96,32 +96,29 @@ namespace cslam
             total_front_end_cumulative_communication_bytes += info.front_end_cumulative_communication_bytes;
             total_sparsification_cumulative_computation_time += info.sparsification_cumulative_computation_time;
         }
-        pose_graph_log_info_file << "total_nb_matches," << std::to_string(total_nb_matches) << std::endl;
-        pose_graph_log_info_file << "total_nb_failed_matches," << std::to_string(total_nb_failed_matches) << std::endl;
-        pose_graph_log_info_file << "total_nb_vertices_transmitted," << std::to_string(total_nb_vertices_transmitted) << std::endl;
-        pose_graph_log_info_file << "total_front_end_cumulative_communication_bytes," << std::to_string(total_front_end_cumulative_communication_bytes) << std::endl;
-        pose_graph_log_info_file << "total_sparsification_cumulative_computation_time," << std::to_string(total_sparsification_cumulative_computation_time) << std::endl;
-        pose_graph_log_info_file << "latest_pgo_time," << std::to_string(elapsed_time_) << std::endl;
-        pose_graph_log_info_file << "total_pgo_time," << std::to_string(total_pgo_time_) << std::endl;
+        optimization_log_file << "total_nb_matches," << std::to_string(total_nb_matches) << std::endl;
+        optimization_log_file << "total_nb_failed_matches," << std::to_string(total_nb_failed_matches) << std::endl;
+        optimization_log_file << "total_nb_vertices_transmitted," << std::to_string(total_nb_vertices_transmitted) << std::endl;
+        optimization_log_file << "total_front_end_cumulative_communication_bytes," << std::to_string(total_front_end_cumulative_communication_bytes) << std::endl;
+        optimization_log_file << "total_sparsification_cumulative_computation_time," << std::to_string(total_sparsification_cumulative_computation_time) << std::endl;
+        optimization_log_file << "latest_pgo_time," << std::to_string(elapsed_time_) << std::endl;
+        optimization_log_file << "total_pgo_time," << std::to_string(total_pgo_time_) << std::endl;
 
-        float algebraic_connectivity = compute_algebraic_connectivity(optimized_global_pose_graph_.first,
-                                                                      optimized_global_pose_graph_.second);
-        pose_graph_log_info_file << "algebraic_connectivity," << std::to_string(algebraic_connectivity) << std::endl;
-        pose_graph_log_info_file << "nb_edges," << std::to_string(optimized_global_pose_graph_.first->size()) << std::endl;
-        pose_graph_log_info_file << "nb_vertices," << std::to_string(optimized_global_pose_graph_.second->size()) << std::endl;
+        optimization_log_file << "nb_edges," << std::to_string(optimized_global_pose_graph_.first->size()) << std::endl;
+        optimization_log_file << "nb_vertices," << std::to_string(optimized_global_pose_graph_.second->size()) << std::endl;
         float total_error = compute_error(optimized_global_pose_graph_.first,
                                           optimized_global_pose_graph_.second);
-        pose_graph_log_info_file << "total_error," << std::to_string(total_error) << std::endl;
+        optimization_log_file << "total_error," << std::to_string(total_error) << std::endl;
         auto loop_closure_errors = compute_inter_robot_loop_closure_errors(optimized_global_pose_graph_.first,
                                                                            optimized_global_pose_graph_.second);
-        pose_graph_log_info_file << "inter_robot_loop_closure_errors," << std::to_string(loop_closure_errors.size()) << std::endl;
+        optimization_log_file << "inter_robot_loop_closures," << std::to_string(loop_closure_errors.size()) << std::endl;
         for (const auto &error : loop_closure_errors)
         {
-            pose_graph_log_info_file << "loop_closure_error"
+            optimization_log_file << "error"
                                      << "," << std::to_string(error.second) << std::endl;
         }
 
-        pose_graph_log_info_file.close();
+        optimization_log_file.close();
 
         // Write gps logs (.csv)
         for (const auto &info : pose_graphs_log_info_)
@@ -149,43 +146,6 @@ namespace cslam
         optimized_global_pose_graph_.first.reset();
         optimized_global_pose_graph_.second.reset();
         gps_values_.clear();
-    }
-
-    float Logger::compute_algebraic_connectivity(const gtsam::NonlinearFactorGraph::shared_ptr &graph,
-                                                 const gtsam::Values::shared_ptr &result)
-    {
-        float algebraic_connectivity = MAXFLOAT;
-        try
-        {
-            auto expected_hessian = graph->linearize(*result)->hessian().first;
-            Eigen::EigenSolver<gtsam::Matrix> solver(expected_hessian);
-            auto eigenvalues = solver.eigenvalues();
-            int min_eigenvalue_idx = 0;
-            float min_eigenvalue = eigenvalues[0].real();
-            for (int i = 0; i < eigenvalues.size(); i++)
-            {
-                if (eigenvalues(i).real() < min_eigenvalue)
-                {
-                    min_eigenvalue_idx = i;
-                    min_eigenvalue = eigenvalues(i).real();
-                }
-            }
-            for (int i = 0; i < eigenvalues.size(); i++)
-            {
-                if (i != min_eigenvalue_idx)
-                {
-                    if (eigenvalues(i).real() < algebraic_connectivity)
-                    {
-                        algebraic_connectivity = eigenvalues(i).real();
-                    }
-                }
-            }
-        }
-        catch (std::exception &e)
-        { 
-            RCLCPP_ERROR(node_->get_logger(), "Logging: Error while computing algebraic connectivity: %s", e.what());
-        }
-        return algebraic_connectivity;
     }
 
     std::vector<std::pair<std::pair<gtsam::LabeledSymbol, gtsam::LabeledSymbol>, double>> Logger::compute_inter_robot_loop_closure_errors(const gtsam::NonlinearFactorGraph::shared_ptr &graph,

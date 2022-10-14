@@ -101,7 +101,7 @@ def solve_teaser(src, dst, voxel_size):
 
     solution = solver.getSolution()
 
-    valid = len(solver.getInlierMaxClique()) > 1
+    valid = len(solver.getInlierMaxClique()) > 5 # TODO: add param
 
     if valid:
         # ICP refinement

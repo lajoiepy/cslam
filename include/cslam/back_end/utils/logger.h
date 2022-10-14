@@ -49,9 +49,7 @@ namespace cslam
         void write_logs();
 
     private:
-        float compute_algebraic_connectivity(const gtsam::NonlinearFactorGraph::shared_ptr &graph,
-                                             const gtsam::Values::shared_ptr &result);
-
+    
         double compute_error(const gtsam::NonlinearFactorGraph::shared_ptr &graph,
                                              const gtsam::Values::shared_ptr &result);
 

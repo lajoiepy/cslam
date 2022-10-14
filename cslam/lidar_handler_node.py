@@ -73,7 +73,7 @@ class LidarHandler: # TODO: document
 
         self.pointcloud_descriptors_publisher.publish(out_msg)
         if self.params["evaluation.enable_logs"]:
-            self.log_local_descriptors_cumulative_communication += len(out_msg.data)
+            self.log_local_descriptors_cumulative_communication += len(out_msg.data.data)
             self.log_publisher.publish(KeyValue(key="local_descriptors_cumulative_communication", value=str(self.log_local_descriptors_cumulative_communication)))
     
     def receive_local_descriptors(self, msg):
