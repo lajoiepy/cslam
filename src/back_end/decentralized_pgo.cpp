@@ -348,8 +348,7 @@ bool DecentralizedPGO::is_optimizer()
       is_optimizer = false;
     }
   }
-  if (// current_neighbors_ids_.robots.ids.size() == 0 || // TODO remove this condition
-      odometry_pose_estimates_->size() == 0)
+  if (odometry_pose_estimates_->size() == 0)
   {
     is_optimizer = false;
   }

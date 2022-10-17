@@ -225,7 +225,7 @@ class GlobalDescriptorLoopClosureDetection(object):
             from_match_idx = self.neighbor_manager.select_from_which_match_to_send(
                 self.inter_robot_matches_buffer.peekitem(-1)[0])
 
-            msgs = dict_to_list_chunks(
+            chuncks = dict_to_list_chunks(
                 self.inter_robot_matches_buffer, from_match_idx -
                 self.inter_robot_matches_buffer.peekitem(0)[0], self.
                 params['frontend.detection_publication_max_elems_per_msg'])
@@ -233,10 +233,26 @@ class GlobalDescriptorLoopClosureDetection(object):
             # Don't transmit matches that should have already been detected by the other robot
             _, neighbors_in_range_list = self.neighbor_manager.check_neighbors_in_range()
             if len(neighbors_in_range_list) == 2:
-                for m in msgs:
-                    for match in m:
+                for c in chuncks:
+                    for match in c:
                         if match.robot0_id in neighbors_in_range_list and match.robot1_id in neighbors_in_range_list:
-                            m.remove(match)
+                            c.remove(match)
+                    if len(c) <= 0:
+                        chuncks.remove(c)
+
+            # Convert to ROS message
+            msgs = []
+            for c in chuncks:
+                m = []
+                for match in c:
+                    msg = InterRobotMatch()
+                    msg.robot0_id = match.robot0_id
+                    msg.robot0_keyframe_id = match.robot0_keyframe_id
+                    msg.robot1_id = match.robot1_id
+                    msg.robot1_keyframe_id = match.robot1_keyframe_id
+                    msg.weight = match.weight
+                    m.append(msg)
+                msgs.append(m)
 
             # Transmit the rest
             for m in msgs:
@@ -375,9 +391,10 @@ class GlobalDescriptorLoopClosureDetection(object):
             for i in unknown_range:
                 match = self.lcm.add_other_robot_global_descriptor(
                     msg.descriptors[i])
-                self.inter_robot_matches_buffer[
-                    self.nb_inter_robot_matches] = match
-                self.nb_inter_robot_matches += 1
+                if match is not None:
+                    self.inter_robot_matches_buffer[
+                        self.nb_inter_robot_matches] = match
+                    self.nb_inter_robot_matches += 1
 
     def inter_robot_matches_callback(self, msg):
         """Callback for inter-robot matches received from other robots.
