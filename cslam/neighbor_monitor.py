@@ -22,6 +22,7 @@ class NeighborMonitor():
         self.latest_time_stamp = self.init_time
         self.last_keyframe_received = -1
         self.last_keyframe_sent = -1
+        self.last_match_sent = -1
 
         self.heartbeat_subscriber = self.node.create_subscription(
             UInt32, '/r' + str(rid) + '/' + 'heartbeat',

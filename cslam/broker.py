@@ -41,8 +41,8 @@ class Broker(object):
             # Build graph
             self.matching_graph = nx.Graph()
             for e in self.edges:
-                edge_vertices = [(e.robot0_id, e.robot0_image_id),
-                                 (e.robot1_id, e.robot1_image_id)]
+                edge_vertices = [(e.robot0_id, e.robot0_keyframe_id),
+                                 (e.robot1_id, e.robot1_keyframe_id)]
                 # Add vertices (required for bipartite)
                 for vertex in edge_vertices:
                     if vertex not in self.matching_graph:
@@ -119,8 +119,8 @@ class Broker(object):
         """
         vertices_dialog = set()
         for e in self.edges:
-            edge_vertices = [(e.robot0_id, e.robot0_image_id),
-                             (e.robot1_id, e.robot1_image_id)]
+            edge_vertices = [(e.robot0_id, e.robot0_keyframe_id),
+                             (e.robot1_id, e.robot1_keyframe_id)]
             if edge_vertices[0] not in vertices_dialog and edge_vertices[
                     1] not in vertices_dialog:
                 rand_idx = np.random.randint(2)

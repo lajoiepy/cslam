@@ -30,11 +30,12 @@ class LoopClosureDetection(Node):
                         ('neighbor_management.max_heartbeat_delay_sec', 5),
                         ('neighbor_management.init_delay_sec', 5),
                         ('neighbor_management.heartbeat_period_sec', 0.5),
-                        ('frontend.global_descriptor_publication_period_sec', 1.0),
-                        ('frontend.global_descriptor_publication_max_elems_per_msg',
+                        ('frontend.detection_publication_period_sec', 1.0),
+                        ('frontend.detection_publication_max_elems_per_msg',
                          10), ('neighbor_management.enable_neighbor_monitoring', False),
                         ('frontend.enable_intra_robot_loop_closures', False),
-                        ('frontend.global_descriptor_topic', None),
+                        ('frontend.global_descriptors_topic', "/global_descriptors"),
+                        ('frontend.inter_robot_matches_topic', "/inter_robot_matches"),
                         ('frontend.use_vertex_cover_selection', True),
                         ('frontend.cosplace.descriptor_dim', 512),
                         ('frontend.cosplace.backbone', "resnet101"),
@@ -71,11 +72,11 @@ class LoopClosureDetection(Node):
         self.params["neighbor_management.heartbeat_period_sec"] = self.get_parameter(
             'neighbor_management.heartbeat_period_sec').value
         self.params[
-            "frontend.global_descriptor_publication_period_sec"] = self.get_parameter(
-                'frontend.global_descriptor_publication_period_sec').value
+            "frontend.detection_publication_period_sec"] = self.get_parameter(
+                'frontend.detection_publication_period_sec').value
         self.params[
-            "frontend.global_descriptor_publication_max_elems_per_msg"] = self.get_parameter(
-                'frontend.global_descriptor_publication_max_elems_per_msg').value
+            "frontend.detection_publication_max_elems_per_msg"] = self.get_parameter(
+                'frontend.detection_publication_max_elems_per_msg').value
         self.params["frontend.use_vertex_cover_selection"] = self.get_parameter(
             'frontend.use_vertex_cover_selection').value
         self.params["frontend.cosplace.descriptor_dim"] = self.get_parameter(

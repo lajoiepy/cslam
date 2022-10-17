@@ -70,11 +70,11 @@ class LidarHandler: # TODO: document
 
     def send_local_descriptors_request(self, request):
         out_msg = LocalPointCloudDescriptors()
-        out_msg.data = icp_utils.open3d_to_ros(self.local_descriptors_map[request.image_id])
-        out_msg.image_id = request.image_id
+        out_msg.data = icp_utils.open3d_to_ros(self.local_descriptors_map[request.keyframe_id])
+        out_msg.keyframe_id = request.keyframe_id
         out_msg.robot_id = self.params["robot_id"]
         out_msg.matches_robot_id = request.matches_robot_id
-        out_msg.matches_image_id = request.matches_image_id
+        out_msg.matches_keyframe_id = request.matches_keyframe_id
 
         self.pointcloud_descriptors_publisher.publish(out_msg)
         if self.params["evaluation.enable_logs"]:
@@ -85,15 +85,15 @@ class LidarHandler: # TODO: document
         frame_ids = []
         for i in range(len(msg.matches_robot_id)):
             if msg.matches_robot_id[i] == self.params["robot_id"]:
-                frame_ids.append(msg.matches_image_id[i])
+                frame_ids.append(msg.matches_keyframe_id[i])
         for frame_id in frame_ids:
             pc = self.local_descriptors_map[frame_id]
             transform, success = icp_utils.compute_transform(pc, icp_utils.ros_to_open3d(msg.data), self.params["frontend.voxel_size"])
             out_msg = InterRobotLoopClosure()
             out_msg.robot0_id = self.params["robot_id"]
-            out_msg.robot0_image_id = frame_id
+            out_msg.robot0_keyframe_id = frame_id
             out_msg.robot1_id = msg.robot_id
-            out_msg.robot1_image_id = msg.image_id
+            out_msg.robot1_keyframe_id = msg.keyframe_id
             if success:
                 out_msg.success = True
                 out_msg.transform = transform

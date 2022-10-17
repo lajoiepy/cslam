@@ -16,7 +16,7 @@
 
 `similarity_threshold`: Minimum similarity value required to consider a potential match.
 
-`global_descriptor_topic`: Topic name for global descriptors
+`global_descriptors_topic`: Topic name for global descriptors
 
 `global_descriptor_technique`: Global descriptors computation technique (e.g., netvlad)
 
@@ -28,9 +28,9 @@
 
 `pnp_min_inliers`: Minimum number of match inliers for transformation computation between keyframes. 
 
-`global_descriptor_publication_period_sec`: Period of publication of global descriptors.
+`detection_publication_period_sec`: Period of publication of global descriptors.
 
-`global_descriptor_publication_max_elems_per_msg`: Split global descriptors messages in maximum N elements.
+`detection_publication_max_elems_per_msg`: Split global descriptors messages in maximum N elements.
 
 `enable_intra_robot_loop_closures`: Enable intra-robot loop closures computation.
 

@@ -56,11 +56,11 @@ def verif_broker(unittest_framework, nb_poses, nb_candidate_edges, nb_robots,
     initial_vertices = set()
     duplicates = []
     for e in selection:
-        v0 = (e.robot0_id, e.robot0_image_id)
+        v0 = (e.robot0_id, e.robot0_keyframe_id)
         if v0 in initial_vertices:
             duplicates.append(v0)
         initial_vertices.add(v0)
-        v1 = (e.robot1_id, e.robot1_image_id)
+        v1 = (e.robot1_id, e.robot1_keyframe_id)
         if v1 in initial_vertices:
             duplicates.append(v1)
         initial_vertices.add(v1)
@@ -93,8 +93,8 @@ def verif_broker(unittest_framework, nb_poses, nb_candidate_edges, nb_robots,
 
     # Check that all edges are covered
     for e in selection:
-        v0 = (e.robot0_id, e.robot0_image_id)
-        v1 = (e.robot1_id, e.robot1_image_id)
+        v0 = (e.robot0_id, e.robot0_keyframe_id)
+        v1 = (e.robot1_id, e.robot1_keyframe_id)
         v0_in = v0 in vertices
         v1_in = v1 in vertices
         unittest_framework.assertTrue(v0_in or v1_in)

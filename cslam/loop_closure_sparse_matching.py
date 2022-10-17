@@ -41,15 +41,18 @@ class LoopClosureSparseMatching(object):
             embedding (np.array): global descriptor
             id (int): keyframe id
         """
+        matches = []
         self.local_nnsm.add_item(embedding, keyframe_id)
         for i in range(self.params['nb_robots']):
             if i != self.params['robot_id']:
                 kf, similarity = self.other_robots_nnsm[i].search_best(embedding)
                 if kf is not None:
                     if similarity >= self.params['frontend.similarity_threshold']:
-                        self.candidate_selector.add_match(
-                            EdgeInterRobot(self.params['robot_id'], keyframe_id, i, kf,
-                                           similarity))
+                        match = EdgeInterRobot(self.params['robot_id'], keyframe_id, i, kf,
+                                           similarity)
+                        self.candidate_selector.add_match(match)
+                        matches.append(match)
+        return matches
 
     def add_other_robot_global_descriptor(self, msg):
         """ Add keyframe global descriptor info from other robot
@@ -58,14 +61,16 @@ class LoopClosureSparseMatching(object):
             msg (cslam_loop_detection_interfaces.msg.GlobalDescriptor): global descriptor info
         """
         self.other_robots_nnsm[msg.robot_id].add_item(
-            np.asarray(msg.descriptor), msg.image_id)
+            np.asarray(msg.descriptor), msg.keyframe_id)
 
+        match = None
         kf, similarity = self.local_nnsm.search_best(np.asarray(msg.descriptor))
         if kf is not None:   
             if similarity >= self.params['frontend.similarity_threshold']:
-                self.candidate_selector.add_match(
-                    EdgeInterRobot(self.params['robot_id'], kf, msg.robot_id,
-                                   msg.image_id, similarity))
+                match = EdgeInterRobot(self.params['robot_id'], kf, msg.robot_id,
+                                   msg.keyframe_id, similarity)
+                self.candidate_selector.add_match(match)
+        return match
 
     def match_local_loop_closures(self, descriptor, kf_id):
         kfs, similarities = self.local_nnsm.search(descriptor,

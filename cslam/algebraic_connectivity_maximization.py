@@ -9,9 +9,9 @@ class EdgeInterRobot(NamedTuple):
     """ Inter-robot loop closure edge
     """
     robot0_id: int
-    robot0_image_id: int
+    robot0_keyframe_id: int
     robot1_id: int
-    robot1_image_id: int
+    robot1_keyframe_id: int
     weight: float
 
     def __eq__(self, other):
@@ -21,13 +21,13 @@ class EdgeInterRobot(NamedTuple):
             other (EdgeInterRobot): Other edge to compare
         """
         return ((self.robot0_id == other.robot0_id) and
-                (self.robot0_image_id == other.robot0_image_id) and
+                (self.robot0_keyframe_id == other.robot0_keyframe_id) and
                 (self.robot1_id == other.robot1_id) and
-                (self.robot1_image_id == other.robot1_image_id)) or (
+                (self.robot1_keyframe_id == other.robot1_keyframe_id)) or (
                     (self.robot0_id == other.robot1_id) and
-                    (self.robot0_image_id == other.robot1_image_id) and
+                    (self.robot0_keyframe_id == other.robot1_keyframe_id) and
                     (self.robot1_id == other.robot0_id) and
-                    (self.robot1_image_id == other.robot0_image_id))
+                    (self.robot1_keyframe_id == other.robot0_keyframe_id))
 
 
 class AlgebraicConnectivityMaximization(object):
@@ -69,9 +69,9 @@ class AlgebraicConnectivityMaximization(object):
             edge (EdgeInterRobot): loop closure edge
         """
         self.nb_poses[edge.robot0_id] = max(self.nb_poses[edge.robot0_id],
-                                            edge.robot0_image_id + 1)
+                                            edge.robot0_keyframe_id + 1)
         self.nb_poses[edge.robot1_id] = max(self.nb_poses[edge.robot1_id],
-                                            edge.robot1_image_id + 1)
+                                            edge.robot1_keyframe_id + 1)
 
     def update_initial_fixed_edge_exists(self, fixed_edge):
         """Maintains a bool for each neighbors to know if we have at least a known link.
@@ -101,14 +101,14 @@ class AlgebraicConnectivityMaximization(object):
             self.update_nb_poses(e)
 
         for e in candidate_edges:
-            self.candidate_edges[(e.robot0_id, e.robot0_image_id, e.robot1_id,
-                                  e.robot1_image_id)] = e
+            self.candidate_edges[(e.robot0_id, e.robot0_keyframe_id, e.robot1_id,
+                                  e.robot1_keyframe_id)] = e
 
     def add_fixed_edge(self, edge):
         """Add an already computed edge to the graph
 
         Args:
-            edge (EdgeInterRobot): inter-robot edgegdffg
+            edge (EdgeInterRobot): inter-robot edge
         """
         self.fixed_edges.append(edge)
         # Update nb of poses and initial edge check
@@ -121,8 +121,8 @@ class AlgebraicConnectivityMaximization(object):
         Args:
             edge (EdgeInterRobot): inter-robot edge
         """
-        self.candidate_edges[(edge.robot0_id, edge.robot0_image_id,
-                              edge.robot1_id, edge.robot1_image_id)] = edge
+        self.candidate_edges[(edge.robot0_id, edge.robot0_keyframe_id,
+                              edge.robot1_id, edge.robot1_keyframe_id)] = edge
         # Update nb of poses
         self.update_nb_poses(edge)
 
@@ -219,7 +219,7 @@ class AlgebraicConnectivityMaximization(object):
                 previous_nb_poses = self.nb_poses[id]
 
     def rekey_edges(self, edges, is_robot_included):
-        """Modify keys (nodes ID) from robot_id+image_id to node_id
+        """Modify keys (nodes ID) from robot_id+keyframe_id to node_id
         Result example: 3 robots with 10 nodes eachs
         robot 0 nodes id = 1 to 9
         robot 1 nodes id = 10 to 19
@@ -238,8 +238,8 @@ class AlgebraicConnectivityMaximization(object):
         for e in edges:
             if is_robot_included[e.robot0_id] and is_robot_included[
                     e.robot1_id]:
-                i = self.offsets[e.robot0_id] + e.robot0_image_id
-                j = self.offsets[e.robot1_id] + e.robot1_image_id
+                i = self.offsets[e.robot0_id] + e.robot0_keyframe_id
+                j = self.offsets[e.robot1_id] + e.robot1_keyframe_id
                 rekeyed_edges.append(Edge(i, j, e.weight))
         return rekeyed_edges
 
@@ -279,11 +279,11 @@ class AlgebraicConnectivityMaximization(object):
                         robot0_id = o
                     if is_robot_included[o] and edges[c].j >= self.offsets[o]:
                         robot1_id = o
-            robot0_image_id = edges[c].i - self.offsets[robot0_id]
-            robot1_image_id = edges[c].j - self.offsets[robot1_id]
+            robot0_keyframe_id = edges[c].i - self.offsets[robot0_id]
+            robot1_keyframe_id = edges[c].j - self.offsets[robot1_id]
             recovered_inter_robot_edges.append(
-                EdgeInterRobot(robot0_id, robot0_image_id, robot1_id,
-                               robot1_image_id, edges[c].weight))
+                EdgeInterRobot(robot0_id, robot0_keyframe_id, robot1_id,
+                               robot1_keyframe_id, edges[c].weight))
         return recovered_inter_robot_edges
 
     def check_graph_disconnections(self, is_other_robot_considered):
@@ -429,8 +429,8 @@ class AlgebraicConnectivityMaximization(object):
         Args:
             match (EdgeInterRobot): potential match
         """
-        key = (match.robot0_id, match.robot0_image_id, match.robot1_id,
-               match.robot1_image_id)
+        key = (match.robot0_id, match.robot0_keyframe_id, match.robot1_id,
+               match.robot1_keyframe_id)
                     
         if key in self.candidate_edges:
             if match.weight > self.candidate_edges[key].weight:

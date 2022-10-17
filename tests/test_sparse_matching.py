@@ -7,7 +7,7 @@ import numpy as np
 from collections import namedtuple
 
 GlobalDescriptor = namedtuple('GlobalDescriptor',
-                              ['image_id', 'robot_id', 'descriptor'])
+                              ['keyframe_id', 'robot_id', 'descriptor'])
 
 
 def set_params():

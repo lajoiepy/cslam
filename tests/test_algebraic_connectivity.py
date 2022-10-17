@@ -26,7 +26,7 @@ def build_simple_graph(nb_poses, nb_candidate_edges):
     while len(candidate_edges.values()) < nb_candidate_edges:
         edge = EdgeInterRobot(0, random.choice(range(nb_poses)), 0,
                               random.choice(range(nb_poses)), fixed_weight)
-        candidate_edges[(edge.robot0_image_id, edge.robot1_image_id)] = edge
+        candidate_edges[(edge.robot0_keyframe_id, edge.robot1_keyframe_id)] = edge
         i = i + 1
     return fixed_edges_list, list(candidate_edges.values())
 
@@ -62,9 +62,9 @@ def build_multi_robot_graph(nb_poses, nb_candidate_edges, nb_robots):
                               random.choice(range(nb_poses)), robot1_id,
                               random.choice(range(nb_poses)), fixed_weight)
         if edge.robot0_id < edge.robot1_id:                      
-            candidate_edges[(edge.robot0_id, edge.robot0_image_id, edge.robot1_id, edge.robot1_image_id)] = edge
+            candidate_edges[(edge.robot0_id, edge.robot0_keyframe_id, edge.robot1_id, edge.robot1_keyframe_id)] = edge
         else:
-            candidate_edges[(edge.robot1_id, edge.robot1_image_id, edge.robot0_id, edge.robot0_image_id)] = edge
+            candidate_edges[(edge.robot1_id, edge.robot1_keyframe_id, edge.robot0_id, edge.robot0_keyframe_id)] = edge
         i = i + 1
 
     return fixed_edges_list, list(candidate_edges.values())
@@ -307,8 +307,8 @@ class TestAlgebraicConnectivity(unittest.TestCase):
 
         for e0 in selection0:
             for e1 in selection1:
-                self.assertFalse(e0.robot0_image_id == e1.robot0_image_id
-                                 and e0.robot1_image_id == e1.robot1_image_id)
+                self.assertFalse(e0.robot0_keyframe_id == e1.robot0_keyframe_id
+                                 and e0.robot1_keyframe_id == e1.robot1_keyframe_id)
 
     def test_check_graph_disconnections(self):
         """Test connectivity check
@@ -504,16 +504,16 @@ class TestAlgebraicConnectivity(unittest.TestCase):
         for i in range(len(values)):
             e = values[i]
             r = rekeyed_candidate_edges[i]
-            self.assertEqual(r.i, e.robot0_image_id + e.robot0_id * 10)
-            self.assertEqual(r.j, e.robot1_image_id + e.robot1_id * 10)
+            self.assertEqual(r.i, e.robot0_keyframe_id + e.robot0_id * 10)
+            self.assertEqual(r.j, e.robot1_keyframe_id + e.robot1_id * 10)
 
         recovered_edges = ac.recover_inter_robot_edges(rekeyed_candidate_edges,
                                                        is_robot_included)
         for i in range(len(values)):
             e = values[i]
             r = recovered_edges[i]
-            self.assertEqual(r.robot0_image_id, e.robot0_image_id)
-            self.assertEqual(r.robot1_image_id, e.robot1_image_id)
+            self.assertEqual(r.robot0_keyframe_id, e.robot0_keyframe_id)
+            self.assertEqual(r.robot1_keyframe_id, e.robot1_keyframe_id)
 
     def test_multi_robot_edges0(self):
         """Test graph with multi-robot edges
@@ -541,10 +541,10 @@ class TestAlgebraicConnectivity(unittest.TestCase):
                                          greedy_initialization=False)
         self.assertEqual(len(selection), nb_candidates_to_choose)
         for s in selection:
-            self.assertLess(s.robot0_image_id, nb_poses)
-            self.assertGreaterEqual(s.robot0_image_id, 0)
-            self.assertLess(s.robot1_image_id, nb_poses)
-            self.assertGreaterEqual(s.robot0_image_id, 0)
+            self.assertLess(s.robot0_keyframe_id, nb_poses)
+            self.assertGreaterEqual(s.robot0_keyframe_id, 0)
+            self.assertLess(s.robot1_keyframe_id, nb_poses)
+            self.assertGreaterEqual(s.robot0_keyframe_id, 0)
             self.assertGreaterEqual(s.robot0_id, 0)
             self.assertGreaterEqual(s.robot1_id, 0)
             self.assertLess(s.robot0_id, nb_robots)
@@ -653,8 +653,8 @@ class TestAlgebraicConnectivity(unittest.TestCase):
         ac.add_match(e2)
         self.assertEqual(len(ac.candidate_edges.values()), 2)
         self.assertAlmostEqual(
-            ac.candidate_edges[(e2.robot0_id, e2.robot0_image_id, e2.robot1_id,
-                                e2.robot1_image_id)].weight, 0.2)
+            ac.candidate_edges[(e2.robot0_id, e2.robot0_keyframe_id, e2.robot1_id,
+                                e2.robot1_keyframe_id)].weight, 0.2)
 
 
 if __name__ == "__main__":

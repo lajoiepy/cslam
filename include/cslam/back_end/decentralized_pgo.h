@@ -415,7 +415,7 @@ namespace cslam
 
         std::shared_ptr<Logger> logger_;
 
-        unsigned int log_nb_matches_, log_nb_failed_matches_, log_nb_vertices_transmitted_, log_global_descriptors_cumulative_communication_, log_local_descriptors_cumulative_communication_;
+        unsigned int log_nb_matches_, log_nb_failed_matches_, log_nb_vertices_transmitted_, log_detection_cumulative_communication_, log_local_descriptors_cumulative_communication_;
         float log_sparsification_cumulative_computation_time_;
 
         std::map<unsigned int, sensor_msgs::msg::NavSatFix> gps_data_;

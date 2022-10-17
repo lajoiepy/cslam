@@ -196,7 +196,7 @@ DecentralizedPGO::DecentralizedPGO(std::shared_ptr<rclcpp::Node> &node)
     log_nb_matches_ = 0;
     log_nb_failed_matches_ = 0;
     log_nb_vertices_transmitted_ = 0;
-    log_global_descriptors_cumulative_communication_ = 0;
+    log_detection_cumulative_communication_ = 0;
     log_local_descriptors_cumulative_communication_ = 0;
     log_sparsification_cumulative_computation_time_ = 0.0;
   }
@@ -285,9 +285,9 @@ void DecentralizedPGO::inter_robot_loop_closure_callback(
 
     unsigned char robot0_c = ROBOT_LABEL(msg->robot0_id);
     gtsam::LabeledSymbol symbol_from(GRAPH_LABEL, robot0_c,
-                                     msg->robot0_image_id);
+                                     msg->robot0_keyframe_id);
     unsigned char robot1_c = ROBOT_LABEL(msg->robot1_id);
-    gtsam::LabeledSymbol symbol_to(GRAPH_LABEL, robot1_c, msg->robot1_image_id);
+    gtsam::LabeledSymbol symbol_to(GRAPH_LABEL, robot1_c, msg->robot1_keyframe_id);
 
     gtsam::BetweenFactor<gtsam::Pose3> factor =
         gtsam::BetweenFactor<gtsam::Pose3>(symbol_from, symbol_to, measurement,
@@ -413,7 +413,7 @@ cslam_common_interfaces::msg::PoseGraph DecentralizedPGO::fill_pose_graph_msg(co
     out_msg.nb_matches = log_nb_matches_;
     out_msg.nb_failed_matches = log_nb_failed_matches_;
     out_msg.nb_vertices_transmitted = log_nb_vertices_transmitted_;
-    out_msg.front_end_cumulative_communication_bytes = log_global_descriptors_cumulative_communication_ + log_local_descriptors_cumulative_communication_;
+    out_msg.front_end_cumulative_communication_bytes = log_detection_cumulative_communication_ + log_local_descriptors_cumulative_communication_;
     out_msg.sparsification_cumulative_computation_time = log_sparsification_cumulative_computation_time_;
   }
 
@@ -900,8 +900,8 @@ void DecentralizedPGO::log_callback(const diagnostic_msgs::msg::KeyValue::ConstS
     log_nb_failed_matches_ = std::stoul(msg->value);
   } else if (msg->key == "nb_vertices_transmitted"){
     log_nb_vertices_transmitted_ = std::stoul(msg->value);
-  } else if (msg->key == "global_descriptors_cumulative_communication"){
-    log_global_descriptors_cumulative_communication_ = std::stoul(msg->value);
+  } else if (msg->key == "detection_cumulative_communication"){
+    log_detection_cumulative_communication_ = std::stoul(msg->value);
   } else if (msg->key == "local_descriptors_cumulative_communication"){
     log_local_descriptors_cumulative_communication_ = std::stoul(msg->value);
   } else if (msg->key == "sparsification_cumulative_computation_time"){

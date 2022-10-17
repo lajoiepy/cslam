@@ -391,13 +391,13 @@ void RGBDHandler::local_descriptors_request(
 {
   // Fill msg
   cslam_loop_detection_interfaces::msg::LocalImageDescriptors msg;
-  clear_sensor_data(local_descriptors_map_.at(request->image_id));
-  sensor_data_to_rgbd_msg(local_descriptors_map_.at(request->image_id),
+  clear_sensor_data(local_descriptors_map_.at(request->keyframe_id));
+  sensor_data_to_rgbd_msg(local_descriptors_map_.at(request->keyframe_id),
                           msg.data);
-  msg.image_id = request->image_id;
+  msg.keyframe_id = request->keyframe_id;
   msg.robot_id = robot_id_;
   msg.matches_robot_id = request->matches_robot_id;
-  msg.matches_image_id = request->matches_image_id;
+  msg.matches_keyframe_id = request->matches_keyframe_id;
 
   // Publish local descriptors
   local_descriptors_publisher_->publish(msg);
@@ -479,16 +479,16 @@ void RGBDHandler::receive_local_image_descriptors(
         cslam_loop_detection_interfaces::msg::LocalImageDescriptors>
         msg)
 {
-  std::deque<int> image_ids;
+  std::deque<int> keyframe_ids;
   for (unsigned int i = 0; i < msg->matches_robot_id.size(); i++)
   {
     if (msg->matches_robot_id[i] == robot_id_)
     {
-      image_ids.push_back(msg->matches_image_id[i]);
+      keyframe_ids.push_back(msg->matches_keyframe_id[i]);
     }
   }
 
-  for (auto local_image_id : image_ids)
+  for (auto local_keyframe_id : keyframe_ids)
   {
     try
     {
@@ -498,17 +498,17 @@ void RGBDHandler::receive_local_image_descriptors(
       // Compute transformation
       //  Registration params
       rtabmap::RegistrationInfo reg_info;
-      auto tmp_from = local_descriptors_map_.at(local_image_id);
+      auto tmp_from = local_descriptors_map_.at(local_keyframe_id);
       tmp_from->uncompressData();
       rtabmap::Transform t = registration_.computeTransformation(
           *tmp_from, tmp_to, rtabmap::Transform(), &reg_info);
 
-      // Store using pairs (robot_id, image_id)
+      // Store using pairs (robot_id, keyframe_id)
       cslam_loop_detection_interfaces::msg::InterRobotLoopClosure lc;
       lc.robot0_id = robot_id_;
-      lc.robot0_image_id = local_image_id;
+      lc.robot0_keyframe_id = local_keyframe_id;
       lc.robot1_id = msg->robot_id;
-      lc.robot1_image_id = msg->image_id;
+      lc.robot1_keyframe_id = msg->keyframe_id;
       if (!t.isNull())
       {
         lc.success = true;
@@ -520,7 +520,7 @@ void RGBDHandler::receive_local_image_descriptors(
         RCLCPP_DEBUG(
             node_->get_logger(),
             "Could not compute transformation between (%d,%d) and (%d,%d): %s",
-            robot_id_, local_image_id, msg->robot_id, msg->image_id,
+            robot_id_, local_keyframe_id, msg->robot_id, msg->keyframe_id,
             reg_info.rejectedMsg.c_str());
         lc.success = false;
         inter_robot_loop_closure_publisher_->publish(lc);
@@ -531,7 +531,7 @@ void RGBDHandler::receive_local_image_descriptors(
       RCLCPP_WARN(
           node_->get_logger(),
           "Exception: Could not compute transformation between (%d,%d) and (%d,%d): %s",
-          robot_id_, local_image_id, msg->robot_id, msg->image_id,
+          robot_id_, local_keyframe_id, msg->robot_id, msg->keyframe_id,
           e.what());
     }
   }
@@ -613,7 +613,7 @@ void RGBDHandler::send_visualization_keypoints(const std::pair<std::shared_ptr<r
   cslam_loop_detection_interfaces::msg::LocalImageDescriptors features_msg;
   sensor_data_to_rgbd_msg(keypoints_data.first,
                           features_msg.data);
-  features_msg.image_id = keypoints_data.first->id();
+  features_msg.keyframe_id = keypoints_data.first->id();
   features_msg.robot_id = robot_id_;
   features_msg.data.key_points.clear();
 

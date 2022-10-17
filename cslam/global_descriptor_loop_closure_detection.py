@@ -15,11 +15,10 @@ from cslam.loop_closure_sparse_matching import LoopClosureSparseMatching
 from cslam.broker import Broker
 
 from cslam_common_interfaces.msg import KeyframeRGB, KeyframePointCloud
-from cslam_loop_detection_interfaces.msg import (GlobalDescriptor,
-                                                 GlobalDescriptors,
-                                                 InterRobotLoopClosure,
-                                                 LocalDescriptorsRequest,
-                                                 LocalKeyframeMatch)
+from cslam_loop_detection_interfaces.msg import (
+    GlobalDescriptor, GlobalDescriptors, InterRobotLoopClosure,
+    LocalDescriptorsRequest, LocalKeyframeMatch, InterRobotMatch,
+    InterRobotMatches)
 from diagnostic_msgs.msg import KeyValue
 import time
 from sortedcontainers import SortedDict
@@ -64,14 +63,26 @@ class GlobalDescriptorLoopClosureDetection(object):
 
         # ROS 2 objects setup
         self.params[
-            'frontend.global_descriptor_topic'] = self.node.get_parameter(
-                'frontend.global_descriptor_topic').value
+            'frontend.global_descriptors_topic'] = self.node.get_parameter(
+                'frontend.global_descriptors_topic').value
         self.global_descriptor_publisher = self.node.create_publisher(
-            GlobalDescriptors, self.params['frontend.global_descriptor_topic'],
-            100)
+            GlobalDescriptors,
+            self.params['frontend.global_descriptors_topic'], 100)
         self.global_descriptor_subscriber = self.node.create_subscription(
-            GlobalDescriptors, self.params['frontend.global_descriptor_topic'],
+            GlobalDescriptors,
+            self.params['frontend.global_descriptors_topic'],
             self.global_descriptor_callback, 100)
+
+        self.params[
+            'frontend.inter_robot_matches_topic'] = self.node.get_parameter(
+                'frontend.inter_robot_matches_topic').value
+        self.inter_robot_matches_publisher = self.node.create_publisher(
+            InterRobotMatches,
+            self.params['frontend.inter_robot_matches_topic'], 100)
+        self.inter_robot_matches_subscriber = self.node.create_subscription(
+            InterRobotMatches,
+            self.params['frontend.inter_robot_matches_topic'],
+            self.inter_robot_matches_callback, 100)
 
         if self.keyframe_type == "rgb":
             self.receive_keyframe_subscriber = self.node.create_subscription(
@@ -106,16 +117,26 @@ class GlobalDescriptorLoopClosureDetection(object):
 
         self.global_descriptors_buffer = SortedDict()
         self.global_descriptors_timer = self.node.create_timer(
-            self.params['frontend.global_descriptor_publication_period_sec'],
-            self.global_descriptors_timer_callback, clock=Clock()) # Note: It is important to use the system clock instead of ROS clock for timers since we are within a TimerAction
-        
+            self.params['frontend.detection_publication_period_sec'],
+            self.global_descriptors_timer_callback,
+            clock=Clock()
+        )  # Note: It is important to use the system clock instead of ROS clock for timers since we are within a TimerAction
+
+        self.inter_robot_matches_buffer = SortedDict()
+        self.nb_inter_robot_matches = 0
+        self.inter_robot_matches_timer = self.node.create_timer(
+            self.params['frontend.detection_publication_period_sec'],
+            self.inter_robot_matches_timer_callback,
+            clock=Clock()
+        )  # Note: It is important to use the system clock instead of ROS clock for timers since we are within a TimerAction
+
         if self.params["evaluation.enable_logs"]:
             self.log_publisher = self.node.create_publisher(
                 KeyValue, 'log_info', 100)
             self.log_total_matches = 0
             self.log_total_failed_matches = 0
             self.log_total_vertices_transmitted = 0
-            self.log_global_descriptors_cumulative_communication = 0
+            self.log_detection_cumulative_communication = 0
             self.log_total_sparsification_computation_time = 0.0
 
     def add_global_descriptor_to_map(self, embedding, kf_id):
@@ -126,41 +147,57 @@ class GlobalDescriptorLoopClosureDetection(object):
             kf_id (int): keyframe ID
         """
         # Add for matching
-        self.lcm.add_local_global_descriptor(embedding, kf_id)
+        matches = self.lcm.add_local_global_descriptor(embedding, kf_id)
         # Local matching
         self.detect_intra(embedding, kf_id)
 
         # Store global descriptor
         msg = GlobalDescriptor()
-        msg.image_id = kf_id
+        msg.keyframe_id = kf_id
         msg.robot_id = self.params['robot_id']
         msg.descriptor = embedding.tolist()
         self.global_descriptors_buffer[kf_id] = msg
 
+        # Store matches
+        for match in matches:
+            self.inter_robot_matches_buffer[
+                self.nb_inter_robot_matches] = match
+            self.nb_inter_robot_matches += 1
+
     def delete_useless_descriptors(self):
         """Deletes global descriptors
-           because all other robots have already received 
-           some descriptors
+           because all other robots have already received them.
         """
         from_kf_id = self.neighbor_manager.useless_descriptors(
             self.global_descriptors_buffer.peekitem(-1)[0])
-        if from_kf_id >= self.global_descriptors_buffer.peekitem(0)[0]: 
+        if from_kf_id >= self.global_descriptors_buffer.peekitem(0)[0]:
             for k in self.global_descriptors_buffer.keys():
                 if k < from_kf_id:
                     del self.global_descriptors_buffer[k]
 
+    def delete_useless_inter_robot_matches(self):
+        """Deletes inter_robot_matches
+           because all other robots have already received them.
+        """
+        from_match_id = self.neighbor_manager.useless_matches(
+            self.inter_robot_matches_buffer.peekitem(-1)[0])
+        if from_match_id >= self.inter_robot_matches_buffer.peekitem(0)[0]:
+            for k in self.inter_robot_matches_buffer.keys():
+                if k < from_match_id:
+                    del self.inter_robot_matches_buffer[k]
+
     def global_descriptors_timer_callback(self):
         """Publish global descriptors message periodically
+        Doesn't publish if the descriptors are already known by neighboring robots
         """
         if len(self.global_descriptors_buffer) > 0:
             from_kf_id = self.neighbor_manager.select_from_which_kf_to_send(
                 self.global_descriptors_buffer.peekitem(-1)[0])
-            
+
             msgs = dict_to_list_chunks(
                 self.global_descriptors_buffer,
                 from_kf_id - self.global_descriptors_buffer.peekitem(0)[0],
-                self.params[
-                    'frontend.global_descriptor_publication_max_elems_per_msg']
+                self.params['frontend.detection_publication_max_elems_per_msg']
             )
 
             for m in msgs:
@@ -168,13 +205,55 @@ class GlobalDescriptorLoopClosureDetection(object):
                 global_descriptors.descriptors = m
                 self.global_descriptor_publisher.publish(global_descriptors)
                 if self.params["evaluation.enable_logs"]:
-                    self.log_global_descriptors_cumulative_communication += len(global_descriptors.descriptors) * len(global_descriptors.descriptors[0].descriptor) * 4 # bytes
+                    self.log_detection_cumulative_communication += len(
+                        global_descriptors.descriptors) * len(
+                            global_descriptors.descriptors[0].descriptor
+                        ) * 4  # bytes
 
             self.delete_useless_descriptors()
             if self.params["evaluation.enable_logs"]:
                 self.log_publisher.publish(
-                    KeyValue(key="global_descriptors_cumulative_communication",
-                             value=str(self.log_global_descriptors_cumulative_communication)))
+                    KeyValue(key="detection_cumulative_communication",
+                             value=str(
+                                 self.log_detection_cumulative_communication)))
+
+    def inter_robot_matches_timer_callback(self):
+        """Publish inter-robot matches message periodically
+        Doesn't publish if the inter-robot matches are already known by neighboring robots
+        """
+        if len(self.inter_robot_matches_buffer) > 0:
+            from_match_idx = self.neighbor_manager.select_from_which_match_to_send(
+                self.inter_robot_matches_buffer.peekitem(-1)[0])
+
+            msgs = dict_to_list_chunks(
+                self.inter_robot_matches_buffer, from_match_idx -
+                self.inter_robot_matches_buffer.peekitem(0)[0], self.
+                params['frontend.detection_publication_max_elems_per_msg'])
+
+            # Don't transmit matches that should have already been detected by the other robot
+            _, neighbors_in_range_list = self.neighbor_manager.check_neighbors_in_range()
+            if len(neighbors_in_range_list) == 2:
+                for m in msgs:
+                    for match in m:
+                        if match.robot0_id in neighbors_in_range_list and match.robot1_id in neighbors_in_range_list:
+                            m.remove(match)
+
+            # Transmit the rest
+            for m in msgs:
+                inter_robot_matches = InterRobotMatches()
+                inter_robot_matches.robot_id = self.params['robot_id']
+                inter_robot_matches.matches = m
+                self.inter_robot_matches_publisher.publish(inter_robot_matches)
+                if self.params["evaluation.enable_logs"]:
+                    self.log_detection_cumulative_communication += len(
+                        inter_robot_matches.matches) * 20  # bytes
+
+            self.delete_useless_inter_robot_matches()
+            if self.params["evaluation.enable_logs"]:
+                self.log_publisher.publish(
+                    KeyValue(key="detection_cumulative_communication",
+                             value=str(
+                                 self.log_detection_cumulative_communication)))
 
     def detect_intra(self, embedding, kf_id):
         """ Detect intra-robot loop closures
@@ -200,9 +279,11 @@ class GlobalDescriptorLoopClosureDetection(object):
         Returns:
             list(int): selected keyframes from other robots to match
         """
-        neighbors_is_in_range, neighbors_in_range_list = self.neighbor_manager.check_neighbors_in_range()
+        neighbors_is_in_range, neighbors_in_range_list = self.neighbor_manager.check_neighbors_in_range(
+        )
         # Check if the robot is the broker
-        if len(neighbors_in_range_list) > 0 and self.neighbor_manager.local_robot_is_broker():
+        if len(neighbors_in_range_list
+               ) > 0 and self.neighbor_manager.local_robot_is_broker():
             if self.params["evaluation.enable_logs"]: start_time = time.time()
             # Find matches that maximize the algebraic connectivity
             selection = self.lcm.select_candidates(
@@ -217,11 +298,14 @@ class GlobalDescriptorLoopClosureDetection(object):
                 for v in selected_vertices_set:
                     # Call to send publish local descriptors
                     msg = LocalDescriptorsRequest()
-                    msg.image_id = v[1]
+                    msg.keyframe_id = v[1]
                     msg.matches_robot_id = vertices_info[v][0]
-                    msg.matches_image_id = vertices_info[v][1]
+                    msg.matches_keyframe_id = vertices_info[v][1]
                     self.local_descriptors_request_publishers[v[0]].publish(
                         msg)
+                    self.node.get_logger().info(
+                        "Requesting local descriptors from robot %d for keyframe %d"
+                        % (v[0], v[1]))  # TODO: remove
                 if self.params["evaluation.enable_logs"]:
                     self.log_total_vertices_transmitted += len(
                         selected_vertices_set)
@@ -246,18 +330,18 @@ class GlobalDescriptorLoopClosureDetection(object):
         """
         vertices = {}
         for s in selection:
-            key0 = (s.robot0_id, s.robot0_image_id)
-            key1 = (s.robot1_id, s.robot1_image_id)
+            key0 = (s.robot0_id, s.robot0_keyframe_id)
+            key1 = (s.robot1_id, s.robot1_keyframe_id)
             if key0 in vertices:
                 vertices[key0][0].append(s.robot1_id)
-                vertices[key0][1].append(s.robot1_image_id)
+                vertices[key0][1].append(s.robot1_keyframe_id)
             else:
-                vertices[key0] = [[s.robot1_id], [s.robot1_image_id]]
+                vertices[key0] = [[s.robot1_id], [s.robot1_keyframe_id]]
             if key1 in vertices:
                 vertices[key1][0].append(s.robot0_id)
-                vertices[key1][1].append(s.robot0_image_id)
+                vertices[key1][1].append(s.robot0_keyframe_id)
             else:
-                vertices[key1] = [[s.robot0_id], [s.robot0_image_id]]
+                vertices[key1] = [[s.robot0_id], [s.robot0_keyframe_id]]
         return vertices
 
     def receive_keyframe(self, msg):
@@ -284,12 +368,26 @@ class GlobalDescriptorLoopClosureDetection(object):
 
         Args:
             msg (cslam_loop_detection_interfaces::msg::GlobalDescriptors): descriptors
-        """ 
+        """
         if msg.descriptors[0].robot_id != self.params['robot_id']:
             unknown_range = self.neighbor_manager.get_unknown_range(
                 msg.descriptors)
             for i in unknown_range:
-                self.lcm.add_other_robot_global_descriptor(msg.descriptors[i])
+                match = self.lcm.add_other_robot_global_descriptor(
+                    msg.descriptors[i])
+                self.inter_robot_matches_buffer[
+                    self.nb_inter_robot_matches] = match
+                self.nb_inter_robot_matches += 1
+
+    def inter_robot_matches_callback(self, msg):
+        """Callback for inter-robot matches received from other robots.
+
+        Args:
+            msg (cslam_loop_detection_interfaces::msg::InterRobotMatches): matches
+        """
+        if msg.robot_id != self.params['robot_id']:
+            for match in msg.matches:
+                self.lcm.candidate_selector.add_match(match)
 
     def inter_robot_loop_closure_msg_to_edge(self, msg):
         """ Convert a inter-robot loop closure to an edge 
@@ -301,8 +399,8 @@ class GlobalDescriptorLoopClosureDetection(object):
         Returns:
             EdgeInterRobot: inter-robot edge
         """
-        return EdgeInterRobot(msg.robot0_id, msg.robot0_image_id,
-                              msg.robot1_id, msg.robot1_image_id,
+        return EdgeInterRobot(msg.robot0_id, msg.robot0_keyframe_id,
+                              msg.robot1_id, msg.robot1_keyframe_id,
                               self.lcm.candidate_selector.fixed_weight)
 
     def receive_inter_robot_loop_closure(self, msg):
@@ -314,9 +412,9 @@ class GlobalDescriptorLoopClosureDetection(object):
         if msg.success:
             self.node.get_logger().info(
                 'New inter-robot loop closure measurement: (' +
-                str(msg.robot0_id) + ',' + str(msg.robot0_image_id) +
+                str(msg.robot0_id) + ',' + str(msg.robot0_keyframe_id) +
                 ') -> (' + str(msg.robot1_id) + ',' +
-                str(msg.robot1_image_id) + ')')
+                str(msg.robot1_keyframe_id) + ')')
             # If geo verif succeeds, move from candidate to fixed edge in the graph
             self.lcm.candidate_selector.candidate_edges_to_fixed(
                 [self.inter_robot_loop_closure_msg_to_edge(msg)])
@@ -330,9 +428,9 @@ class GlobalDescriptorLoopClosureDetection(object):
             # If geo verif fails, remove candidate
             self.node.get_logger().debug(
                 'Failed inter-robot loop closure measurement: (' +
-                str(msg.robot0_id) + ',' + str(msg.robot0_image_id) +
+                str(msg.robot0_id) + ',' + str(msg.robot0_keyframe_id) +
                 ') -> (' + str(msg.robot1_id) + ',' +
-                str(msg.robot1_image_id) + ')')
+                str(msg.robot1_keyframe_id) + ')')
             self.lcm.candidate_selector.remove_candidate_edges(
                 [self.inter_robot_loop_closure_msg_to_edge(msg)])
 
