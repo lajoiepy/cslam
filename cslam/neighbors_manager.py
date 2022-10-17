@@ -2,10 +2,11 @@ from cslam.neighbor_monitor import NeighborMonitor
 from cslam_common_interfaces.msg import RobotIdsAndOrigin
 from std_msgs.msg import String
 
+import rclpy
 
 class NeighborManager():
 
-    def __init__(self, node, robot_id, nb_robots, is_enabled, max_delay_sec):
+    def __init__(self, node, robot_id, nb_robots, is_enabled, init_delay_sec, max_delay_sec):
         self.node = node
         self.robot_id = robot_id
         self.nb_robots = nb_robots
@@ -13,7 +14,7 @@ class NeighborManager():
         for id in range(self.nb_robots):
             if id != self.robot_id:
                 self.neighbors_monitors[id] = NeighborMonitor(
-                    self.node, id, is_enabled, max_delay_sec)
+                    self.node, id, is_enabled, init_delay_sec, max_delay_sec)
 
         self.subscriber = self.node.create_subscription(
             String, 'get_current_neighbors',
@@ -81,7 +82,7 @@ class NeighborManager():
         """_summary_
 
         Args:
-            last_index (int): last keyframe id in the list of descriptors
+            last_kf_id (int): last keyframe id in the list of descriptors
         """
         from_kf_id = last_kf_id
         for i in range(self.nb_robots):
@@ -116,7 +117,7 @@ class NeighborManager():
             i for i in range(len(descriptors)) if descriptors[i].image_id >
             self.neighbors_monitors[other_robot_id].last_keyframe_received
         ]
-
+        
         self.update_received_kf_id(
             other_robot_id,
             max(self.neighbors_monitors[other_robot_id].last_keyframe_received,

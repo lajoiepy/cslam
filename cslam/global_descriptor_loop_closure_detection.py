@@ -22,12 +22,13 @@ from cslam_loop_detection_interfaces.msg import (GlobalDescriptor,
                                                  LocalKeyframeMatch)
 from diagnostic_msgs.msg import KeyValue
 import time
+from sortedcontainers import SortedDict
 
 import rclpy
 from rclpy.node import Node
 
 from cslam.neighbors_manager import NeighborManager
-from cslam.utils.utils import list_chunks
+from cslam.utils.misc import dict_to_list_chunks
 
 
 class GlobalDescriptorLoopClosureDetection(object):
@@ -99,9 +100,10 @@ class GlobalDescriptorLoopClosureDetection(object):
         self.neighbor_manager = NeighborManager(
             self.node, self.params['robot_id'], self.params['nb_robots'],
             self.params['neighbor_management.enable_neighbor_monitoring'],
+            self.params['neighbor_management.init_delay_sec'],
             self.params['neighbor_management.max_heartbeat_delay_sec'])
 
-        self.global_descriptors_buffer = []
+        self.global_descriptors_buffer = SortedDict()
         self.global_descriptors_timer = self.node.create_timer(
             self.params['frontend.global_descriptor_publication_period_sec'],
             self.global_descriptors_timer_callback)
@@ -132,7 +134,7 @@ class GlobalDescriptorLoopClosureDetection(object):
         msg.image_id = kf_id
         msg.robot_id = self.params['robot_id']
         msg.descriptor = embedding.tolist()
-        self.global_descriptors_buffer.append(msg)
+        self.global_descriptors_buffer[kf_id] = msg
 
     def delete_useless_descriptors(self):
         """Deletes global descriptors
@@ -140,23 +142,27 @@ class GlobalDescriptorLoopClosureDetection(object):
            some descriptors
         """
         from_kf_id = self.neighbor_manager.useless_descriptors(
-            self.global_descriptors_buffer[-1].image_id)
-        if from_kf_id >= self.global_descriptors_buffer[0].image_id:
-            self.global_descriptors_buffer = [
-                e for e in self.global_descriptors_buffer
-                if e.image_id > from_kf_id
-            ]
+            self.global_descriptors_buffer.peekitem(-1)[0])
+        if from_kf_id >= self.global_descriptors_buffer.peekitem(0)[0]: 
+            for k in self.global_descriptors_buffer.keys():
+                if k < from_kf_id:
+                    del self.global_descriptors_buffer[k]
 
     def global_descriptors_timer_callback(self):
         """Publish global descriptors message periodically
         """
+        if self.params["robot_id"] > 0: # TODO: remove
+            self.node.get_logger().info("Timer callback {}".format(len(self.global_descriptors_buffer))) # TODO: remove
         if len(self.global_descriptors_buffer) > 0:
             from_kf_id = self.neighbor_manager.select_from_which_kf_to_send(
-                self.global_descriptors_buffer[-1].image_id)
+                self.global_descriptors_buffer.peekitem(-1)[0])
+            
+            if self.params["robot_id"] > 0: # TODO: remove
+                self.node.get_logger().info("Select from {} {}".format(self.global_descriptors_buffer.peekitem(-1)[0], from_kf_id)) # TODO: remove
 
-            msgs = list_chunks(
+            msgs = dict_to_list_chunks(
                 self.global_descriptors_buffer,
-                from_kf_id - self.global_descriptors_buffer[0].image_id,
+                from_kf_id - self.global_descriptors_buffer.peekitem(0)[0],
                 self.params[
                     'frontend.global_descriptor_publication_max_elems_per_msg']
             )
@@ -164,6 +170,7 @@ class GlobalDescriptorLoopClosureDetection(object):
             for m in msgs:
                 global_descriptors = GlobalDescriptors()
                 global_descriptors.descriptors = m
+                self.node.get_logger().info("Global descriptor publish robot {} {}".format(m[0].robot_id, m[0].image_id)) # TODO: remove
                 self.global_descriptor_publisher.publish(global_descriptors)
                 if self.params["evaluation.enable_logs"]:
                     self.log_global_descriptors_cumulative_communication += len(global_descriptors.descriptors) * len(global_descriptors.descriptors[0].descriptor) * 4 # bytes
@@ -198,11 +205,9 @@ class GlobalDescriptorLoopClosureDetection(object):
         Returns:
             list(int): selected keyframes from other robots to match
         """
-        neighbors_is_in_range, neighbors_in_range_list = self.neighbor_manager.check_neighbors_in_range(
-        )
+        neighbors_is_in_range, neighbors_in_range_list = self.neighbor_manager.check_neighbors_in_range()
         # Check if the robot is the broker
-        if len(neighbors_in_range_list
-               ) > 0 and self.neighbor_manager.local_robot_is_broker():
+        if len(neighbors_in_range_list) > 0 and self.neighbor_manager.local_robot_is_broker():
             if self.params["evaluation.enable_logs"]: start_time = time.time()
             # Find matches that maximize the algebraic connectivity
             selection = self.lcm.select_candidates(
@@ -211,10 +216,14 @@ class GlobalDescriptorLoopClosureDetection(object):
 
             # Extract and publish local descriptors
             vertices_info = self.edge_list_to_vertices(selection)
+            rclpy.logging.get_logger('cslam' + str(self.params["robot_id"])).info("Here 1.1: {}".format(vertices_info)) # TODO: remove 
             broker = Broker(selection, neighbors_in_range_list)
+            rclpy.logging.get_logger('cslam' + str(self.params["robot_id"])).info("Here 1.2: {}".format(neighbors_in_range_list)) # TODO: remove 
             for selected_vertices_set in broker.brokerage(
                     self.params["frontend.use_vertex_cover_selection"]):
+                rclpy.logging.get_logger('cslam' + str(self.params["robot_id"])).info("Here 2: {}".format(selected_vertices_set)) # TODO: remove   
                 for v in selected_vertices_set:
+                    rclpy.logging.get_logger('cslam' + str(self.params["robot_id"])).info("Here 3: {}".format(v)) # TODO: remove   
                     # Call to send publish local descriptors
                     msg = LocalDescriptorsRequest()
                     msg.image_id = v[1]
@@ -284,10 +293,12 @@ class GlobalDescriptorLoopClosureDetection(object):
 
         Args:
             msg (cslam_loop_detection_interfaces::msg::GlobalDescriptors): descriptors
-        """
+        """ 
         if msg.descriptors[0].robot_id != self.params['robot_id']:
+            self.node.get_logger().info("Receive global descriptor: robot_id= {} , image_id= {} , size= {}".format(msg.descriptors[0].robot_id, msg.descriptors[0].image_id, len(msg.descriptors))) # TODO: remove
             unknown_range = self.neighbor_manager.get_unknown_range(
                 msg.descriptors)
+            self.node.get_logger().info("Unknown range: {}".format(unknown_range)) # TODO: remove
             for i in unknown_range:
                 self.lcm.add_other_robot_global_descriptor(msg.descriptors[i])
 

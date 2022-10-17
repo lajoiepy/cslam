@@ -44,7 +44,7 @@
 
 ### Neighbor Management:
 
-`enable_neighbor_monitoring`: Enable monitoring of robots in communication range. If false, all robots are always considered neighbors.
+`enable_neighbor_monitoring`: Enable monitoring of robots in communication range. If false, all robots are always considered neighbors. Set to false only when connectivity is always maintained between all the robots.
 
 `max_heartbeat_delay_sec`: Communication delay beyond which a neighboring robot is not considered in range if it did not communicate.
 
@@ -61,3 +61,5 @@
 `enable_logs`: Enable logging of optimization result files.
 
 `log_folder`: Path where to store the logged optimization files.
+
+TODO:update

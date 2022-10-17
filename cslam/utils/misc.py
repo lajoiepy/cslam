@@ -1,5 +1,5 @@
 """"
-This file contains various utilatary functions 
+This file contains various utilitary functions 
 for basic number and list operations
 """
 
@@ -17,3 +17,17 @@ def list_range(l, start):
 def list_chunks(l, start, chunk_size):
    s = clamp(start, 0, len(l)-1)
    return [l[i:i+chunk_size] for i in range(s, len(l), chunk_size)]
+
+def dict_to_list_chunks(d, start, chunk_size):
+   chunks = []
+   tmp = []
+   for k in d.keys():  
+      if k >= start:
+         tmp.append(d[k])
+         if len(tmp) == chunk_size:
+            chunks.append(tmp)
+            tmp = []
+   if len(tmp) > 0:
+      chunks.append(tmp)
+
+   return chunks

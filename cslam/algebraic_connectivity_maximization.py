@@ -5,7 +5,6 @@ import numpy as np
 from cslam.mac.mac import MAC
 from cslam.mac.utils import Edge, weight_graph_lap_from_edge_list
 
-
 class EdgeInterRobot(NamedTuple):
     """ Inter-robot loop closure edge
     """
@@ -432,6 +431,7 @@ class AlgebraicConnectivityMaximization(object):
         """
         key = (match.robot0_id, match.robot0_image_id, match.robot1_id,
                match.robot1_image_id)
+                    
         if key in self.candidate_edges:
             if match.weight > self.candidate_edges[key].weight:
                 self.add_candidate_edge(match)

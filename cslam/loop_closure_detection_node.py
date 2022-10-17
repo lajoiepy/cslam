@@ -27,6 +27,7 @@ class LoopClosureDetection(Node):
                         ('frontend.nb_best_matches', 10), ('frontend.image_crop_size', None),
                         ('frontend.intra_loop_min_inbetween_keyframes', 10),
                         ('neighbor_management.max_heartbeat_delay_sec', 5),
+                        ('neighbor_management.init_delay_sec', 5),
                         ('neighbor_management.heartbeat_period_sec', 0.5),
                         ('frontend.global_descriptor_publication_period_sec', 1.0),
                         ('frontend.global_descriptor_publication_max_elems_per_msg',
@@ -64,6 +65,8 @@ class LoopClosureDetection(Node):
             'neighbor_management.enable_neighbor_monitoring').value
         self.params["neighbor_management.max_heartbeat_delay_sec"] = self.get_parameter(
             'neighbor_management.max_heartbeat_delay_sec').value
+        self.params["neighbor_management.init_delay_sec"] = self.get_parameter(
+            'neighbor_management.init_delay_sec').value
         self.params["neighbor_management.heartbeat_period_sec"] = self.get_parameter(
             'neighbor_management.heartbeat_period_sec').value
         self.params[
