@@ -149,7 +149,8 @@ add_executable(pose_graph_manager
   src/back_end/decentralized_pgo.cpp
   src/back_end/pose_graph_manager_node.cpp
   src/back_end/utils/logger.cpp
-  src/back_end/gtsam_utils.cpp)
+  src/back_end/gtsam_utils.cpp
+  src/back_end/utils/simulated_rendezvous.cpp)
 add_dependencies(pose_graph_manager  
 pose_graph_manager
   ${${PROJECT_NAME}_EXPORTED_TARGETS})

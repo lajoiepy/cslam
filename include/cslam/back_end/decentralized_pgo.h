@@ -35,6 +35,7 @@
 
 #include "cslam/back_end/gtsam_utils.h"
 #include "cslam/back_end/utils/logger.h"
+#include "cslam/back_end/utils/simulated_rendezvous.h"
 
 namespace cslam
 {
@@ -420,6 +421,9 @@ namespace cslam
 
         std::map<unsigned int, sensor_msgs::msg::NavSatFix> gps_data_;
         bool enable_gps_recording_;
+
+        bool enable_simulated_rendezvous_;
+        std::shared_ptr<SimulatedRendezVous> sim_rdv_;
     };
 } // namespace cslam
 #endif

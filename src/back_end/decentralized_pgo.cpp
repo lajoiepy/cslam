@@ -15,6 +15,8 @@ DecentralizedPGO::DecentralizedPGO(std::shared_ptr<rclcpp::Node> &node)
                        pose_graph_optimization_start_period_ms_);
   node_->get_parameter("backend.pose_graph_optimization_loop_period_ms",
                        pose_graph_optimization_loop_period_ms_);
+  node_->get_parameter("backend.enable_broadcast_tf_frames",
+                       enable_broadcast_tf_frames_);
   node_->get_parameter("neighbor_management.heartbeat_period_sec", heartbeat_period_sec_);
   node->get_parameter("evaluation.enable_logs",
                       enable_logs_);
@@ -22,12 +24,13 @@ DecentralizedPGO::DecentralizedPGO(std::shared_ptr<rclcpp::Node> &node)
                       log_folder_);
   node->get_parameter("evaluation.enable_gps_recording",
                       enable_gps_recording_);
+  node->get_parameter("evaluation.enable_simulated_rendezvous", enable_simulated_rendezvous_);
+  std::string rendezvous_schedule_file;
+  node->get_parameter("evaluation.rendezvous_schedule_file", rendezvous_schedule_file);
   node_->get_parameter("visualization.enable",
                        enable_visualization_);
   node_->get_parameter("visualization.publishing_period_ms",
                        visualization_period_ms_);
-  node_->get_parameter("backend.enable_broadcast_tf_frames",
-                       enable_broadcast_tf_frames_);
 
   int max_waiting_param;
   node_->get_parameter("backend.max_waiting_time_sec", max_waiting_param);
@@ -199,6 +202,11 @@ DecentralizedPGO::DecentralizedPGO(std::shared_ptr<rclcpp::Node> &node)
     log_detection_cumulative_communication_ = 0;
     log_local_descriptors_cumulative_communication_ = 0;
     log_sparsification_cumulative_computation_time_ = 0.0;
+  }
+
+  if (enable_simulated_rendezvous_)
+  {
+    sim_rdv_ = std::make_shared<SimulatedRendezVous>(node_, rendezvous_schedule_file, robot_id_);
   }
 
   RCLCPP_INFO(node_->get_logger(), "Initialization done.");
@@ -658,6 +666,12 @@ void DecentralizedPGO::share_optimized_estimates(
 
 void DecentralizedPGO::heartbeat_timer_callback()
 {
+  if (enable_simulated_rendezvous_)
+  {
+    if (!sim_rdv_->is_alive()) {
+      return;
+    }
+  }
   std_msgs::msg::UInt32 msg;
   msg.data = origin_robot_id_;
   heartbeat_publisher_->publish(msg);

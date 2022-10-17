@@ -110,10 +110,7 @@ class GlobalDescriptorLoopClosureDetection(object):
 
         # Listen for changes in node liveliness
         self.neighbor_manager = NeighborManager(
-            self.node, self.params['robot_id'], self.params['nb_robots'],
-            self.params['neighbor_management.enable_neighbor_monitoring'],
-            self.params['neighbor_management.init_delay_sec'],
-            self.params['neighbor_management.max_heartbeat_delay_sec'])
+            self.node, self.params)
 
         self.global_descriptors_buffer = SortedDict()
         self.global_descriptors_timer = self.node.create_timer(

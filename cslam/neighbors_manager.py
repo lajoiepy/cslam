@@ -4,17 +4,22 @@ from std_msgs.msg import String
 
 import rclpy
 
+
 class NeighborManager():
 
-    def __init__(self, node, robot_id, nb_robots, is_enabled, init_delay_sec, max_delay_sec):
+    def __init__(self, node, params):  # TODO: document
         self.node = node
-        self.robot_id = robot_id
-        self.nb_robots = nb_robots
+        self.params = params
+        self.robot_id = self.params['robot_id']
+        self.nb_robots = self.params['nb_robots']
         self.neighbors_monitors = {}
-        for id in range(self.nb_robots):
-            if id != self.robot_id:
-                self.neighbors_monitors[id] = NeighborMonitor(
-                    self.node, id, is_enabled, init_delay_sec, max_delay_sec)
+        for rid in range(self.nb_robots):
+            if rid != self.robot_id:
+                self.neighbors_monitors[rid] = NeighborMonitor(
+                    self.node, rid, self.
+                    params['neighbor_management.enable_neighbor_monitoring'],
+                    self.params['neighbor_management.init_delay_sec'],
+                    self.params['neighbor_management.max_heartbeat_delay_sec'])
 
         self.subscriber = self.node.create_subscription(
             String, 'get_current_neighbors',
@@ -126,7 +131,7 @@ class NeighborManager():
         for i in range(self.nb_robots):
             if i != self.robot_id:
                 from_match_id = min(self.neighbors_monitors[i].last_match_sent,
-                                 from_match_id)
+                                    from_match_id)
         return from_match_id
 
     def update_received_kf_id(self, other_robot_id, kf_id):
@@ -155,7 +160,7 @@ class NeighborManager():
             i for i in range(len(descriptors)) if descriptors[i].keyframe_id >
             self.neighbors_monitors[other_robot_id].last_keyframe_received
         ]
-        
+
         self.update_received_kf_id(
             other_robot_id,
             max(self.neighbors_monitors[other_robot_id].last_keyframe_received,
@@ -168,7 +173,8 @@ class NeighborManager():
         Args:
             msg (String): Empty
         """
-        is_robot_in_range, robots_in_range_list = self.check_neighbors_in_range()
+        is_robot_in_range, robots_in_range_list = self.check_neighbors_in_range(
+        )
         robots_in_range_list.remove(self.robot_id)
         msg = RobotIdsAndOrigin()
         msg.robots.ids = robots_in_range_list
