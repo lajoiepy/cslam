@@ -4,6 +4,7 @@
 
 import rclpy
 from rclpy.node import Node
+from rclpy.clock import Clock
 from sensor_msgs.msg import Image
 
 from cslam.global_descriptor_loop_closure_detection import GlobalDescriptorLoopClosureDetection
@@ -90,7 +91,7 @@ class LoopClosureDetection(Node):
             self.params, self)
         self.inter_robot_detection_timer = self.create_timer(
             self.params['frontend.inter_robot_detection_period_sec'],
-            self.glcd.detect_inter)
+            self.glcd.detect_inter, clock=Clock())
 
 
 if __name__ == '__main__':

@@ -8,6 +8,7 @@ from cslam_loop_detection_interfaces.msg import LocalDescriptorsRequest, LocalPo
 import cslam.lidar_pr.icp_utils as icp_utils
 import rclpy
 from rclpy.node import Node
+from rclpy.clock import Clock
 from diagnostic_msgs.msg import KeyValue
 
 class LidarHandler: # TODO: document
@@ -38,7 +39,7 @@ class LidarHandler: # TODO: document
         self.inter_robot_loop_closure_publisher = self.node.create_publisher(InterRobotLoopClosure, "/inter_robot_loop_closure", 100)
 
         period_ms = self.params["frontend.map_manager_process_period_ms"]
-        self.processing_timer = self.node.create_timer(float(period_ms)/1000, self.process_new_sensor_data)
+        self.processing_timer = self.node.create_timer(float(period_ms)/1000, self.process_new_sensor_data, clock=Clock())
 
         self.received_data = []
         self.local_descriptors_map = {}

@@ -61,7 +61,7 @@ class LoopClosureSparseMatching(object):
         self.other_robots_nnsm[msg.robot_id].add_item(
             np.asarray(msg.descriptor), msg.image_id)
 
-        rclpy.logging.get_logger('cslam' + str(self.params["robot_id"])).info("Other receive {}".format(self.local_nnsm.n)) # TODO: remove   
+        #rclpy.logging.get_logger('cslam' + str(self.params["robot_id"])).info("Other receive {}".format(self.local_nnsm.n)) # TODO: remove   
 
         kf, similarity = self.local_nnsm.search_best(np.asarray(msg.descriptor))
         if kf is not None:
@@ -105,7 +105,7 @@ class LoopClosureSparseMatching(object):
         Returns:
             list(EdgeInterRobot): selected edges
         """
-        rclpy.logging.get_logger('cslam' + str(self.params["robot_id"])).info("Candidate selector 0: {} / {}".format(len(self.candidate_selector.candidate_edges), number_of_candidates)) # TODO: remove   
+        #rclpy.logging.get_logger('cslam' + str(self.params["robot_id"])).info("Candidate selector 0: {} / {}".format(len(self.candidate_selector.candidate_edges), number_of_candidates)) # TODO: remove   
         if len(self.candidate_selector.candidate_edges) > number_of_candidates:
             rclpy.logging.get_logger('cslam' + str(self.params["robot_id"])).info("Candidate selector 1: {} / {}".format(len(self.candidate_selector.candidate_edges), number_of_candidates)) # TODO: remove   
             return self.candidate_selector.select_candidates(
