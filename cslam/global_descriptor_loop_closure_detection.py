@@ -328,11 +328,11 @@ class GlobalDescriptorLoopClosureDetection(object):
                              value=str(self.log_total_matches)))
         else:
             # If geo verif fails, remove candidate
-            self.node.get_logger().info(
+            self.node.get_logger().debug(
                 'Failed inter-robot loop closure measurement: (' +
                 str(msg.robot0_id) + ',' + str(msg.robot0_image_id) +
                 ') -> (' + str(msg.robot1_id) + ',' +
-                str(msg.robot1_image_id) + ')') # TODO remove
+                str(msg.robot1_image_id) + ')')
             self.lcm.candidate_selector.remove_candidate_edges(
                 [self.inter_robot_loop_closure_msg_to_edge(msg)])
 

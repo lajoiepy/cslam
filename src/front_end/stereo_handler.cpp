@@ -51,6 +51,12 @@ void StereoHandler::stereo_callback(
     const sensor_msgs::msg::CameraInfo::ConstSharedPtr camera_info_left,
     const sensor_msgs::msg::CameraInfo::ConstSharedPtr camera_info_right,
     const nav_msgs::msg::Odometry::ConstSharedPtr odom) {
+  // If odom tracking failed, do not process the frame
+  if (odom->pose.covariance[0] > 1000)
+  {
+    RCLCPP_WARN(node_->get_logger(), "Odom tracking failed, skipping frame");
+    return;
+  }
   if (!(image_rect_left->encoding.compare(
             sensor_msgs::image_encodings::TYPE_8UC1) == 0 ||
         image_rect_left->encoding.compare(sensor_msgs::image_encodings::MONO8) ==
@@ -96,7 +102,7 @@ void StereoHandler::stereo_callback(
   Transform localTransform = rtabmap_ros::getTransform(
       base_frame_id_, image_rect_left->header.frame_id, stamp, *tf_buffer_, 0.1);
   if (localTransform.isNull()) {
-    RCLCPP_ERROR(node_->get_logger(),
+    RCLCPP_INFO(node_->get_logger(),
                  "Could not get transform from %s to %s after 0.1 s!",
                  base_frame_id_.c_str(), image_rect_left->header.frame_id.c_str());
     return;

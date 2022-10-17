@@ -828,7 +828,7 @@ void DecentralizedPGO::check_result_and_finish_optimization()
 
   if (status == std::future_status::ready)
   {
-    RCLCPP_INFO(node_->get_logger(), "Pose Graph Optimization complete.");
+    RCLCPP_DEBUG(node_->get_logger(), "Pose Graph Optimization completed.");
     auto result = optimization_result_.get();
     optimization_count_++;
 

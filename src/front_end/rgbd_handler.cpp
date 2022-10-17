@@ -164,6 +164,13 @@ void RGBDHandler::rgbd_callback(
     const sensor_msgs::msg::CameraInfo::ConstSharedPtr camera_info_rgb,
     const nav_msgs::msg::Odometry::ConstSharedPtr odom)
 {
+  // If odom tracking failed, do not process the frame
+  if (odom->pose.covariance[0] > 1000)
+  {
+    RCLCPP_WARN(node_->get_logger(), "Odom tracking failed, skipping frame");
+    return;
+  }
+
   if (!(image_rect_rgb->encoding.compare(sensor_msgs::image_encodings::TYPE_8UC1) == 0 ||
         image_rect_rgb->encoding.compare(sensor_msgs::image_encodings::MONO8) == 0 ||
         image_rect_rgb->encoding.compare(sensor_msgs::image_encodings::MONO16) == 0 ||
@@ -313,9 +320,9 @@ bool RGBDHandler::generate_new_keyframe(std::shared_ptr<rtabmap::SensorData> &ke
       }
       catch (std::exception &e)
       {
-        RCLCPP_ERROR(
+        RCLCPP_WARN(
             node_->get_logger(),
-            "Could not compute transformation for keyframe generation: %s",
+            "Exception: Could not compute transformation for keyframe generation: %s",
             e.what());
       }
     }
@@ -437,9 +444,9 @@ void RGBDHandler::receive_local_keyframe_match(
   }
   catch (std::exception &e)
   {
-    RCLCPP_ERROR(
+    RCLCPP_WARN(
         node_->get_logger(),
-        "Could not compute local transformation between %d and %d: %s",
+        "Exception: Could not compute local transformation between %d and %d: %s",
         msg->keyframe0_id, msg->keyframe1_id,
         e.what());
   }
@@ -510,7 +517,7 @@ void RGBDHandler::receive_local_image_descriptors(
       }
       else
       {
-        RCLCPP_ERROR(
+        RCLCPP_DEBUG(
             node_->get_logger(),
             "Could not compute transformation between (%d,%d) and (%d,%d): %s",
             robot_id_, local_image_id, msg->robot_id, msg->image_id,
@@ -521,9 +528,9 @@ void RGBDHandler::receive_local_image_descriptors(
     }
     catch (std::exception &e)
     {
-      RCLCPP_ERROR(
+      RCLCPP_WARN(
           node_->get_logger(),
-          "Could not compute transformation between (%d,%d) and (%d,%d): %s",
+          "Exception: Could not compute transformation between (%d,%d) and (%d,%d): %s",
           robot_id_, local_image_id, msg->robot_id, msg->image_id,
           e.what());
     }

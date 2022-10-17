@@ -57,6 +57,10 @@ class LidarHandler: # TODO: document
             self.latest_gps = NavSatFix()
 
     def lidar_callback(self, pc_msg, odom_msg):
+        # If odom tracking failed, do not process the frame
+        if (odom_msg.pose.covariance[0] > 1000):
+            self.node.get_logger().warn("Odom tracking failed, skipping frame")
+            return
         self.received_data.append((pc_msg, odom_msg))
         if self.params["evaluation.enable_gps_recording"]:
             self.gps_data.append(self.latest_gps)
