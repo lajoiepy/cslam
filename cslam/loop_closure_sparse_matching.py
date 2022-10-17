@@ -2,7 +2,6 @@ import numpy as np
 from cslam.nns_matching import NearestNeighborsMatching
 from cslam.lidar_pr.scancontext_matching import ScanContextMatching
 from cslam.algebraic_connectivity_maximization import AlgebraicConnectivityMaximization, EdgeInterRobot
-import rclpy # TODO: remove this dependency
 
 class LoopClosureSparseMatching(object):
     """Sparse matching for loop closure detection
@@ -61,11 +60,8 @@ class LoopClosureSparseMatching(object):
         self.other_robots_nnsm[msg.robot_id].add_item(
             np.asarray(msg.descriptor), msg.image_id)
 
-        #rclpy.logging.get_logger('cslam' + str(self.params["robot_id"])).info("Other receive {}".format(self.local_nnsm.n)) # TODO: remove   
-
         kf, similarity = self.local_nnsm.search_best(np.asarray(msg.descriptor))
-        if kf is not None:
-            rclpy.logging.get_logger('cslam' + str(self.params["robot_id"])).info("Other, Similarity: {} / {}".format(similarity, self.params['frontend.similarity_threshold'])) # TODO: remove   
+        if kf is not None:   
             if similarity >= self.params['frontend.similarity_threshold']:
                 self.candidate_selector.add_match(
                     EdgeInterRobot(self.params['robot_id'], kf, msg.robot_id,
@@ -104,10 +100,8 @@ class LoopClosureSparseMatching(object):
 
         Returns:
             list(EdgeInterRobot): selected edges
-        """
-        #rclpy.logging.get_logger('cslam' + str(self.params["robot_id"])).info("Candidate selector 0: {} / {}".format(len(self.candidate_selector.candidate_edges), number_of_candidates)) # TODO: remove   
+        """   
         if len(self.candidate_selector.candidate_edges) > number_of_candidates:
-            rclpy.logging.get_logger('cslam' + str(self.params["robot_id"])).info("Candidate selector 1: {} / {}".format(len(self.candidate_selector.candidate_edges), number_of_candidates)) # TODO: remove   
             return self.candidate_selector.select_candidates(
                 number_of_candidates, is_neighbor_in_range,
                 greedy_initialization)
