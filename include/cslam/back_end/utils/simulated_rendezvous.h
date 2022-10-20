@@ -25,7 +25,7 @@ namespace cslam
     private:
         std::shared_ptr<rclcpp::Node> node_;
         unsigned int robot_id_;
-        std::vector<std::pair<double, double>> rendezvous_ranges_;
+        std::vector<std::pair<uint64_t, uint64_t>> rendezvous_ranges_;
         bool enabled_;
     };
 

@@ -36,11 +36,13 @@ class LoopClosureDetection(Node):
                         ('frontend.enable_intra_robot_loop_closures', False),
                         ('frontend.global_descriptors_topic', "/global_descriptors"),
                         ('frontend.inter_robot_matches_topic', "/inter_robot_matches"),
+                        ('frontend.enable_sparsification', True),
                         ('frontend.use_vertex_cover_selection', True),
                         ('frontend.cosplace.descriptor_dim', 512),
                         ('frontend.cosplace.backbone', "resnet101"),
                         ('frontend.sensor_type', "stereo"),
                         ('evaluation.enable_logs', False),
+                        ('evaluation.enable_sparsification_comparison', False),
                         ])
         self.params = {}
         self.params['frontend.similarity_threshold'] = self.get_parameter(
@@ -63,6 +65,8 @@ class LoopClosureDetection(Node):
             'frontend.inter_robot_detection_period_sec').value
         self.params["frontend.image_crop_size"] = self.get_parameter(
             'frontend.image_crop_size').value
+        self.params["frontend.enable_sparsification"] = self.get_parameter(
+            'frontend.enable_sparsification').value
         self.params["neighbor_management.enable_neighbor_monitoring"] = self.get_parameter(
             'neighbor_management.enable_neighbor_monitoring').value
         self.params["neighbor_management.max_heartbeat_delay_sec"] = self.get_parameter(
@@ -87,6 +91,8 @@ class LoopClosureDetection(Node):
             'frontend.sensor_type').value.lower()
         self.params["evaluation.enable_logs"] = self.get_parameter(
             'evaluation.enable_logs').value
+        self.params["evaluation.enable_sparsification_comparison"] = self.get_parameter(
+            'evaluation.enable_sparsification_comparison').value
 
         self.glcd = GlobalDescriptorLoopClosureDetection(
             self.params, self)

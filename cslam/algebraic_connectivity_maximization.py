@@ -5,6 +5,7 @@ import numpy as np
 from cslam.mac.mac import MAC
 from cslam.mac.utils import Edge, weight_graph_lap_from_edge_list
 
+
 class EdgeInterRobot(NamedTuple):
     """ Inter-robot loop closure edge
     """
@@ -32,11 +33,16 @@ class EdgeInterRobot(NamedTuple):
 
 class AlgebraicConnectivityMaximization(object):
 
-    def __init__(self,
-                 robot_id=0,
-                 nb_robots=1,
-                 max_iters=20,
-                 fixed_weight=1.0):
+    def __init__(
+        self,
+        robot_id=0,
+        nb_robots=1,
+        max_iters=20,
+        fixed_weight=1.0,
+        extra_params={
+            "frontend.enable_sparsification": True,
+            "evaluation.enable_sparsification_comparison": False,
+        }):
         """Initialization
 
         Args:
@@ -46,9 +52,11 @@ class AlgebraicConnectivityMaximization(object):
             fixed_weight (float, optional): weight of fixed measurements. Defaults to 1.0.
         """
         self.fixed_weight = fixed_weight
+        self.params = extra_params
 
         self.fixed_edges = []
         self.candidate_edges = {}
+        self.failed_edges = set()
 
         self.max_iters = max_iters
 
@@ -101,8 +109,8 @@ class AlgebraicConnectivityMaximization(object):
             self.update_nb_poses(e)
 
         for e in candidate_edges:
-            self.candidate_edges[(e.robot0_id, e.robot0_keyframe_id, e.robot1_id,
-                                  e.robot1_keyframe_id)] = e
+            self.candidate_edges[(e.robot0_id, e.robot0_keyframe_id,
+                                  e.robot1_id, e.robot1_keyframe_id)] = e
 
     def add_fixed_edge(self, edge):
         """Add an already computed edge to the graph
@@ -121,12 +129,16 @@ class AlgebraicConnectivityMaximization(object):
         Args:
             edge (EdgeInterRobot): inter-robot edge
         """
+        # Check if the edge is not a failed edge or fixed edge
+        if edge in self.failed_edges or edge in self.fixed_edges:
+            return
+        # Otherwise add it to the candidate edges
         self.candidate_edges[(edge.robot0_id, edge.robot0_keyframe_id,
                               edge.robot1_id, edge.robot1_keyframe_id)] = edge
         # Update nb of poses
         self.update_nb_poses(edge)
 
-    def remove_candidate_edges(self, edges):
+    def remove_candidate_edges(self, edges, failed=False):
         """Remove candidate edge from the graph
 
         Args:
@@ -136,6 +148,9 @@ class AlgebraicConnectivityMaximization(object):
         for k in keys:
             if self.candidate_edges[k] in edges:
                 del self.candidate_edges[k]
+        if failed:
+            for e in edges:
+                self.failed_edges.add(e)
 
     def candidate_edges_to_fixed(self, edges):
         """Move candidate edges to fixed. 
@@ -406,10 +421,17 @@ class AlgebraicConnectivityMaximization(object):
                 w_init = self.random_initialization(nb_candidates_to_choose,
                                                     rekeyed_candidate_edges)
 
-            if self.check_initial_fixed_measurements_exists(is_robot_included):
-                result = self.run_mac_solver(rekeyed_fixed_edges,
-                                             rekeyed_candidate_edges, w_init,
-                                             nb_candidates_to_choose)
+            if self.params[
+                    "frontend.enable_sparsification"] and self.check_initial_fixed_measurements_exists(
+                        is_robot_included):
+                result_mac = self.run_mac_solver(rekeyed_fixed_edges,
+                                                 rekeyed_candidate_edges,
+                                                 w_init,
+                                                 nb_candidates_to_choose)
+                if self.params["evaluation.enable_sparsification_comparison"]:
+                    result = numpy.multiply(result_mac, w_init)
+                else:
+                    result = result_mac
             else:
                 result = w_init
 
@@ -417,11 +439,27 @@ class AlgebraicConnectivityMaximization(object):
                 rekeyed_candidate_edges[i]
                 for i in np.nonzero(result.astype(int))[0]
             ]
+
+            if self.params["evaluation.enable_sparsification_comparison"]:
+                self.sparsification_comparison_logs(w_init, result_mac)
+
             # Return selected multi-robot edges
             return self.recover_inter_robot_edges(selected_edges,
                                                   is_robot_included)
         else:
             return []
+
+    def sparsification_comparison_logs(self, greedy_result, mac_result):
+        """ TODO: document
+        """
+        self.log_greedy_edges = self.recover_inter_robot_edges([
+                    rekeyed_candidate_edges[i]
+                    for i in np.nonzero(w_init.astype(int))[0]
+                ], is_robot_included)
+        self.log_mac_edges = self.recover_inter_robot_edges([
+                    rekeyed_candidate_edges[i]
+                    for i in np.nonzero(result_mac.astype(int))[0]
+                ], is_robot_included)
 
     def add_match(self, match):
         """Add match
@@ -431,7 +469,7 @@ class AlgebraicConnectivityMaximization(object):
         """
         key = (match.robot0_id, match.robot0_keyframe_id, match.robot1_id,
                match.robot1_keyframe_id)
-                    
+
         if key in self.candidate_edges:
             if match.weight > self.candidate_edges[key].weight:
                 self.add_candidate_edge(match)

@@ -401,7 +401,8 @@ class GlobalDescriptorLoopClosureDetection(object):
         """
         if msg.robot_id != self.params['robot_id']:
             for match in msg.matches:
-                self.lcm.candidate_selector.add_match(match)
+                edge = EdgeInterRobot(match.robot0_id, match.robot0_keyframe_id, match.robot1_id, match.robot1_keyframe_id, match.weight)
+                self.lcm.candidate_selector.add_match(edge)
 
     def inter_robot_loop_closure_msg_to_edge(self, msg):
         """ Convert a inter-robot loop closure to an edge 
@@ -423,6 +424,7 @@ class GlobalDescriptorLoopClosureDetection(object):
         Args:
             msg (cslam_loop_detection_interfaces::msg::InterRobotLoopClosure): Inter-robot loop closure
         """
+        rclpy.logging.get_logger('AlgebraicConnectivityMaximization r' + str(self.params["robot_id"])).info("Candidates edges 0: {}".format(len(self.lcm.candidate_selector.candidate_edges)))# TODO: remove
         if msg.success:
             self.node.get_logger().info(
                 'New inter-robot loop closure measurement: (' +
@@ -440,16 +442,17 @@ class GlobalDescriptorLoopClosureDetection(object):
                              value=str(self.log_total_matches)))
         else:
             # If geo verif fails, remove candidate
-            self.node.get_logger().debug(
+            self.node.get_logger().info(
                 'Failed inter-robot loop closure measurement: (' +
                 str(msg.robot0_id) + ',' + str(msg.robot0_keyframe_id) +
                 ') -> (' + str(msg.robot1_id) + ',' +
                 str(msg.robot1_keyframe_id) + ')')
             self.lcm.candidate_selector.remove_candidate_edges(
-                [self.inter_robot_loop_closure_msg_to_edge(msg)])
+                [self.inter_robot_loop_closure_msg_to_edge(msg)], failed=True)
 
             if self.params["evaluation.enable_logs"]:
                 self.log_total_failed_matches += 1
                 self.log_publisher.publish(
                     KeyValue(key="nb_failed_matches",
                              value=str(self.log_total_failed_matches)))
+        rclpy.logging.get_logger('AlgebraicConnectivityMaximization r' + str(self.params["robot_id"])).info("Candidates edges 1: {}".format(len(self.lcm.candidate_selector.candidate_edges)))# TODO: remove
