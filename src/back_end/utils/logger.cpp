@@ -15,6 +15,20 @@ namespace cslam
         system(("mkdir -p " + log_folder_).c_str());
         total_pgo_time_ = 0;
         nb_robots_ = nb_robots;
+
+        logger_subscriber_ = node_->create_subscription<diagnostic_msgs::msg::KeyValue>(
+            "log_info", 10, std::bind(&Logger::log_callback, this, std::placeholders::_1));
+
+        inter_robot_matches_subscriber_ = node_->create_subscription<cslam_common_interfaces::msg::InterRobotMatches>(
+            "log_matches", 10, std::bind(&Logger::log_matches_callback, this, std::placeholders::_1));
+
+        log_nb_matches_ = 0;
+        log_nb_failed_matches_ = 0;
+        log_nb_vertices_transmitted_ = 0;
+        log_nb_matches_selected_ = 0;
+        log_detection_cumulative_communication_ = 0;
+        log_local_descriptors_cumulative_communication_ = 0;
+        log_sparsification_cumulative_computation_time_ = 0.0;
     }
 
     void Logger::add_pose_graph_log_info(const cslam_common_interfaces::msg::PoseGraph &msg)
@@ -139,6 +153,32 @@ namespace cslam
             gps_log_file.close();
         }
 
+        // Write matches logs (.csv)
+        for (const auto &info : pose_graphs_log_info_)
+        {
+            std::ofstream matches_log_file;
+            matches_log_file.open(result_folder + "/spectral_matches_robot_" + std::to_string(info.robot_id) + ".csv");
+            matches_log_file << "robot0_id, robot0_keyframe_id, robot1_id, robot1_keyframe_id" << std::endl;
+            for (size_t i = 0; i < info.spectral_matches.matches.size(); i++)
+            {
+                matches_log_file << std::to_string(info.spectral_matches.matches[i].robot0_id) << ","
+                                 << std::to_string(info.spectral_matches.matches[i].robot0_keyframe_id) << ","
+                                 << std::to_string(info.spectral_matches.matches[i].robot1_id) << ","
+                                 << std::to_string(info.spectral_matches.matches[i].robot1_keyframe_id) << std::endl;
+            }
+
+            std::ofstream greedy_matches_log_file;
+            greedy_matches_log_file.open(result_folder + "/greedy_matches_robot_" + std::to_string(info.robot_id) + ".csv");
+            greedy_matches_log_file << "robot0_id, robot0_keyframe_id, robot1_id, robot1_keyframe_id" << std::endl;
+            for (size_t i = 0; i < info.greedy_matches.matches.size(); i++)
+            {
+                greedy_matches_log_file << std::to_string(info.greedy_matches.matches[i].robot0_id) << ","
+                                 << std::to_string(info.greedy_matches.matches[i].robot0_keyframe_id) << ","
+                                 << std::to_string(info.greedy_matches.matches[i].robot1_id) << ","
+                                 << std::to_string(info.greedy_matches.matches[i].robot1_keyframe_id) << std::endl;
+            }
+        }
+
         // Clear logs
         pose_graphs_log_info_.clear();
         initial_global_pose_graph_.first.reset();
@@ -198,6 +238,52 @@ namespace cslam
             RCLCPP_ERROR(node_->get_logger(), "Logging: Error while computing graph error: %s", e.what());
         }
         return error;
+    }
+
+
+    void Logger::log_callback(const diagnostic_msgs::msg::KeyValue::ConstSharedPtr msg)
+    {
+        if (msg->key == "nb_matches"){
+            log_nb_matches_ = std::stoul(msg->value);
+        } else if (msg->key == "nb_failed_matches"){
+            log_nb_failed_matches_ = std::stoul(msg->value);
+        } else if (msg->key == "nb_vertices_transmitted"){
+            log_nb_vertices_transmitted_ = std::stoul(msg->value);
+        } else if (msg->key == "nb_matches_selected"){
+            log_nb_matches_selected_ = std::stoul(msg->value);
+        } else if (msg->key == "detection_cumulative_communication"){
+            log_detection_cumulative_communication_ = std::stoul(msg->value);
+        } else if (msg->key == "local_descriptors_cumulative_communication"){
+            log_local_descriptors_cumulative_communication_ = std::stoul(msg->value);
+        } else if (msg->key == "sparsification_cumulative_computation_time"){
+            log_sparsification_cumulative_computation_time_ = std::stof(msg->value);
+        } else {
+            RCLCPP_ERROR(node_->get_logger(), "Unknown log key: %s", msg->key.c_str());
+        }
+    }
+
+    void Logger::log_matches_callback(const cslam_common_interfaces::msg::InterRobotMatches::ConstSharedPtr msg)
+    {
+        if (msg->robot_id == 0){
+            for (size_t i = 0; i < msg->matches.size(); i++){
+                spectral_matches_.matches.push_back(msg->matches[i]);
+            }
+        } else if (msg->robot_id == 1){
+            for (size_t i = 0; i < msg->matches.size(); i++){
+                greedy_matches_.matches.push_back(msg->matches[i]);
+            }
+        }
+    }
+
+    void Logger::fill_msg(cslam_common_interfaces::msg::PoseGraph & msg){
+        msg.nb_matches = log_nb_matches_;
+        msg.nb_failed_matches = log_nb_failed_matches_;
+        msg.nb_vertices_transmitted = log_nb_vertices_transmitted_;
+        msg.nb_matches_selected = log_nb_matches_selected_;
+        msg.front_end_cumulative_communication_bytes = log_detection_cumulative_communication_ + log_local_descriptors_cumulative_communication_;
+        msg.sparsification_cumulative_computation_time = log_sparsification_cumulative_computation_time_;
+        msg.spectral_matches = spectral_matches_;
+        msg.greedy_matches = greedy_matches_;
     }
 
 } // namespace cslam

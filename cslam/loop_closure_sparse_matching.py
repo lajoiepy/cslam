@@ -58,7 +58,7 @@ class LoopClosureSparseMatching(object):
         """ Add keyframe global descriptor info from other robot
 
         Args:
-            msg (cslam_loop_detection_interfaces.msg.GlobalDescriptor): global descriptor info
+            msg (cslam_common_interfaces.msg.GlobalDescriptor): global descriptor info
         """
         self.other_robots_nnsm[msg.robot_id].add_item(
             np.asarray(msg.descriptor), msg.keyframe_id)

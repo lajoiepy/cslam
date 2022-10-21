@@ -242,7 +242,7 @@ void StereoHandler::stereo_callback(
 
 void StereoHandler::local_descriptors_msg_to_sensor_data(
     const std::shared_ptr<
-        cslam_loop_detection_interfaces::msg::LocalImageDescriptors>
+        cslam_common_interfaces::msg::LocalImageDescriptors>
         msg,
     rtabmap::SensorData &sensor_data) {
   // Fill descriptors

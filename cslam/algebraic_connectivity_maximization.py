@@ -56,7 +56,7 @@ class AlgebraicConnectivityMaximization(object):
 
         self.fixed_edges = []
         self.candidate_edges = {}
-        self.failed_edges = set()
+        self.already_considered_matches = set()
 
         self.max_iters = max_iters
 
@@ -69,6 +69,25 @@ class AlgebraicConnectivityMaximization(object):
         for i in range(self.nb_robots):
             self.nb_poses[i] = 0
             self.initial_fixed_edge_exists[i] = False
+
+        self.log_greedy_edges = []
+        self.log_mac_edges = []
+
+    def edge_key(self, edge):
+        """Get a unique key for an edge
+
+        Args:
+            edge (EdgeInterRobot): inter-robot edge
+
+        Returns:
+            tuple(int, int, int, int): unique key
+        """
+        if edge.robot0_id < edge.robot1_id:
+            return (edge.robot0_id, edge.robot0_keyframe_id,
+                    edge.robot1_id, edge.robot1_keyframe_id)
+        else:
+            return (edge.robot1_id, edge.robot1_keyframe_id,
+                    edge.robot0_id, edge.robot0_keyframe_id)
 
     def update_nb_poses(self, edge):
         """The number of poses should be the maximal edge id known
@@ -109,8 +128,7 @@ class AlgebraicConnectivityMaximization(object):
             self.update_nb_poses(e)
 
         for e in candidate_edges:
-            self.candidate_edges[(e.robot0_id, e.robot0_keyframe_id,
-                                  e.robot1_id, e.robot1_keyframe_id)] = e
+            self.candidate_edges[self.edge_key(e)] = e
 
     def add_fixed_edge(self, edge):
         """Add an already computed edge to the graph
@@ -130,11 +148,11 @@ class AlgebraicConnectivityMaximization(object):
             edge (EdgeInterRobot): inter-robot edge
         """
         # Check if the edge is not a failed edge or fixed edge
-        if edge in self.failed_edges or edge in self.fixed_edges:
+        if self.edge_key(edge) in self.already_considered_matches:
             return
+        
         # Otherwise add it to the candidate edges
-        self.candidate_edges[(edge.robot0_id, edge.robot0_keyframe_id,
-                              edge.robot1_id, edge.robot1_keyframe_id)] = edge
+        self.candidate_edges[self.edge_key(edge)] = edge
         # Update nb of poses
         self.update_nb_poses(edge)
 
@@ -148,9 +166,9 @@ class AlgebraicConnectivityMaximization(object):
         for k in keys:
             if self.candidate_edges[k] in edges:
                 del self.candidate_edges[k]
-        if failed:
-            for e in edges:
-                self.failed_edges.add(e)
+        
+        for edge in edges:
+            self.already_considered_matches.add(self.edge_key(edge))
 
     def candidate_edges_to_fixed(self, edges):
         """Move candidate edges to fixed. 
@@ -441,24 +459,27 @@ class AlgebraicConnectivityMaximization(object):
             ]
 
             if self.params["evaluation.enable_sparsification_comparison"]:
-                self.sparsification_comparison_logs(w_init, result_mac)
+                self.sparsification_comparison_logs(rekeyed_candidate_edges, is_robot_included, w_init, result_mac)
 
             # Return selected multi-robot edges
-            return self.recover_inter_robot_edges(selected_edges,
+            inter_robot_edges = self.recover_inter_robot_edges(selected_edges,
                                                   is_robot_included)
+            self.remove_candidate_edges(inter_robot_edges)
+
+            return inter_robot_edges
         else:
             return []
 
-    def sparsification_comparison_logs(self, greedy_result, mac_result):
+    def sparsification_comparison_logs(self, rekeyed_candidate_edges, is_robot_included, greedy_result, mac_result):
         """ TODO: document
         """
         self.log_greedy_edges = self.recover_inter_robot_edges([
                     rekeyed_candidate_edges[i]
-                    for i in np.nonzero(w_init.astype(int))[0]
+                    for i in np.nonzero(greedy_result.astype(int))[0]
                 ], is_robot_included)
         self.log_mac_edges = self.recover_inter_robot_edges([
                     rekeyed_candidate_edges[i]
-                    for i in np.nonzero(result_mac.astype(int))[0]
+                    for i in np.nonzero(mac_result.astype(int))[0]
                 ], is_robot_included)
 
     def add_match(self, match):

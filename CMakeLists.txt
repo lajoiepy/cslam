@@ -85,6 +85,8 @@ find_package(PCL 1.7
 ## Build ##
 ###########
 
+# TODO: Add option not to build logging
+
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
 # include_directories(include)
@@ -127,7 +129,7 @@ SET(Libraries
 )
 
 find_package(cslam_common_interfaces REQUIRED)
-find_package(cslam_loop_detection_interfaces REQUIRED)
+find_package(cslam_common_interfaces REQUIRED)
 
 add_executable(map_manager 
   src/front_end/map_manager.cpp 
@@ -141,7 +143,7 @@ add_dependencies(map_manager
   ${${PROJECT_NAME}_EXPORTED_TARGETS})
 ament_target_dependencies(map_manager 
   ${Libraries} 
-  cslam_common_interfaces cslam_loop_detection_interfaces)
+  cslam_common_interfaces cslam_common_interfaces)
 set_target_properties(map_manager 
   PROPERTIES OUTPUT_NAME "map_manager")
 
@@ -156,7 +158,7 @@ pose_graph_manager
   ${${PROJECT_NAME}_EXPORTED_TARGETS})
 ament_target_dependencies(pose_graph_manager 
   ${Libraries}
-  cslam_common_interfaces cslam_loop_detection_interfaces)
+  cslam_common_interfaces cslam_common_interfaces)
 target_link_libraries(pose_graph_manager gtsam)
 set_target_properties(pose_graph_manager 
   PROPERTIES OUTPUT_NAME "pose_graph_manager")

@@ -40,7 +40,7 @@ namespace cslam
          * @return rtabmap::SensorData&
          */
         virtual void local_descriptors_msg_to_sensor_data(
-            const std::shared_ptr<cslam_loop_detection_interfaces::msg::LocalImageDescriptors> msg,
+            const std::shared_ptr<cslam_common_interfaces::msg::LocalImageDescriptors> msg,
             rtabmap::SensorData &sensor_data);
 
         /**

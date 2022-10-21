@@ -4,7 +4,7 @@ from message_filters import TimeSynchronizer, Subscriber
 from sensor_msgs.msg import PointCloud2, PointField, NavSatFix
 from nav_msgs.msg import Odometry
 from cslam_common_interfaces.msg import KeyframeOdom, KeyframePointCloud
-from cslam_loop_detection_interfaces.msg import LocalDescriptorsRequest, LocalPointCloudDescriptors, InterRobotLoopClosure, IntraRobotLoopClosure, LocalKeyframeMatch
+from cslam_common_interfaces.msg import LocalDescriptorsRequest, LocalPointCloudDescriptors, InterRobotLoopClosure, IntraRobotLoopClosure, LocalKeyframeMatch
 import cslam.lidar_pr.icp_utils as icp_utils
 import rclpy
 from rclpy.node import Node

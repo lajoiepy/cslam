@@ -15,7 +15,7 @@ from cslam.loop_closure_sparse_matching import LoopClosureSparseMatching
 from cslam.broker import Broker
 
 from cslam_common_interfaces.msg import KeyframeRGB, KeyframePointCloud
-from cslam_loop_detection_interfaces.msg import (
+from cslam_common_interfaces.msg import (
     GlobalDescriptor, GlobalDescriptors, InterRobotLoopClosure,
     LocalDescriptorsRequest, LocalKeyframeMatch, InterRobotMatch,
     InterRobotMatches)
@@ -130,9 +130,12 @@ class GlobalDescriptorLoopClosureDetection(object):
         if self.params["evaluation.enable_logs"]:
             self.log_publisher = self.node.create_publisher(
                 KeyValue, 'log_info', 100)
-            self.log_total_matches = 0
+            self.log_matches_publisher = self.node.create_publisher(
+                InterRobotMatches, 'log_matches', 100)
+            self.log_total_successful_matches = 0
             self.log_total_failed_matches = 0
             self.log_total_vertices_transmitted = 0
+            self.log_total_matches_selected = 0
             self.log_detection_cumulative_communication = 0
             self.log_total_sparsification_computation_time = 0.0
 
@@ -214,6 +217,18 @@ class GlobalDescriptorLoopClosureDetection(object):
                              value=str(
                                  self.log_detection_cumulative_communication)))
 
+    def edge_to_match(self, edge):
+        """Converts an InterRobotEdge to a InterRobotMatch message
+           Args: edge (InterRobotEdge)
+        """
+        msg = InterRobotMatch()
+        msg.robot0_id = edge.robot0_id
+        msg.robot0_keyframe_id = edge.robot0_keyframe_id
+        msg.robot1_id = edge.robot1_id
+        msg.robot1_keyframe_id = edge.robot1_keyframe_id
+        msg.weight = edge.weight
+        return msg
+
     def inter_robot_matches_timer_callback(self):
         """Publish inter-robot matches message periodically
         Doesn't publish if the inter-robot matches are already known by neighboring robots
@@ -242,12 +257,7 @@ class GlobalDescriptorLoopClosureDetection(object):
             for c in chuncks:
                 m = []
                 for match in c:
-                    msg = InterRobotMatch()
-                    msg.robot0_id = match.robot0_id
-                    msg.robot0_keyframe_id = match.robot0_keyframe_id
-                    msg.robot1_id = match.robot1_id
-                    msg.robot1_keyframe_id = match.robot1_keyframe_id
-                    msg.weight = match.weight
+                    msg = self.edge_to_match(match)
                     m.append(msg)
                 msgs.append(m)
 
@@ -316,12 +326,10 @@ class GlobalDescriptorLoopClosureDetection(object):
                     msg.matches_keyframe_id = vertices_info[v][1]
                     self.local_descriptors_request_publishers[v[0]].publish(
                         msg)
-                    self.node.get_logger().info(
-                        "Requesting local descriptors from robot %d for keyframe %d"
-                        % (v[0], v[1]))  # TODO: remove
                 if self.params["evaluation.enable_logs"]:
                     self.log_total_vertices_transmitted += len(
                         selected_vertices_set)
+                    self.log_total_matches_selected += len(selection)
             if self.params["evaluation.enable_logs"]:
                 stop_time = time.time()
                 self.log_total_sparsification_computation_time += stop_time - start_time
@@ -333,6 +341,20 @@ class GlobalDescriptorLoopClosureDetection(object):
                 self.log_publisher.publish(
                     KeyValue(key="nb_vertices_transmitted",
                              value=str(self.log_total_vertices_transmitted)))
+                self.log_publisher.publish(
+                    KeyValue(key="nb_matches_selected",
+                             value=str(self.log_total_matches_selected)))
+                if self.params["evaluation.enable_sparsification_comparison"]:
+                    matches = InterRobotMatches()
+                    matches.robot_id = 0 # Sparse
+                    for e in self.lcm.candidate_selector.log_mac_edges:
+                        matches.matches.append(self.edge_to_match(e))
+                    self.log_matches_publisher.publish(matches)
+                    matches = InterRobotMatches()
+                    matches.robot_id = 1 # Greedy
+                    for e in self.lcm.candidate_selector.log_greedy_edges:
+                        matches.matches.append(self.edge_to_match(e))
+                    self.log_matches_publisher.publish(matches)
 
     def edge_list_to_vertices(self, selection):
         """Extracts the vertices in a list of edges
@@ -380,7 +402,7 @@ class GlobalDescriptorLoopClosureDetection(object):
         """Callback for descriptors received from other robots.
 
         Args:
-            msg (cslam_loop_detection_interfaces::msg::GlobalDescriptors): descriptors
+            msg (cslam_common_interfaces::msg::GlobalDescriptors): descriptors
         """
         if msg.descriptors[0].robot_id != self.params['robot_id']:
             unknown_range = self.neighbor_manager.get_unknown_range(
@@ -397,8 +419,9 @@ class GlobalDescriptorLoopClosureDetection(object):
         """Callback for inter-robot matches received from other robots.
 
         Args:
-            msg (cslam_loop_detection_interfaces::msg::InterRobotMatches): matches
+            msg (cslam_common_interfaces::msg::InterRobotMatches): matches
         """
+        pass
         if msg.robot_id != self.params['robot_id']:
             for match in msg.matches:
                 edge = EdgeInterRobot(match.robot0_id, match.robot0_keyframe_id, match.robot1_id, match.robot1_keyframe_id, match.weight)
@@ -409,7 +432,7 @@ class GlobalDescriptorLoopClosureDetection(object):
             for algebraic connectivity maximization
 
         Args:
-            msg (cslam_loop_detection_interfaces::msg::InterRobotLoopClosure): Inter-robot loop closure
+            msg (cslam_common_interfaces::msg::InterRobotLoopClosure): Inter-robot loop closure
 
         Returns:
             EdgeInterRobot: inter-robot edge
@@ -422,9 +445,8 @@ class GlobalDescriptorLoopClosureDetection(object):
         """Receive computed inter-robot loop closure
 
         Args:
-            msg (cslam_loop_detection_interfaces::msg::InterRobotLoopClosure): Inter-robot loop closure
+            msg (cslam_common_interfaces::msg::InterRobotLoopClosure): Inter-robot loop closure
         """
-        rclpy.logging.get_logger('AlgebraicConnectivityMaximization r' + str(self.params["robot_id"])).info("Candidates edges 0: {}".format(len(self.lcm.candidate_selector.candidate_edges)))# TODO: remove
         if msg.success:
             self.node.get_logger().info(
                 'New inter-robot loop closure measurement: (' +
@@ -436,10 +458,10 @@ class GlobalDescriptorLoopClosureDetection(object):
                 [self.inter_robot_loop_closure_msg_to_edge(msg)])
 
             if self.params["evaluation.enable_logs"]:
-                self.log_total_matches += 1
+                self.log_total_successful_matches += 1
                 self.log_publisher.publish(
                     KeyValue(key="nb_matches",
-                             value=str(self.log_total_matches)))
+                             value=str(self.log_total_successful_matches)))
         else:
             # If geo verif fails, remove candidate
             self.node.get_logger().info(
@@ -455,4 +477,3 @@ class GlobalDescriptorLoopClosureDetection(object):
                 self.log_publisher.publish(
                     KeyValue(key="nb_failed_matches",
                              value=str(self.log_total_failed_matches)))
-        rclpy.logging.get_logger('AlgebraicConnectivityMaximization r' + str(self.params["robot_id"])).info("Candidates edges 1: {}".format(len(self.lcm.candidate_selector.candidate_edges)))# TODO: remove

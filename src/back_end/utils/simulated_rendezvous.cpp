@@ -14,27 +14,25 @@ SimulatedRendezVous::SimulatedRendezVous(std::shared_ptr<rclcpp::Node> &node,
             for (std::string line; std::getline(schedule, line); )
             {
                 auto delim0 = line.find(",");
-                RCLCPP_ERROR(node_->get_logger(), line);
                 if (robot_id_ == std::stoul(line.substr(0, delim0)))
                 {
+                    RCLCPP_INFO(node_->get_logger(), "Simulated rendezvous schedule of robot"+line);
                     while (delim0 != std::string::npos){
                         auto delim1 = line.find(",", delim0 + 1);
 
-                        auto start = std::stoull(line.substr(delim0 + 1, delim1)) + initial_time + 1800;
+                        auto start = std::stoull(line.substr(delim0 + 1, delim1)) + initial_time;
 
                         delim0 = delim1;
                         delim1 = line.find(",", delim0);
 
-                        auto end = std::stoull(line.substr(delim0 + 1, delim1)) + initial_time + 1800;
+                        auto end = std::stoull(line.substr(delim0 + 1, delim1)) + initial_time;
 
-                        rendezvous_ranges_.push_back(std::make_pair(start, end));// TODO: consider the bag rate?
-                        RCLCPP_ERROR(node_->get_logger(), "rendezvous_ranges_: %d %d", start, end);
+                        rendezvous_ranges_.push_back(std::make_pair(start, end));
 
                         delim0 = delim1;
                     }
                 }
             }
-            RCLCPP_ERROR(node_->get_logger(), "rendezvous_ranges_.size: %d", rendezvous_ranges_.size());
             schedule.close();
         }
     }

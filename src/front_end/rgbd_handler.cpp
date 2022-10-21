@@ -50,7 +50,7 @@ RGBDHandler::RGBDHandler(std::shared_ptr<rclcpp::Node> &node)
 
   // Service to extract and publish local image descriptors to another robot
   send_local_descriptors_subscriber_ = node_->create_subscription<
-      cslam_loop_detection_interfaces::msg::LocalDescriptorsRequest>(
+      cslam_common_interfaces::msg::LocalDescriptorsRequest>(
       "local_descriptors_request", 100,
       std::bind(&RGBDHandler::local_descriptors_request, this,
                 std::placeholders::_1));
@@ -73,7 +73,7 @@ RGBDHandler::RGBDHandler(std::shared_ptr<rclcpp::Node> &node)
 
   // Local matches subscription
   local_keyframe_match_subscriber_ = node->create_subscription<
-      cslam_loop_detection_interfaces::msg::LocalKeyframeMatch>(
+      cslam_common_interfaces::msg::LocalKeyframeMatch>(
       "local_keyframe_match", 100,
       std::bind(&RGBDHandler::receive_local_keyframe_match, this,
                 std::placeholders::_1));
@@ -81,12 +81,12 @@ RGBDHandler::RGBDHandler(std::shared_ptr<rclcpp::Node> &node)
   // Publishers to other robots local descriptors subscribers
   std::string local_descriptors_topic = "/local_descriptors";
   local_descriptors_publisher_ = node_->create_publisher<
-      cslam_loop_detection_interfaces::msg::LocalImageDescriptors>(local_descriptors_topic, 100);
+      cslam_common_interfaces::msg::LocalImageDescriptors>(local_descriptors_topic, 100);
 
   if (enable_visualization_)
   {
     visualization_local_descriptors_publisher_ = node_->create_publisher<
-        cslam_loop_detection_interfaces::msg::LocalImageDescriptors>("/viz/local_descriptors", 100);
+        cslam_common_interfaces::msg::LocalImageDescriptors>("/viz/local_descriptors", 100);
 
     keyframe_pointcloud_publisher_ = node_->create_publisher<cslam_common_interfaces::msg::VizPointCloud>(
         "/viz/keyframe_pointcloud", 100);
@@ -94,7 +94,7 @@ RGBDHandler::RGBDHandler(std::shared_ptr<rclcpp::Node> &node)
 
   // Subscriber for local descriptors
   local_descriptors_subscriber_ = node->create_subscription<
-      cslam_loop_detection_interfaces::msg::LocalImageDescriptors>(
+      cslam_common_interfaces::msg::LocalImageDescriptors>(
       "/local_descriptors", 100,
       std::bind(&RGBDHandler::receive_local_image_descriptors, this,
                 std::placeholders::_1));
@@ -107,12 +107,12 @@ RGBDHandler::RGBDHandler(std::shared_ptr<rclcpp::Node> &node)
 
   // Intra-robot loop closure publisher
   intra_robot_loop_closure_publisher_ = node_->create_publisher<
-      cslam_loop_detection_interfaces::msg::IntraRobotLoopClosure>(
+      cslam_common_interfaces::msg::IntraRobotLoopClosure>(
       "intra_robot_loop_closure", 100);
 
   // Publisher for inter robot loop closure to all robots
   inter_robot_loop_closure_publisher_ = node_->create_publisher<
-      cslam_loop_detection_interfaces::msg::InterRobotLoopClosure>(
+      cslam_common_interfaces::msg::InterRobotLoopClosure>(
       "/inter_robot_loop_closure", 100);
 
   tf_buffer_ = std::make_shared<tf2_ros::Buffer>(node_->get_clock());
@@ -386,11 +386,11 @@ void RGBDHandler::sensor_data_to_rgbd_msg(
 }
 
 void RGBDHandler::local_descriptors_request(
-    cslam_loop_detection_interfaces::msg::LocalDescriptorsRequest::
+    cslam_common_interfaces::msg::LocalDescriptorsRequest::
         ConstSharedPtr request)
 {
   // Fill msg
-  cslam_loop_detection_interfaces::msg::LocalImageDescriptors msg;
+  cslam_common_interfaces::msg::LocalImageDescriptors msg;
   clear_sensor_data(local_descriptors_map_.at(request->keyframe_id));
   sensor_data_to_rgbd_msg(local_descriptors_map_.at(request->keyframe_id),
                           msg.data);
@@ -415,7 +415,7 @@ void RGBDHandler::local_descriptors_request(
 }
 
 void RGBDHandler::receive_local_keyframe_match(
-    cslam_loop_detection_interfaces::msg::LocalKeyframeMatch::ConstSharedPtr
+    cslam_common_interfaces::msg::LocalKeyframeMatch::ConstSharedPtr
         msg)
 {
   try
@@ -428,7 +428,7 @@ void RGBDHandler::receive_local_keyframe_match(
     rtabmap::Transform t = registration_.computeTransformation(
         *keyframe0, *keyframe1, rtabmap::Transform(), &reg_info);
 
-    cslam_loop_detection_interfaces::msg::IntraRobotLoopClosure lc;
+    cslam_common_interfaces::msg::IntraRobotLoopClosure lc;
     lc.keyframe0_id = msg->keyframe0_id;
     lc.keyframe1_id = msg->keyframe1_id;
     if (!t.isNull())
@@ -454,7 +454,7 @@ void RGBDHandler::receive_local_keyframe_match(
 
 void RGBDHandler::local_descriptors_msg_to_sensor_data(
     const std::shared_ptr<
-        cslam_loop_detection_interfaces::msg::LocalImageDescriptors>
+        cslam_common_interfaces::msg::LocalImageDescriptors>
         msg,
     rtabmap::SensorData &sensor_data)
 {
@@ -476,7 +476,7 @@ void RGBDHandler::local_descriptors_msg_to_sensor_data(
 
 void RGBDHandler::receive_local_image_descriptors(
     const std::shared_ptr<
-        cslam_loop_detection_interfaces::msg::LocalImageDescriptors>
+        cslam_common_interfaces::msg::LocalImageDescriptors>
         msg)
 {
   std::deque<int> keyframe_ids;
@@ -504,7 +504,7 @@ void RGBDHandler::receive_local_image_descriptors(
           *tmp_from, tmp_to, rtabmap::Transform(), &reg_info);
 
       // Store using pairs (robot_id, keyframe_id)
-      cslam_loop_detection_interfaces::msg::InterRobotLoopClosure lc;
+      cslam_common_interfaces::msg::InterRobotLoopClosure lc;
       lc.robot0_id = robot_id_;
       lc.robot0_keyframe_id = local_keyframe_id;
       lc.robot1_id = msg->robot_id;
@@ -610,7 +610,7 @@ void RGBDHandler::clear_sensor_data(std::shared_ptr<rtabmap::SensorData>& sensor
 void RGBDHandler::send_visualization_keypoints(const std::pair<std::shared_ptr<rtabmap::SensorData>, std::shared_ptr<const nav_msgs::msg::Odometry>> &keypoints_data)
 {
   // visualization message
-  cslam_loop_detection_interfaces::msg::LocalImageDescriptors features_msg;
+  cslam_common_interfaces::msg::LocalImageDescriptors features_msg;
   sensor_data_to_rgbd_msg(keypoints_data.first,
                           features_msg.data);
   features_msg.keyframe_id = keypoints_data.first->id();

@@ -32,11 +32,11 @@
 #include <cslam_common_interfaces/msg/keyframe_odom.hpp>
 #include <cslam_common_interfaces/msg/keyframe_rgb.hpp>
 #include <cslam_common_interfaces/msg/viz_point_cloud.hpp>
-#include <cslam_loop_detection_interfaces/msg/inter_robot_loop_closure.hpp>
-#include <cslam_loop_detection_interfaces/msg/local_descriptors_request.hpp>
-#include <cslam_loop_detection_interfaces/msg/local_image_descriptors.hpp>
-#include <cslam_loop_detection_interfaces/msg/local_keyframe_match.hpp>
-#include <cslam_loop_detection_interfaces/msg/intra_robot_loop_closure.hpp>
+#include <cslam_common_interfaces/msg/inter_robot_loop_closure.hpp>
+#include <cslam_common_interfaces/msg/local_descriptors_request.hpp>
+#include <cslam_common_interfaces/msg/local_image_descriptors.hpp>
+#include <cslam_common_interfaces/msg/local_keyframe_match.hpp>
+#include <cslam_common_interfaces/msg/intra_robot_loop_closure.hpp>
 #include <diagnostic_msgs/msg/key_value.hpp>
 #include <sensor_msgs/msg/nav_sat_fix.hpp>
 #include <deque>
@@ -76,7 +76,7 @@ namespace cslam
          * @param request Image ID to send and matching info
          */
         void local_descriptors_request(
-            cslam_loop_detection_interfaces::msg::LocalDescriptorsRequest::
+            cslam_common_interfaces::msg::LocalDescriptorsRequest::
                 ConstSharedPtr request);
 
         /**
@@ -85,7 +85,7 @@ namespace cslam
          * @param msg
          */
         void receive_local_keyframe_match(
-            cslam_loop_detection_interfaces::msg::LocalKeyframeMatch::ConstSharedPtr
+            cslam_common_interfaces::msg::LocalKeyframeMatch::ConstSharedPtr
                 msg);
 
         /**
@@ -95,7 +95,7 @@ namespace cslam
          */
         void receive_local_image_descriptors(
             const std::shared_ptr<
-                cslam_loop_detection_interfaces::msg::LocalImageDescriptors>
+                cslam_common_interfaces::msg::LocalImageDescriptors>
                 msg);
 
         /**
@@ -114,7 +114,7 @@ namespace cslam
          */
         virtual void local_descriptors_msg_to_sensor_data(
             const std::shared_ptr<
-                cslam_loop_detection_interfaces::msg::LocalImageDescriptors>
+                cslam_common_interfaces::msg::LocalImageDescriptors>
                 msg,
             rtabmap::SensorData &sensor_data);
 
@@ -221,11 +221,11 @@ namespace cslam
         message_filters::Subscriber<nav_msgs::msg::Odometry> sub_odometry_;
 
         rclcpp::Subscription<
-            cslam_loop_detection_interfaces::msg::LocalDescriptorsRequest>::SharedPtr
+            cslam_common_interfaces::msg::LocalDescriptorsRequest>::SharedPtr
             send_local_descriptors_subscriber_;
 
         rclcpp::Publisher<
-            cslam_loop_detection_interfaces::msg::LocalImageDescriptors>::SharedPtr
+            cslam_common_interfaces::msg::LocalImageDescriptors>::SharedPtr
             local_descriptors_publisher_,
             visualization_local_descriptors_publisher_;
 
@@ -239,21 +239,21 @@ namespace cslam
             keyframe_pointcloud_publisher_;
 
         rclcpp::Subscription<
-            cslam_loop_detection_interfaces::msg::LocalKeyframeMatch>::SharedPtr
+            cslam_common_interfaces::msg::LocalKeyframeMatch>::SharedPtr
             local_keyframe_match_subscriber_;
 
         rclcpp::Subscription<
-            cslam_loop_detection_interfaces::msg::LocalImageDescriptors>::SharedPtr
+            cslam_common_interfaces::msg::LocalImageDescriptors>::SharedPtr
             local_descriptors_subscriber_;
 
         rtabmap::RegistrationVis registration_;
 
         rclcpp::Publisher<
-            cslam_loop_detection_interfaces::msg::InterRobotLoopClosure>::SharedPtr
+            cslam_common_interfaces::msg::InterRobotLoopClosure>::SharedPtr
             inter_robot_loop_closure_publisher_;
 
         rclcpp::Publisher<
-            cslam_loop_detection_interfaces::msg::IntraRobotLoopClosure>::SharedPtr
+            cslam_common_interfaces::msg::IntraRobotLoopClosure>::SharedPtr
             intra_robot_loop_closure_publisher_;
 
         rclcpp::Publisher<

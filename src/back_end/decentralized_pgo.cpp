@@ -43,13 +43,13 @@ DecentralizedPGO::DecentralizedPGO(std::shared_ptr<rclcpp::Node> &node)
                     std::placeholders::_1));
 
   intra_robot_loop_closure_subscriber_ = node->create_subscription<
-      cslam_loop_detection_interfaces::msg::IntraRobotLoopClosure>(
+      cslam_common_interfaces::msg::IntraRobotLoopClosure>(
       "intra_robot_loop_closure", 1000,
       std::bind(&DecentralizedPGO::intra_robot_loop_closure_callback, this,
                 std::placeholders::_1));
 
   inter_robot_loop_closure_subscriber_ = node->create_subscription<
-      cslam_loop_detection_interfaces::msg::InterRobotLoopClosure>(
+      cslam_common_interfaces::msg::InterRobotLoopClosure>(
       "/inter_robot_loop_closure", 1000,
       std::bind(&DecentralizedPGO::inter_robot_loop_closure_callback, this,
                 std::placeholders::_1));
@@ -195,13 +195,6 @@ DecentralizedPGO::DecentralizedPGO(std::shared_ptr<rclcpp::Node> &node)
   if (enable_logs_)
   {
     logger_ = std::make_shared<Logger>(node_, robot_id_, nb_robots_, log_folder_);
-
-    log_nb_matches_ = 0;
-    log_nb_failed_matches_ = 0;
-    log_nb_vertices_transmitted_ = 0;
-    log_detection_cumulative_communication_ = 0;
-    log_local_descriptors_cumulative_communication_ = 0;
-    log_sparsification_cumulative_computation_time_ = 0.0;
   }
 
   if (enable_simulated_rendezvous_)
@@ -263,7 +256,7 @@ void DecentralizedPGO::odometry_callback(
 }
 
 void DecentralizedPGO::intra_robot_loop_closure_callback(
-    const cslam_loop_detection_interfaces::msg::IntraRobotLoopClosure::
+    const cslam_common_interfaces::msg::IntraRobotLoopClosure::
         ConstSharedPtr msg)
 {
   if (msg->success)
@@ -284,7 +277,7 @@ void DecentralizedPGO::intra_robot_loop_closure_callback(
 }
 
 void DecentralizedPGO::inter_robot_loop_closure_callback(
-    const cslam_loop_detection_interfaces::msg::InterRobotLoopClosure::
+    const cslam_common_interfaces::msg::InterRobotLoopClosure::
         ConstSharedPtr msg)
 {
   if (msg->success)
@@ -417,11 +410,7 @@ cslam_common_interfaces::msg::PoseGraph DecentralizedPGO::fill_pose_graph_msg(co
   
   // If logging, add extra data
   if (enable_logs_) {
-    out_msg.nb_matches = log_nb_matches_;
-    out_msg.nb_failed_matches = log_nb_failed_matches_;
-    out_msg.nb_vertices_transmitted = log_nb_vertices_transmitted_;
-    out_msg.front_end_cumulative_communication_bytes = log_detection_cumulative_communication_ + log_local_descriptors_cumulative_communication_;
-    out_msg.sparsification_cumulative_computation_time = log_sparsification_cumulative_computation_time_;
+    logger_->fill_msg(out_msg);
   }
 
   return out_msg;
@@ -824,8 +813,6 @@ void DecentralizedPGO::start_optimization()
 
   if (enable_logs_){
     logger_->log_initial_global_pose_graph(aggregate_pose_graph_.first, aggregate_pose_graph_.second);
-    logger_subscriber_ = node_->create_subscription<diagnostic_msgs::msg::KeyValue>(
-        "log_info", 10, std::bind(&DecentralizedPGO::log_callback, this, std::placeholders::_1));
   }
 
   // Optimize graph
@@ -902,24 +889,5 @@ void DecentralizedPGO::optimization_loop_callback()
     cslam_common_interfaces::msg::OptimizerState state_msg;
     state_msg.state = optimizer_state_;
     optimizer_state_publisher_->publish(state_msg);
-  }
-}
-
-void DecentralizedPGO::log_callback(const diagnostic_msgs::msg::KeyValue::ConstSharedPtr msg)
-{
-  if (msg->key == "nb_matches"){
-    log_nb_matches_ = std::stoul(msg->value);
-  } else if (msg->key == "nb_failed_matches"){
-    log_nb_failed_matches_ = std::stoul(msg->value);
-  } else if (msg->key == "nb_vertices_transmitted"){
-    log_nb_vertices_transmitted_ = std::stoul(msg->value);
-  } else if (msg->key == "detection_cumulative_communication"){
-    log_detection_cumulative_communication_ = std::stoul(msg->value);
-  } else if (msg->key == "local_descriptors_cumulative_communication"){
-    log_local_descriptors_cumulative_communication_ = std::stoul(msg->value);
-  } else if (msg->key == "sparsification_cumulative_computation_time"){
-    log_sparsification_cumulative_computation_time_ = std::stof(msg->value);
-  } else {
-    RCLCPP_ERROR(node_->get_logger(), "Unknown log key: %s", msg->key.c_str());
   }
 }

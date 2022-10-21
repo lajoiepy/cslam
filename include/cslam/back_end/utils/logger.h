@@ -22,8 +22,10 @@
 #include <iomanip>
 
 #include <sensor_msgs/msg/nav_sat_fix.hpp>
+#include <diagnostic_msgs/msg/key_value.hpp>
 
 #include <cslam_common_interfaces/msg/pose_graph.hpp>
+#include <cslam_common_interfaces/msg/inter_robot_matches.hpp>
 
 namespace cslam
 {
@@ -48,6 +50,22 @@ namespace cslam
 
         void write_logs();
 
+        /**
+         * @brief Receive log messages
+         * 
+         * @param msg 
+         */
+        void log_callback(const diagnostic_msgs::msg::KeyValue::ConstSharedPtr msg);
+
+        /**
+         * @brief Receive log messages
+         * 
+         * @param msg 
+         */
+        void log_matches_callback(const cslam_common_interfaces::msg::InterRobotMatches::ConstSharedPtr msg);
+
+        void fill_msg(cslam_common_interfaces::msg::PoseGraph & msg);
+
     private:
     
         double compute_error(const gtsam::NonlinearFactorGraph::shared_ptr &graph,
@@ -67,6 +85,17 @@ namespace cslam
         std::pair<gtsam::NonlinearFactorGraph::shared_ptr, gtsam::Values::shared_ptr> initial_global_pose_graph_;
         std::pair<gtsam::NonlinearFactorGraph::shared_ptr, gtsam::Values::shared_ptr> optimized_global_pose_graph_;
         std::vector<cslam_common_interfaces::msg::PoseGraph> pose_graphs_log_info_;
+
+        rclcpp::Subscription<diagnostic_msgs::msg::KeyValue>::SharedPtr
+            logger_subscriber_;
+
+        rclcpp::Subscription<cslam_common_interfaces::msg::InterRobotMatches>::SharedPtr
+            inter_robot_matches_subscriber_;
+
+        cslam_common_interfaces::msg::InterRobotMatches spectral_matches_, greedy_matches_;
+
+        unsigned int log_nb_matches_, log_nb_failed_matches_, log_nb_vertices_transmitted_, log_nb_matches_selected_, log_detection_cumulative_communication_, log_local_descriptors_cumulative_communication_;
+        float log_sparsification_cumulative_computation_time_;
     };
 
 } // namespace cslam

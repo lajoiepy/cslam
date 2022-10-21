@@ -17,13 +17,12 @@
 #include <cslam_common_interfaces/msg/optimizer_state.hpp>
 #include <cslam_common_interfaces/msg/reference_frames.hpp>
 #include <cslam_common_interfaces/msg/robot_ids_and_origin.hpp>
-#include <cslam_loop_detection_interfaces/msg/inter_robot_loop_closure.hpp>
-#include <cslam_loop_detection_interfaces/msg/intra_robot_loop_closure.hpp>
+#include <cslam_common_interfaces/msg/inter_robot_loop_closure.hpp>
+#include <cslam_common_interfaces/msg/intra_robot_loop_closure.hpp>
 
 #include <geometry_msgs/msg/transform_stamped.hpp>
 #include <std_msgs/msg/string.hpp>
 #include <std_msgs/msg/u_int32.hpp>
-#include <diagnostic_msgs/msg/key_value.hpp>
 
 #include <tf2_ros/transform_broadcaster.h>
 
@@ -86,7 +85,7 @@ namespace cslam
          * @param msg
          */
         void inter_robot_loop_closure_callback(
-            const cslam_loop_detection_interfaces::msg::InterRobotLoopClosure::
+            const cslam_common_interfaces::msg::InterRobotLoopClosure::
                 ConstSharedPtr msg);
 
         /**
@@ -95,7 +94,7 @@ namespace cslam
          * @param msg
          */
         void intra_robot_loop_closure_callback(
-            const cslam_loop_detection_interfaces::msg::IntraRobotLoopClosure::
+            const cslam_common_interfaces::msg::IntraRobotLoopClosure::
                 ConstSharedPtr msg);
 
         /**
@@ -128,13 +127,6 @@ namespace cslam
          */
         void get_pose_graph_callback(
             const cslam_common_interfaces::msg::RobotIds::ConstSharedPtr msg);
-
-        /**
-         * @brief Receive log messages
-         * 
-         * @param msg 
-         */
-        void log_callback(const diagnostic_msgs::msg::KeyValue::ConstSharedPtr msg);
 
         /**
          * @brief Receives pose graph
@@ -325,11 +317,11 @@ namespace cslam
             odometry_subscriber_;
 
         rclcpp::Subscription<
-            cslam_loop_detection_interfaces::msg::InterRobotLoopClosure>::SharedPtr
+            cslam_common_interfaces::msg::InterRobotLoopClosure>::SharedPtr
             inter_robot_loop_closure_subscriber_;
 
         rclcpp::Subscription<
-            cslam_loop_detection_interfaces::msg::IntraRobotLoopClosure>::SharedPtr
+            cslam_common_interfaces::msg::IntraRobotLoopClosure>::SharedPtr
             intra_robot_loop_closure_subscriber_;
 
         rclcpp::Publisher<cslam_common_interfaces::msg::OptimizationResult>::SharedPtr
@@ -411,13 +403,7 @@ namespace cslam
         rclcpp::Publisher<cslam_common_interfaces::msg::ReferenceFrames>::SharedPtr
             reference_frame_per_robot_publisher_;
 
-        rclcpp::Subscription<diagnostic_msgs::msg::KeyValue>::SharedPtr
-            logger_subscriber_;
-
         std::shared_ptr<Logger> logger_;
-
-        unsigned int log_nb_matches_, log_nb_failed_matches_, log_nb_vertices_transmitted_, log_detection_cumulative_communication_, log_local_descriptors_cumulative_communication_;
-        float log_sparsification_cumulative_computation_time_;
 
         std::map<unsigned int, sensor_msgs::msg::NavSatFix> gps_data_;
         bool enable_gps_recording_;
