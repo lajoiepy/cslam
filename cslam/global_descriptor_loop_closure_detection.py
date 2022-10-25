@@ -333,7 +333,7 @@ class GlobalDescriptorLoopClosureDetection(object):
             if self.params["evaluation.enable_logs"]:
                 stop_time = time.time()
                 self.log_total_sparsification_computation_time += stop_time - start_time
-                self.log_publisher.publish(
+                self.log_publisher.publish(# TODO: move to logger module
                     KeyValue(
                         key="sparsification_cumulative_computation_time",
                         value=str(

@@ -1,6 +1,8 @@
 from typing import NamedTuple
 
 import numpy as np
+import rclpy
+from rclpy.node import Node  # TODO: remove
 
 from cslam.mac.mac import MAC
 from cslam.mac.utils import Edge, weight_graph_lap_from_edge_list
@@ -83,11 +85,11 @@ class AlgebraicConnectivityMaximization(object):
             tuple(int, int, int, int): unique key
         """
         if edge.robot0_id < edge.robot1_id:
-            return (edge.robot0_id, edge.robot0_keyframe_id,
-                    edge.robot1_id, edge.robot1_keyframe_id)
+            return (edge.robot0_id, edge.robot0_keyframe_id, edge.robot1_id,
+                    edge.robot1_keyframe_id)
         else:
-            return (edge.robot1_id, edge.robot1_keyframe_id,
-                    edge.robot0_id, edge.robot0_keyframe_id)
+            return (edge.robot1_id, edge.robot1_keyframe_id, edge.robot0_id,
+                    edge.robot0_keyframe_id)
 
     def update_nb_poses(self, edge):
         """The number of poses should be the maximal edge id known
@@ -107,8 +109,9 @@ class AlgebraicConnectivityMaximization(object):
         Args:
             fixed_edge (EdgeInterRobot): fixed edge in the graph
         """
-        self.initial_fixed_edge_exists[fixed_edge.robot0_id] = True
-        self.initial_fixed_edge_exists[fixed_edge.robot1_id] = True
+        if fixed_edge.robot0_id != fixed_edge.robot1_id:
+            self.initial_fixed_edge_exists[fixed_edge.robot0_id] = True
+            self.initial_fixed_edge_exists[fixed_edge.robot1_id] = True
 
     def set_graph(self, fixed_edges, candidate_edges):
         """Fill graph struct
@@ -150,7 +153,7 @@ class AlgebraicConnectivityMaximization(object):
         # Check if the edge is not a failed edge or fixed edge
         if self.edge_key(edge) in self.already_considered_matches:
             return
-        
+
         # Otherwise add it to the candidate edges
         self.candidate_edges[self.edge_key(edge)] = edge
         # Update nb of poses
@@ -166,7 +169,7 @@ class AlgebraicConnectivityMaximization(object):
         for k in keys:
             if self.candidate_edges[k] in edges:
                 del self.candidate_edges[k]
-        
+
         for edge in edges:
             self.already_considered_matches.add(self.edge_key(edge))
 
@@ -359,9 +362,9 @@ class AlgebraicConnectivityMaximization(object):
             bool: check result
         """
         initial_fixed_measurements_exists = True
-        for id in is_robot_included:
-            if is_robot_included[id] and (
-                    not self.initial_fixed_edge_exists[id]):
+        for rid in is_robot_included:
+            if is_robot_included[rid] and (
+                    not self.initial_fixed_edge_exists[rid]):
                 initial_fixed_measurements_exists = False
         return initial_fixed_measurements_exists
 
@@ -425,6 +428,9 @@ class AlgebraicConnectivityMaximization(object):
         rekeyed_candidate_edges = self.rekey_edges(
             self.candidate_edges.values(), is_robot_included)
 
+        if nb_candidates_to_choose > len(rekeyed_candidate_edges):
+            nb_candidates_to_choose = len(rekeyed_candidate_edges)
+
         if len(rekeyed_candidate_edges) > 0:
             # Compute number of poses
             self.total_nb_poses = 0
@@ -447,40 +453,46 @@ class AlgebraicConnectivityMaximization(object):
                                                  w_init,
                                                  nb_candidates_to_choose)
                 if self.params["evaluation.enable_sparsification_comparison"]:
-                    result = numpy.multiply(result_mac, w_init)
+                    result = np.add(result_mac, w_init)
+                    self.sparsification_comparison_logs(
+                        rekeyed_candidate_edges, is_robot_included, w_init,
+                        result_mac)
                 else:
                     result = result_mac
             else:
                 result = w_init
+                if self.params["evaluation.enable_sparsification_comparison"]:
+                    self.sparsification_comparison_logs(
+                        rekeyed_candidate_edges, is_robot_included, result,
+                        result)
 
             selected_edges = [
                 rekeyed_candidate_edges[i]
                 for i in np.nonzero(result.astype(int))[0]
             ]
 
-            if self.params["evaluation.enable_sparsification_comparison"]:
-                self.sparsification_comparison_logs(rekeyed_candidate_edges, is_robot_included, w_init, result_mac)
-
             # Return selected multi-robot edges
-            inter_robot_edges = self.recover_inter_robot_edges(selected_edges,
-                                                  is_robot_included)
+            inter_robot_edges = self.recover_inter_robot_edges(
+                selected_edges, is_robot_included)
             self.remove_candidate_edges(inter_robot_edges)
 
             return inter_robot_edges
         else:
             return []
 
-    def sparsification_comparison_logs(self, rekeyed_candidate_edges, is_robot_included, greedy_result, mac_result):
+    def sparsification_comparison_logs(self, rekeyed_candidate_edges,
+                                       is_robot_included, greedy_result,
+                                       mac_result):
         """ TODO: document
         """
         self.log_greedy_edges = self.recover_inter_robot_edges([
-                    rekeyed_candidate_edges[i]
-                    for i in np.nonzero(greedy_result.astype(int))[0]
-                ], is_robot_included)
+            rekeyed_candidate_edges[i]
+            for i in np.nonzero(greedy_result.astype(int))[0]
+        ], is_robot_included)
         self.log_mac_edges = self.recover_inter_robot_edges([
-                    rekeyed_candidate_edges[i]
-                    for i in np.nonzero(mac_result.astype(int))[0]
-                ], is_robot_included)
+            rekeyed_candidate_edges[i]
+            for i in np.nonzero(mac_result.astype(int))[0]
+        ], is_robot_included)
 
     def add_match(self, match):
         """Add match

@@ -156,26 +156,29 @@ namespace cslam
         // Write matches logs (.csv)
         for (const auto &info : pose_graphs_log_info_)
         {
-            std::ofstream matches_log_file;
-            matches_log_file.open(result_folder + "/spectral_matches_robot_" + std::to_string(info.robot_id) + ".csv");
-            matches_log_file << "robot0_id, robot0_keyframe_id, robot1_id, robot1_keyframe_id" << std::endl;
-            for (size_t i = 0; i < info.spectral_matches.matches.size(); i++)
+            if (info.robot_id == robot_id_)
             {
-                matches_log_file << std::to_string(info.spectral_matches.matches[i].robot0_id) << ","
-                                 << std::to_string(info.spectral_matches.matches[i].robot0_keyframe_id) << ","
-                                 << std::to_string(info.spectral_matches.matches[i].robot1_id) << ","
-                                 << std::to_string(info.spectral_matches.matches[i].robot1_keyframe_id) << std::endl;
-            }
+                std::ofstream matches_log_file;
+                matches_log_file.open(result_folder + "/spectral_matches.csv");
+                matches_log_file << "robot0_id, robot0_keyframe_id, robot1_id, robot1_keyframe_id" << std::endl;
+                for (size_t i = 0; i < info.spectral_matches.matches.size(); i++)
+                {
+                    matches_log_file << std::to_string(info.spectral_matches.matches[i].robot0_id) << ","
+                                    << std::to_string(info.spectral_matches.matches[i].robot0_keyframe_id) << ","
+                                    << std::to_string(info.spectral_matches.matches[i].robot1_id) << ","
+                                    << std::to_string(info.spectral_matches.matches[i].robot1_keyframe_id) << std::endl;
+                }
 
-            std::ofstream greedy_matches_log_file;
-            greedy_matches_log_file.open(result_folder + "/greedy_matches_robot_" + std::to_string(info.robot_id) + ".csv");
-            greedy_matches_log_file << "robot0_id, robot0_keyframe_id, robot1_id, robot1_keyframe_id" << std::endl;
-            for (size_t i = 0; i < info.greedy_matches.matches.size(); i++)
-            {
-                greedy_matches_log_file << std::to_string(info.greedy_matches.matches[i].robot0_id) << ","
-                                 << std::to_string(info.greedy_matches.matches[i].robot0_keyframe_id) << ","
-                                 << std::to_string(info.greedy_matches.matches[i].robot1_id) << ","
-                                 << std::to_string(info.greedy_matches.matches[i].robot1_keyframe_id) << std::endl;
+                std::ofstream greedy_matches_log_file;
+                greedy_matches_log_file.open(result_folder + "/greedy_matches.csv");
+                greedy_matches_log_file << "robot0_id, robot0_keyframe_id, robot1_id, robot1_keyframe_id" << std::endl;
+                for (size_t i = 0; i < info.greedy_matches.matches.size(); i++)
+                {
+                    greedy_matches_log_file << std::to_string(info.greedy_matches.matches[i].robot0_id) << ","
+                                    << std::to_string(info.greedy_matches.matches[i].robot0_keyframe_id) << ","
+                                    << std::to_string(info.greedy_matches.matches[i].robot1_id) << ","
+                                    << std::to_string(info.greedy_matches.matches[i].robot1_keyframe_id) << std::endl;
+                }
             }
         }
 
@@ -258,7 +261,7 @@ namespace cslam
         } else if (msg->key == "sparsification_cumulative_computation_time"){
             log_sparsification_cumulative_computation_time_ = std::stof(msg->value);
         } else {
-            RCLCPP_ERROR(node_->get_logger(), "Unknown log key: %s", msg->key.c_str());
+            RCLCPP_ERROR(node_->get_logger(), "Unknown log key: %s %s", msg->key.c_str(), msg->value.c_str());
         }
     }
 
