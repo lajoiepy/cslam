@@ -102,6 +102,7 @@ namespace cslam
         unsigned int total_nb_vertices_transmitted = 0;
         unsigned int total_front_end_cumulative_communication_bytes = 0;
         float total_sparsification_cumulative_computation_time = 0.0;
+        unsigned int total_nb_matches_selected = 0;
         for (const auto &info : pose_graphs_log_info_)
         {
             total_nb_matches += info.nb_matches;
@@ -109,10 +110,12 @@ namespace cslam
             total_nb_vertices_transmitted += info.nb_vertices_transmitted;
             total_front_end_cumulative_communication_bytes += info.front_end_cumulative_communication_bytes;
             total_sparsification_cumulative_computation_time += info.sparsification_cumulative_computation_time;
+            total_nb_matches_selected += info.nb_matches_selected;
         }
-        optimization_log_file << "total_nb_matches," << std::to_string(total_nb_matches) << std::endl;
+        optimization_log_file << "total_nb_successful_matches," << std::to_string(total_nb_matches) << std::endl;
         optimization_log_file << "total_nb_failed_matches," << std::to_string(total_nb_failed_matches) << std::endl;
         optimization_log_file << "total_nb_vertices_transmitted," << std::to_string(total_nb_vertices_transmitted) << std::endl;
+        optimization_log_file << "total_nb_matches_selected," << std::to_string(total_nb_matches_selected) << std::endl;
         optimization_log_file << "total_front_end_cumulative_communication_bytes," << std::to_string(total_front_end_cumulative_communication_bytes) << std::endl;
         optimization_log_file << "total_sparsification_cumulative_computation_time," << std::to_string(total_sparsification_cumulative_computation_time) << std::endl;
         optimization_log_file << "latest_pgo_time," << std::to_string(elapsed_time_) << std::endl;

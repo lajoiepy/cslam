@@ -16,6 +16,8 @@ def set_params():
     params['nb_robots'] = 2
     params['frontend.sensor_type'] = 'stereo'
     params['frontend.similarity_threshold'] = 0.0
+    params["frontend.enable_sparsification"] = True
+    params["evaluation.enable_sparsification_comparison"] = False
     return params
 
 

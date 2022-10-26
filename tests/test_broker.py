@@ -24,6 +24,8 @@ def build_graph_and_extract_selection(nb_poses, nb_candidate_edges, nb_robots,
     params['nb_robots'] = nb_robots
     params['frontend.similarity_threshold'] = 0.0  # Doesn't change anything
     params['frontend.sensor_type'] = 'stereo'
+    params["frontend.enable_sparsification"] = True
+    params["evaluation.enable_sparsification_comparison"] = False
     lcsm = LoopClosureSparseMatching(params)
     lcsm.candidate_selector.set_graph(fixed_edges_list, candidate_edges_list)
 
@@ -207,6 +209,62 @@ class TestBroker(unittest.TestCase):
 
         verif_broker(self, nb_poses, nb_candidate_edges, nb_robots, robot_id,
                      2 * nb_candidate_edges, use_vertex_cover)
+
+    def test_manual_vertex_cover(self):
+        # Build graph
+        fixed_edges_list = [] 
+        candidate_edges_list = [] 
+        fixed_weight = 1.0
+        candidate_edges_list.append(EdgeInterRobot(0, 1, 1, 1, fixed_weight))
+        candidate_edges_list.append(EdgeInterRobot(0, 1, 1, 2, fixed_weight))
+        candidate_edges_list.append(EdgeInterRobot(0, 1, 1, 3, fixed_weight))
+        candidate_edges_list.append(EdgeInterRobot(0, 1, 1, 4, fixed_weight))
+        candidate_edges_list.append(EdgeInterRobot(0, 2, 1, 5, fixed_weight))
+
+        robot_id = 0
+        nb_poses = 100
+        nb_candidate_edges = 5
+        nb_robots = 2
+        nb_candidates_to_choose = 5
+        use_vertex_cover = True
+
+        params = {}
+        params['robot_id'] = robot_id
+        params['nb_robots'] = nb_robots
+        params['frontend.similarity_threshold'] = 0.0  # Doesn't change anything
+        params['frontend.sensor_type'] = 'stereo'
+        params["frontend.enable_sparsification"] = True
+        params["evaluation.enable_sparsification_comparison"] = False
+        lcsm = LoopClosureSparseMatching(params)
+        lcsm.candidate_selector.set_graph(fixed_edges_list, candidate_edges_list)
+
+        # Solve the initial graph
+        is_robot_considered = {}
+        for i in range(nb_robots):
+            is_robot_considered[i] = True
+        selection = lcsm.select_candidates(nb_candidates_to_choose,
+                                    is_robot_considered,
+                                    greedy_initialization=False)
+
+        self.assertEqual(
+            len(selection), min(nb_candidate_edges, nb_candidates_to_choose))
+        neighbors_in_range_list = range(nb_robots)
+
+        # Brokerage
+        broker = Broker(selection, neighbors_in_range_list)
+        components = broker.brokerage(use_vertex_cover)
+
+        nb_components = len(components)
+        nb_vertices_transmitted = 0
+
+        for component in components:
+            for v in component:
+                nb_vertices_transmitted += 1
+
+        self.assertEqual(nb_components, 2)
+        self.assertEqual(nb_vertices_transmitted, 2)
+
+
 
 
 if __name__ == "__main__":

@@ -329,10 +329,10 @@ class GlobalDescriptorLoopClosureDetection(object):
                 if self.params["evaluation.enable_logs"]:
                     self.log_total_vertices_transmitted += len(
                         selected_vertices_set)
-                    self.log_total_matches_selected += len(selection)
             if self.params["evaluation.enable_logs"]:
                 stop_time = time.time()
                 self.log_total_sparsification_computation_time += stop_time - start_time
+                self.log_total_matches_selected += len(selection)
                 self.log_publisher.publish(# TODO: move to logger module
                     KeyValue(
                         key="sparsification_cumulative_computation_time",

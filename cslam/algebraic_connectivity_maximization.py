@@ -444,21 +444,18 @@ class AlgebraicConnectivityMaximization(object):
             else:
                 w_init = self.random_initialization(nb_candidates_to_choose,
                                                     rekeyed_candidate_edges)
-
+            
             if self.params[
                     "frontend.enable_sparsification"] and self.check_initial_fixed_measurements_exists(
                         is_robot_included):
-                result_mac = self.run_mac_solver(rekeyed_fixed_edges,
+                result = self.run_mac_solver(rekeyed_fixed_edges,
                                                  rekeyed_candidate_edges,
                                                  w_init,
                                                  nb_candidates_to_choose)
                 if self.params["evaluation.enable_sparsification_comparison"]:
-                    result = np.add(result_mac, w_init)
                     self.sparsification_comparison_logs(
                         rekeyed_candidate_edges, is_robot_included, w_init,
-                        result_mac)
-                else:
-                    result = result_mac
+                        result)
             else:
                 result = w_init
                 if self.params["evaluation.enable_sparsification_comparison"]:
