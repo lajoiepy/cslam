@@ -1,6 +1,7 @@
 import cslam.lidar_pr.scancontext_utils as sc_utils
 import numpy as np
 from scipy import spatial
+import rclpy # TODO: remove
 
 class ScanContextMatching(object):
     """Nearest Neighbor matching of description vectors
@@ -95,4 +96,5 @@ class ScanContextMatching(object):
             return None, None
             
         idxs, sims = self.search(query, 1)
+
         return idxs[0], sims[0]

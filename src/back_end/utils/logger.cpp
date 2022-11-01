@@ -163,24 +163,14 @@ namespace cslam
             {
                 std::ofstream matches_log_file;
                 matches_log_file.open(result_folder + "/spectral_matches.csv");
-                matches_log_file << "robot0_id, robot0_keyframe_id, robot1_id, robot1_keyframe_id" << std::endl;
+                matches_log_file << "robot0_id, robot0_keyframe_id, robot1_id, robot1_keyframe_id, weight" << std::endl;
                 for (size_t i = 0; i < info.spectral_matches.matches.size(); i++)
                 {
                     matches_log_file << std::to_string(info.spectral_matches.matches[i].robot0_id) << ","
                                     << std::to_string(info.spectral_matches.matches[i].robot0_keyframe_id) << ","
                                     << std::to_string(info.spectral_matches.matches[i].robot1_id) << ","
-                                    << std::to_string(info.spectral_matches.matches[i].robot1_keyframe_id) << std::endl;
-                }
-
-                std::ofstream greedy_matches_log_file;
-                greedy_matches_log_file.open(result_folder + "/greedy_matches.csv");
-                greedy_matches_log_file << "robot0_id, robot0_keyframe_id, robot1_id, robot1_keyframe_id" << std::endl;
-                for (size_t i = 0; i < info.greedy_matches.matches.size(); i++)
-                {
-                    greedy_matches_log_file << std::to_string(info.greedy_matches.matches[i].robot0_id) << ","
-                                    << std::to_string(info.greedy_matches.matches[i].robot0_keyframe_id) << ","
-                                    << std::to_string(info.greedy_matches.matches[i].robot1_id) << ","
-                                    << std::to_string(info.greedy_matches.matches[i].robot1_keyframe_id) << std::endl;
+                                    << std::to_string(info.spectral_matches.matches[i].robot1_keyframe_id) << ","
+                                    << std::to_string(info.spectral_matches.matches[i].weight) << std::endl;
                 }
             }
         }
@@ -274,10 +264,6 @@ namespace cslam
             for (size_t i = 0; i < msg->matches.size(); i++){
                 spectral_matches_.matches.push_back(msg->matches[i]);
             }
-        } else if (msg->robot_id == 1){
-            for (size_t i = 0; i < msg->matches.size(); i++){
-                greedy_matches_.matches.push_back(msg->matches[i]);
-            }
         }
     }
 
@@ -289,7 +275,6 @@ namespace cslam
         msg.front_end_cumulative_communication_bytes = log_detection_cumulative_communication_ + log_local_descriptors_cumulative_communication_;
         msg.sparsification_cumulative_computation_time = log_sparsification_cumulative_computation_time_;
         msg.spectral_matches = spectral_matches_;
-        msg.greedy_matches = greedy_matches_;
     }
 
 } // namespace cslam

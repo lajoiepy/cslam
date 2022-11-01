@@ -346,13 +346,8 @@ class GlobalDescriptorLoopClosureDetection(object):
                              value=str(self.log_total_matches_selected)))
                 if self.params["evaluation.enable_sparsification_comparison"]:
                     matches = InterRobotMatches()
-                    matches.robot_id = 0 # Sparse
+                    matches.robot_id = self.params["robot_id"]
                     for e in self.lcm.candidate_selector.log_mac_edges:
-                        matches.matches.append(self.edge_to_match(e))
-                    self.log_matches_publisher.publish(matches)
-                    matches = InterRobotMatches()
-                    matches.robot_id = 1 # Greedy
-                    for e in self.lcm.candidate_selector.log_greedy_edges:
                         matches.matches.append(self.edge_to_match(e))
                     self.log_matches_publisher.publish(matches)
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 import numpy as np
-from message_filters import TimeSynchronizer, Subscriber
+from message_filters import ApproximateTimeSynchronizer, Subscriber
 from sensor_msgs.msg import PointCloud2, PointField, NavSatFix
 from nav_msgs.msg import Odometry
 from cslam_common_interfaces.msg import KeyframeOdom, KeyframePointCloud
@@ -16,8 +16,8 @@ class LidarHandler: # TODO: document
         self.node = node
         self.params = params
 
-        tss = TimeSynchronizer( [ Subscriber(self.node, PointCloud2, self.params["frontend.pointcloud_topic"]),
-                                  Subscriber(self.node, Odometry, self.params["frontend.odom_topic"])], 100 )
+        tss = ApproximateTimeSynchronizer( [ Subscriber(self.node, PointCloud2, self.params["frontend.pointcloud_topic"]),
+                                  Subscriber(self.node, Odometry, self.params["frontend.odom_topic"])], 100, self.params["frontend.pointcloud_odom_approx_time_sync_s"] )
         tss.registerCallback(self.lidar_callback)
 
         self.keyframe_odom_publisher = self.node.create_publisher(KeyframeOdom, "keyframe_odom", 100)
@@ -45,6 +45,7 @@ class LidarHandler: # TODO: document
         self.local_descriptors_map = {}
         self.nb_local_keyframes = 0
         self.previous_keyframe = None
+        self.previous_odom = None
 
         if self.params["evaluation.enable_logs"]:
             self.log_publisher = self.node.create_publisher(
@@ -88,7 +89,7 @@ class LidarHandler: # TODO: document
                 frame_ids.append(msg.matches_keyframe_id[i])
         for frame_id in frame_ids:
             pc = self.local_descriptors_map[frame_id]
-            transform, success = icp_utils.compute_transform(pc, icp_utils.ros_to_open3d(msg.data), self.params["frontend.voxel_size"])
+            transform, success = icp_utils.compute_transform(icp_utils.ros_to_open3d(msg.data), pc, self.params["frontend.voxel_size"], self.params["frontend.matching_min_inliers"])
             out_msg = InterRobotLoopClosure()
             out_msg.robot0_id = self.params["robot_id"]
             out_msg.robot0_keyframe_id = frame_id
@@ -104,7 +105,7 @@ class LidarHandler: # TODO: document
     def receive_local_keyframe_match(self, msg):
         pc0 = self.local_descriptors_map[msg.keyframe0_id]
         pc1 = self.local_descriptors_map[msg.keyframe1_id]
-        transform, success = icp_utils.compute_transform(pc0, pc1, self.params["frontend.voxel_size"])
+        transform, success = icp_utils.compute_transform(pc1, pc0, self.params["frontend.voxel_size"], self.params["frontend.matching_min_inliers"])
         out_msg = IntraRobotLoopClosure()
         out_msg.keyframe0_id = msg.keyframe0_id
         out_msg.keyframe1_id = msg.keyframe1_id
@@ -115,9 +116,20 @@ class LidarHandler: # TODO: document
             out_msg.success = False
         self.intra_robot_loop_closure_publisher.publish(out_msg)
 
+    def odom_distance_squared(self, odom0, odom1):
+        return (odom0.pose.pose.position.x - odom1.pose.pose.position.x)**2 + (odom0.pose.pose.position.y - odom1.pose.pose.position.y)**2 + (odom0.pose.pose.position.z - odom1.pose.pose.position.z)**2
+
     def generate_new_keyframe(self, msg):
         # TODO: Perform overlap check, instead of consering each frame as a keyframe
-        return True 
+        if self.previous_odom is None:
+            self.previous_odom = msg[1]
+            return True 
+        dist = self.odom_distance_squared(self.previous_odom, msg[1])
+        if dist > self.params["frontend.keyframe_generation_ratio_distance"]**2:
+            self.previous_odom = msg[1]
+            return True
+        else:
+            return False
 
     def process_new_sensor_data(self):
         if len(self.received_data) > 0:
@@ -128,7 +140,12 @@ class LidarHandler: # TODO: document
                 gps = self.gps_data[0]
                 self.gps_data.pop(0)
             if self.generate_new_keyframe(data):
-                self.local_descriptors_map[self.nb_local_keyframes] = icp_utils.downsample_ros_pointcloud(data[0], self.params["frontend.voxel_size"])
+                try:
+                    self.local_descriptors_map[self.nb_local_keyframes] = icp_utils.downsample_ros_pointcloud(data[0], self.params["frontend.voxel_size"])
+                except:
+                    self.local_descriptors_map[self.nb_local_keyframes] = []
+                    self.node.get_logger().info("Failure to downsample point cloud.")
+                    return
                 # Publish pointcloud
                 msg_pointcloud = KeyframePointCloud()
                 msg_pointcloud.id = self.nb_local_keyframes
@@ -153,6 +170,9 @@ if __name__ == '__main__':
                         ('frontend.odom_topic', None),
                         ('frontend.map_manager_process_period_ms', None),
                         ('frontend.voxel_size', None),
+                        ('frontend.matching_min_inliers', None),
+                        ('frontend.keyframe_generation_ratio_distance', 0.5),
+                        ('frontend.pointcloud_odom_approx_time_sync_s', 0.1),
                         ('robot_id', None),           
                         ('evaluation.enable_logs', False),  
                         ('evaluation.enable_gps_recording', False), 
@@ -160,13 +180,19 @@ if __name__ == '__main__':
                         ])
     params = {}
     params['frontend.pointcloud_topic'] = node.get_parameter(
-        'frontend.pointcloud_topic').value
+        'frontend.pointcloud_topic').value 
     params['frontend.odom_topic'] = node.get_parameter(
         'frontend.odom_topic').value
     params['frontend.map_manager_process_period_ms'] = node.get_parameter(
         'frontend.map_manager_process_period_ms').value
     params['frontend.voxel_size'] = node.get_parameter(
         'frontend.voxel_size').value
+    params['frontend.matching_min_inliers'] = node.get_parameter(
+        'frontend.matching_min_inliers').value 
+    params['frontend.keyframe_generation_ratio_distance'] = node.get_parameter(
+        'frontend.keyframe_generation_ratio_distance').value
+    params['frontend.pointcloud_odom_approx_time_sync_s'] = node.get_parameter(
+        'frontend.pointcloud_odom_approx_time_sync_s').value
     params['robot_id'] = node.get_parameter(
         'robot_id').value
     params["evaluation.enable_logs"] = node.get_parameter(

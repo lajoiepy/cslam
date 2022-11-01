@@ -8,6 +8,7 @@ import numpy as np
 import teaserpp_python
 import open3d
 from scipy.spatial import cKDTree
+import rclpy # TODO: remove
 
 FIELDS_XYZ = [
     PointField(name='x', offset=0, datatype=PointField.FLOAT32, count=1),
@@ -84,7 +85,7 @@ def downsample(points, voxel_size):
     open3d_cloud.points = open3d.utility.Vector3dVector(points)
     return open3d_cloud.voxel_down_sample(voxel_size=voxel_size)
 
-def solve_teaser(src, dst, voxel_size):
+def solve_teaser(src, dst, voxel_size, min_inliers):
     src_feats = extract_fpfh(src, voxel_size)
     dst_feats = extract_fpfh(dst, voxel_size)
 
@@ -101,8 +102,8 @@ def solve_teaser(src, dst, voxel_size):
 
     solution = solver.getSolution()
 
-    valid = len(solver.getInlierMaxClique()) > 5 # TODO: add param
-
+    valid = len(solver.getInlierMaxClique()) > min_inliers
+    
     if valid:
         # ICP refinement
         T_teaser = Rt2T(solution.rotation, solution.translation)
@@ -149,8 +150,21 @@ def downsample_ros_pointcloud(pc_msg, voxel_size):
     return downsample(points, voxel_size)
 
 # TODO: document
-def compute_transform(src, dst, voxel_size):
-    valid, translation, rotation = solve_teaser(src, dst, voxel_size)
+def compute_transform(src, dst, voxel_size, min_inliers):
+    """Computes a 3D transform between 2 point clouds using TEASER++.
+
+    Be careful: TEASER++ computes the transform from dst to src.
+
+    Args:
+        src (_type_): _description_
+        dst (_type_): _description_
+        voxel_size (_type_): _description_
+        min_inliers (_type_): _description_
+
+    Returns:
+        _type_: _description_
+    """
+    valid, translation, rotation = solve_teaser(src, dst, voxel_size, min_inliers)
     success = valid
     transform = to_transform_msg(translation, rotation)
     return transform, success

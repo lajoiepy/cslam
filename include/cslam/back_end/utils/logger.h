@@ -92,7 +92,7 @@ namespace cslam
         rclcpp::Subscription<cslam_common_interfaces::msg::InterRobotMatches>::SharedPtr
             inter_robot_matches_subscriber_;
 
-        cslam_common_interfaces::msg::InterRobotMatches spectral_matches_, greedy_matches_;
+        cslam_common_interfaces::msg::InterRobotMatches spectral_matches_;
 
         unsigned int log_nb_matches_, log_nb_failed_matches_, log_nb_vertices_transmitted_, log_nb_matches_selected_, log_detection_cumulative_communication_, log_local_descriptors_cumulative_communication_;
         float log_sparsification_cumulative_computation_time_;
