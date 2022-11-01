@@ -102,7 +102,7 @@ class GlobalDescriptorLoopClosureDetection(object):
             self.receive_inter_robot_loop_closure, 100)
 
         self.local_descriptors_request_publishers = {}
-        for i in range(self.params['nb_robots']):
+        for i in range(self.params['max_nb_robots']):
             self.local_descriptors_request_publishers[
                 i] = self.node.create_publisher(
                     LocalDescriptorsRequest,

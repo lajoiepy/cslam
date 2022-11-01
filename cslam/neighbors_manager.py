@@ -11,9 +11,9 @@ class NeighborManager():
         self.node = node
         self.params = params
         self.robot_id = self.params['robot_id']
-        self.nb_robots = self.params['nb_robots']
+        self.max_nb_robots = self.params['max_nb_robots']
         self.neighbors_monitors = {}
-        for rid in range(self.nb_robots):
+        for rid in range(self.max_nb_robots):
             if rid != self.robot_id:
                 self.neighbors_monitors[rid] = NeighborMonitor(
                     self.node, rid, self.
@@ -33,7 +33,7 @@ class NeighborManager():
         """
         is_robot_in_range = {}
         robots_in_range_list = []
-        for i in range(self.nb_robots):
+        for i in range(self.max_nb_robots):
             if i == self.robot_id:
                 is_robot_in_range[i] = True
                 robots_in_range_list.append(i)
@@ -53,7 +53,7 @@ class NeighborManager():
             among the robots in range
         """
         is_broker = True
-        for i in range(self.nb_robots):
+        for i in range(self.max_nb_robots):
             if i != self.robot_id and self.neighbors_monitors[i].is_alive():
                 # Note: This is an arbitrary condition that selects the
                 # lowest ID alive as broker. Could be change to any other cond.
@@ -68,14 +68,14 @@ class NeighborManager():
         """
 
         from_kf_id = latest_local_id
-        for i in range(self.nb_robots):
+        for i in range(self.max_nb_robots):
             if i != self.robot_id:
                 if self.neighbors_monitors[i].is_alive():
                     from_kf_id = min(
                         self.neighbors_monitors[i].last_keyframe_sent,
                         from_kf_id)
 
-        for i in range(self.nb_robots):
+        for i in range(self.max_nb_robots):
             if i != self.robot_id:
                 if self.neighbors_monitors[i].is_alive():
                     self.neighbors_monitors[
@@ -89,14 +89,14 @@ class NeighborManager():
         """
 
         from_match_id = latest_local_match_idx
-        for i in range(self.nb_robots):
+        for i in range(self.max_nb_robots):
             if i != self.robot_id:
                 if self.neighbors_monitors[i].is_alive():
                     from_match_id = min(
                         self.neighbors_monitors[i].last_match_sent,
                         from_match_id)
 
-        for i in range(self.nb_robots):
+        for i in range(self.max_nb_robots):
             if i != self.robot_id:
                 if self.neighbors_monitors[i].is_alive():
                     self.neighbors_monitors[
@@ -113,7 +113,7 @@ class NeighborManager():
             int: the id of the first descriptor that is not useless
         """
         from_kf_id = last_kf_id
-        for i in range(self.nb_robots):
+        for i in range(self.max_nb_robots):
             if i != self.robot_id:
                 from_kf_id = min(self.neighbors_monitors[i].last_keyframe_sent,
                                  from_kf_id)
@@ -128,7 +128,7 @@ class NeighborManager():
             int: the id of the first match that is not useless
         """
         from_match_id = last_match_id
-        for i in range(self.nb_robots):
+        for i in range(self.max_nb_robots):
             if i != self.robot_id:
                 from_match_id = min(self.neighbors_monitors[i].last_match_sent,
                                     from_match_id)

@@ -38,7 +38,7 @@ class AlgebraicConnectivityMaximization(object):
     def __init__(
         self,
         robot_id=0,
-        nb_robots=1,
+        max_nb_robots=1,
         max_iters=20,
         fixed_weight=1.0,
         extra_params={
@@ -49,7 +49,7 @@ class AlgebraicConnectivityMaximization(object):
 
         Args:
             robot_id (int, optional): ID of the robot
-            nb_robots (int, optional): number of robots. Defaults to 1.
+            max_nb_robots (int, optional): number of robots. Defaults to 1.
             max_iters (int, optional): maximum number of iterations. Defaults to 20.
             fixed_weight (float, optional): weight of fixed measurements. Defaults to 1.0.
         """
@@ -62,13 +62,13 @@ class AlgebraicConnectivityMaximization(object):
 
         self.max_iters = max_iters
 
-        self.nb_robots = nb_robots
+        self.max_nb_robots = max_nb_robots
         self.robot_id = robot_id
         self.total_nb_poses = 0
 
         self.initial_fixed_edge_exists = {}
         self.nb_poses = {}
-        for i in range(self.nb_robots):
+        for i in range(self.max_nb_robots):
             self.nb_poses[i] = 0
             self.initial_fixed_edge_exists[i] = False
 
@@ -243,12 +243,12 @@ class AlgebraicConnectivityMaximization(object):
         # Offsets required to put rekey nodes such
         # that they are all in a single graph
         self.offsets = {}
-        for i in range(self.nb_robots):
+        for i in range(self.max_nb_robots):
             self.offsets[i] = 0
         # Compute offsets
         previous_offset = 0
         previous_nb_poses = 0
-        for id in range(self.nb_robots):
+        for id in range(self.max_nb_robots):
             if is_robot_included[id]:
                 self.offsets[id] = previous_offset + previous_nb_poses
                 previous_offset = self.offsets[id]
@@ -334,7 +334,7 @@ class AlgebraicConnectivityMaximization(object):
             bool: true if at least one robot is connected
         """
         is_robot_connected = {}
-        for i in range(self.nb_robots):
+        for i in range(self.max_nb_robots):
             if i == self.robot_id:
                 is_robot_connected[i] = True
             else:

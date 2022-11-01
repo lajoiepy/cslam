@@ -12,16 +12,16 @@ from collections import namedtuple
 import math
 
 
-def build_graph_and_extract_selection(nb_poses, nb_candidate_edges, nb_robots,
+def build_graph_and_extract_selection(nb_poses, nb_candidate_edges, max_nb_robots,
                                       robot_id, nb_candidates_to_choose):
     """Build a graph and perform selection based on algebraic connectivity
     """
     fixed_edges_list, candidate_edges_list = build_multi_robot_graph(
-        nb_poses, nb_candidate_edges, nb_robots)
+        nb_poses, nb_candidate_edges, max_nb_robots)
 
     params = {}
     params['robot_id'] = robot_id
-    params['nb_robots'] = nb_robots
+    params['max_nb_robots'] = max_nb_robots
     params['frontend.similarity_threshold'] = 0.0  # Doesn't change anything
     params['frontend.sensor_type'] = 'stereo'
     params["frontend.enable_sparsification"] = True
@@ -31,24 +31,24 @@ def build_graph_and_extract_selection(nb_poses, nb_candidate_edges, nb_robots,
 
     # Solve the initial graph
     is_robot_considered = {}
-    for i in range(nb_robots):
+    for i in range(max_nb_robots):
         is_robot_considered[i] = True
     return lcsm.select_candidates(nb_candidates_to_choose,
                                   is_robot_considered,
                                   greedy_initialization=False)
 
 
-def verif_broker(unittest_framework, nb_poses, nb_candidate_edges, nb_robots,
+def verif_broker(unittest_framework, nb_poses, nb_candidate_edges, max_nb_robots,
                  robot_id, nb_candidates_to_choose, use_vertex_cover):
     """Test broker based on params
     """
     # Build graph
     selection = build_graph_and_extract_selection(nb_poses, nb_candidate_edges,
-                                                  nb_robots, robot_id,
+                                                  max_nb_robots, robot_id,
                                                   nb_candidates_to_choose)
     unittest_framework.assertEqual(
         len(selection), min(nb_candidate_edges, nb_candidates_to_choose))
-    neighbors_in_range_list = range(nb_robots)
+    neighbors_in_range_list = range(max_nb_robots)
 
     # Brokerage
     broker = Broker(selection, neighbors_in_range_list)
@@ -81,7 +81,7 @@ def verif_broker(unittest_framework, nb_poses, nb_candidate_edges, nb_robots,
     # Upper Bounds:
     unittest_framework.assertLessEqual(
         len(vertices), min(nb_candidate_edges, nb_candidates_to_choose))
-    if use_vertex_cover and nb_robots == 2:
+    if use_vertex_cover and max_nb_robots == 2:
         unittest_framework.assertLessEqual(
             len(vertices), math.ceil(float(len(initial_vertices)) / 2))
     # Lower Bounds:
@@ -113,23 +113,23 @@ class TestBroker(unittest.TestCase):
         robot_id = 0
         nb_poses = 100
         nb_candidate_edges = 50
-        nb_robots = 2
+        max_nb_robots = 2
         nb_candidates_to_choose = 30
         use_vertex_cover = False
 
-        verif_broker(self, nb_poses, nb_candidate_edges, nb_robots, robot_id,
+        verif_broker(self, nb_poses, nb_candidate_edges, max_nb_robots, robot_id,
                      nb_candidates_to_choose, use_vertex_cover)
 
-        verif_broker(self, nb_poses, nb_candidate_edges, nb_robots, robot_id,
+        verif_broker(self, nb_poses, nb_candidate_edges, max_nb_robots, robot_id,
                      nb_candidate_edges, use_vertex_cover)
 
-        verif_broker(self, nb_poses * 10, nb_candidate_edges * 10, nb_robots,
+        verif_broker(self, nb_poses * 10, nb_candidate_edges * 10, max_nb_robots,
                      robot_id, nb_candidates_to_choose * 10, use_vertex_cover)
 
-        verif_broker(self, nb_poses * 10, nb_candidate_edges * 10, nb_robots,
+        verif_broker(self, nb_poses * 10, nb_candidate_edges * 10, max_nb_robots,
                      robot_id, nb_candidate_edges * 10, use_vertex_cover)
 
-        verif_broker(self, nb_poses, nb_candidate_edges, nb_robots, robot_id,
+        verif_broker(self, nb_poses, nb_candidate_edges, max_nb_robots, robot_id,
                      2 * nb_candidate_edges, use_vertex_cover)
 
     def test_vertex_cover_2robots(self):
@@ -139,23 +139,23 @@ class TestBroker(unittest.TestCase):
         robot_id = 0
         nb_poses = 100
         nb_candidate_edges = 50
-        nb_robots = 2
+        max_nb_robots = 2
         nb_candidates_to_choose = 30
         use_vertex_cover = True
 
-        verif_broker(self, nb_poses, nb_candidate_edges, nb_robots, robot_id,
+        verif_broker(self, nb_poses, nb_candidate_edges, max_nb_robots, robot_id,
                      nb_candidates_to_choose, use_vertex_cover)
 
-        verif_broker(self, nb_poses, nb_candidate_edges, nb_robots, robot_id,
+        verif_broker(self, nb_poses, nb_candidate_edges, max_nb_robots, robot_id,
                      nb_candidate_edges, use_vertex_cover)
 
-        verif_broker(self, nb_poses * 10, nb_candidate_edges * 10, nb_robots,
+        verif_broker(self, nb_poses * 10, nb_candidate_edges * 10, max_nb_robots,
                      robot_id, nb_candidates_to_choose * 10, use_vertex_cover)
 
-        verif_broker(self, nb_poses * 10, nb_candidate_edges * 10, nb_robots,
+        verif_broker(self, nb_poses * 10, nb_candidate_edges * 10, max_nb_robots,
                      robot_id, nb_candidate_edges * 10, use_vertex_cover)
 
-        verif_broker(self, nb_poses, nb_candidate_edges, nb_robots, robot_id,
+        verif_broker(self, nb_poses, nb_candidate_edges, max_nb_robots, robot_id,
                      2 * nb_candidate_edges, use_vertex_cover)
 
     def test_simple_dialog_5robots(self):
@@ -165,23 +165,23 @@ class TestBroker(unittest.TestCase):
         robot_id = 1
         nb_poses = 100
         nb_candidate_edges = 200
-        nb_robots = 5
+        max_nb_robots = 5
         nb_candidates_to_choose = 100
         use_vertex_cover = False
 
-        verif_broker(self, nb_poses, nb_candidate_edges, nb_robots, robot_id,
+        verif_broker(self, nb_poses, nb_candidate_edges, max_nb_robots, robot_id,
                      nb_candidates_to_choose, use_vertex_cover)
 
-        verif_broker(self, nb_poses, nb_candidate_edges, nb_robots, robot_id,
+        verif_broker(self, nb_poses, nb_candidate_edges, max_nb_robots, robot_id,
                      nb_candidate_edges, use_vertex_cover)
 
-        verif_broker(self, nb_poses * 10, nb_candidate_edges * 10, nb_robots,
+        verif_broker(self, nb_poses * 10, nb_candidate_edges * 10, max_nb_robots,
                      robot_id, nb_candidates_to_choose * 10, use_vertex_cover)
 
-        verif_broker(self, nb_poses * 10, nb_candidate_edges * 10, nb_robots,
+        verif_broker(self, nb_poses * 10, nb_candidate_edges * 10, max_nb_robots,
                      robot_id, nb_candidate_edges * 10, use_vertex_cover)
 
-        verif_broker(self, nb_poses, nb_candidate_edges, nb_robots, robot_id,
+        verif_broker(self, nb_poses, nb_candidate_edges, max_nb_robots, robot_id,
                      2 * nb_candidate_edges, use_vertex_cover)
 
     def test_vertex_cover_5robots(self):
@@ -191,23 +191,23 @@ class TestBroker(unittest.TestCase):
         robot_id = 2
         nb_poses = 100
         nb_candidate_edges = 200
-        nb_robots = 5
+        max_nb_robots = 5
         nb_candidates_to_choose = 100
         use_vertex_cover = True
 
-        verif_broker(self, nb_poses, nb_candidate_edges, nb_robots, robot_id,
+        verif_broker(self, nb_poses, nb_candidate_edges, max_nb_robots, robot_id,
                      nb_candidates_to_choose, use_vertex_cover)
 
-        verif_broker(self, nb_poses, nb_candidate_edges, nb_robots, robot_id,
+        verif_broker(self, nb_poses, nb_candidate_edges, max_nb_robots, robot_id,
                      nb_candidate_edges, use_vertex_cover)
 
-        verif_broker(self, nb_poses * 10, nb_candidate_edges * 10, nb_robots,
+        verif_broker(self, nb_poses * 10, nb_candidate_edges * 10, max_nb_robots,
                      robot_id, nb_candidates_to_choose * 10, use_vertex_cover)
 
-        verif_broker(self, nb_poses * 10, nb_candidate_edges * 10, nb_robots,
+        verif_broker(self, nb_poses * 10, nb_candidate_edges * 10, max_nb_robots,
                      robot_id, nb_candidate_edges * 10, use_vertex_cover)
 
-        verif_broker(self, nb_poses, nb_candidate_edges, nb_robots, robot_id,
+        verif_broker(self, nb_poses, nb_candidate_edges, max_nb_robots, robot_id,
                      2 * nb_candidate_edges, use_vertex_cover)
 
     def test_manual_vertex_cover(self):
@@ -224,13 +224,13 @@ class TestBroker(unittest.TestCase):
         robot_id = 0
         nb_poses = 100
         nb_candidate_edges = 5
-        nb_robots = 2
+        max_nb_robots = 2
         nb_candidates_to_choose = 5
         use_vertex_cover = True
 
         params = {}
         params['robot_id'] = robot_id
-        params['nb_robots'] = nb_robots
+        params['max_nb_robots'] = max_nb_robots
         params['frontend.similarity_threshold'] = 0.0  # Doesn't change anything
         params['frontend.sensor_type'] = 'stereo'
         params["frontend.enable_sparsification"] = True
@@ -240,7 +240,7 @@ class TestBroker(unittest.TestCase):
 
         # Solve the initial graph
         is_robot_considered = {}
-        for i in range(nb_robots):
+        for i in range(max_nb_robots):
             is_robot_considered[i] = True
         selection = lcsm.select_candidates(nb_candidates_to_choose,
                                     is_robot_considered,
@@ -248,7 +248,7 @@ class TestBroker(unittest.TestCase):
 
         self.assertEqual(
             len(selection), min(nb_candidate_edges, nb_candidates_to_choose))
-        neighbors_in_range_list = range(nb_robots)
+        neighbors_in_range_list = range(max_nb_robots)
 
         # Brokerage
         broker = Broker(selection, neighbors_in_range_list)

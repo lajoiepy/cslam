@@ -13,7 +13,7 @@ GlobalDescriptor = namedtuple('GlobalDescriptor',
 def set_params():
     params = {}
     params['robot_id'] = 0
-    params['nb_robots'] = 2
+    params['max_nb_robots'] = 2
     params['frontend.sensor_type'] = 'stereo'
     params['frontend.similarity_threshold'] = 0.0
     params["frontend.enable_sparsification"] = True
@@ -112,7 +112,7 @@ class TestSparseMatching(unittest.TestCase):
         """Select candidates
         """
         params = set_params()
-        params['nb_robots'] = 3
+        params['max_nb_robots'] = 3
         lcsm = LoopClosureSparseMatching(params)
 
         nb_local_kfs = 100
@@ -134,7 +134,7 @@ class TestSparseMatching(unittest.TestCase):
 
         nb_candidates = 20
         is_robot_considered = {}
-        for i in range(params['nb_robots']):
+        for i in range(params['max_nb_robots']):
             is_robot_considered[i] = True
         selection = lcsm.select_candidates(nb_candidates, is_robot_considered)
         self.assertEqual(len(selection), nb_candidates)
@@ -144,7 +144,7 @@ class TestSparseMatching(unittest.TestCase):
             No robot 1 in range
         """
         params = set_params()
-        params['nb_robots'] = 4
+        params['max_nb_robots'] = 4
         lcsm = LoopClosureSparseMatching(params)
 
         nb_local_kfs = 100
@@ -167,7 +167,7 @@ class TestSparseMatching(unittest.TestCase):
         nb_candidates = 20
 
         is_robot_considered = {}
-        for i in range(params['nb_robots']):
+        for i in range(params['max_nb_robots']):
             is_robot_considered[i] = True
         selection = lcsm.select_candidates(nb_candidates, is_robot_considered)
         self.assertEqual(len(selection), nb_candidates)
@@ -177,7 +177,7 @@ class TestSparseMatching(unittest.TestCase):
             No robot 0 in range
         """
         params = set_params()
-        params['nb_robots'] = 4
+        params['max_nb_robots'] = 4
         params['robot_id'] = 1
         lcsm = LoopClosureSparseMatching(params)
 
@@ -201,7 +201,7 @@ class TestSparseMatching(unittest.TestCase):
         nb_candidates = 20
 
         is_robot_considered = {}
-        for i in range(params['nb_robots']):
+        for i in range(params['max_nb_robots']):
             is_robot_considered[i] = True
 
         selection = lcsm.select_candidates(nb_candidates, is_robot_considered)

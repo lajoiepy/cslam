@@ -15,7 +15,7 @@ int main(int argc, char **argv) {
 
   auto node = std::make_shared<rclcpp::Node>("pose_graph_manager");
 
-  node->declare_parameter<int>("nb_robots", 1);
+  node->declare_parameter<int>("max_nb_robots", 1);
   node->declare_parameter<int>("robot_id", 0);
   node->declare_parameter<int>("backend.pose_graph_optimization_start_period_ms", 1000);
   node->declare_parameter<int>("backend.pose_graph_optimization_loop_period_ms", 100);

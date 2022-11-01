@@ -215,7 +215,7 @@ namespace cslam
 
         std::shared_ptr<rclcpp::Node> node_;
 
-        unsigned int min_inliers_, nb_robots_, robot_id_, max_queue_size_,
+        unsigned int min_inliers_, max_nb_robots_, robot_id_, max_queue_size_,
             nb_local_keyframes_;
 
         message_filters::Subscriber<nav_msgs::msg::Odometry> sub_odometry_;

@@ -285,7 +285,7 @@ namespace cslam
     private:
         std::shared_ptr<rclcpp::Node> node_;
 
-        unsigned int nb_robots_, robot_id_, optimization_count_;
+        unsigned int max_nb_robots_, robot_id_, optimization_count_;
         bool enable_logs_;
 
         unsigned int pose_graph_optimization_start_period_ms_,

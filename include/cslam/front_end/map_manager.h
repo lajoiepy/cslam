@@ -48,7 +48,7 @@ public:
 private:
   std::shared_ptr<rclcpp::Node> node_;
 
-  unsigned int nb_robots_, robot_id_;
+  unsigned int max_nb_robots_, robot_id_;
 
   int map_manager_process_period_ms_;
 

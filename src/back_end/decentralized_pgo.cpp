@@ -9,7 +9,7 @@ using namespace cslam;
 DecentralizedPGO::DecentralizedPGO(std::shared_ptr<rclcpp::Node> &node)
     : node_(node), max_waiting_time_sec_(60, 0)
 {
-  node_->get_parameter("nb_robots", nb_robots_);
+  node_->get_parameter("max_nb_robots", max_nb_robots_);
   node_->get_parameter("robot_id", robot_id_);
   node_->get_parameter("backend.pose_graph_optimization_start_period_ms",
                        pose_graph_optimization_start_period_ms_);
@@ -97,7 +97,7 @@ DecentralizedPGO::DecentralizedPGO(std::shared_ptr<rclcpp::Node> &node)
       node_->create_publisher<cslam_common_interfaces::msg::OptimizationResult>(
           "debug_optimization_result", 100);
 
-  for (unsigned int i = 0; i < nb_robots_; i++)
+  for (unsigned int i = 0; i < max_nb_robots_; i++)
   {
     optimized_estimates_publishers_.insert(
         {i, node->create_publisher<
@@ -116,9 +116,9 @@ DecentralizedPGO::DecentralizedPGO(std::shared_ptr<rclcpp::Node> &node)
           "optimizer_state", 100);
 
   // Initialize inter-robot loop closures measurements
-  for (unsigned int i = 0; i < nb_robots_; i++)
+  for (unsigned int i = 0; i < max_nb_robots_; i++)
   {
-    for (unsigned int j = i + 1; j < nb_robots_; j++)
+    for (unsigned int j = i + 1; j < max_nb_robots_; j++)
     {
       inter_robot_loop_closures_.insert(
           {{i, j}, std::vector<gtsam::BetweenFactor<gtsam::Pose3>>()});
@@ -137,7 +137,7 @@ DecentralizedPGO::DecentralizedPGO(std::shared_ptr<rclcpp::Node> &node)
                 std::placeholders::_1));
 
   // PoseGraph ROS 2 objects
-  for (unsigned int i = 0; i < nb_robots_; i++)
+  for (unsigned int i = 0; i < max_nb_robots_; i++)
   {
     get_pose_graph_publishers_.insert(
         {i, node->create_publisher<cslam_common_interfaces::msg::RobotIds>(
@@ -194,7 +194,7 @@ DecentralizedPGO::DecentralizedPGO(std::shared_ptr<rclcpp::Node> &node)
 
   if (enable_logs_)
   {
-    logger_ = std::make_shared<Logger>(node_, robot_id_, nb_robots_, log_folder_);
+    logger_ = std::make_shared<Logger>(node_, robot_id_, max_nb_robots_, log_folder_);
   }
 
   if (enable_simulated_rendezvous_)
@@ -207,7 +207,7 @@ DecentralizedPGO::DecentralizedPGO(std::shared_ptr<rclcpp::Node> &node)
 
 void DecentralizedPGO::reinitialize_received_pose_graphs()
 {
-  for (unsigned int i = 0; i < nb_robots_; i++)
+  for (unsigned int i = 0; i < max_nb_robots_; i++)
   {
     received_pose_graphs_[i] = false;
   }
@@ -677,9 +677,9 @@ void DecentralizedPGO::visualization_callback()
     auto graph = boost::make_shared<gtsam::NonlinearFactorGraph>();
     graph->push_back(pose_graph_->begin(), pose_graph_->end());
 
-    for (unsigned int i = 0; i < nb_robots_; i++)
+    for (unsigned int i = 0; i < max_nb_robots_; i++)
     {
-      for (unsigned int j = i + 1; j < nb_robots_; j++)
+      for (unsigned int j = i + 1; j < max_nb_robots_; j++)
       {
         unsigned int min_robot_id = std::min(i, j);
         unsigned int max_robot_id = std::max(i, j);

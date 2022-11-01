@@ -3,7 +3,7 @@
 namespace cslam
 {
 
-    Logger::Logger(std::shared_ptr<rclcpp::Node> &node, const unsigned int &robot_id, const unsigned int &nb_robots, const std::string &log_folder) : robot_id_(robot_id)
+    Logger::Logger(std::shared_ptr<rclcpp::Node> &node, const unsigned int &robot_id, const unsigned int &max_nb_robots, const std::string &log_folder) : robot_id_(robot_id)
     {
         node_ = node;
         auto t = std::time(nullptr);
@@ -14,7 +14,7 @@ namespace cslam
         log_folder_ = log_folder + "/" + experiment_id;
         system(("mkdir -p " + log_folder_).c_str());
         total_pgo_time_ = 0;
-        nb_robots_ = nb_robots;
+        max_nb_robots_ = max_nb_robots;
 
         logger_subscriber_ = node_->create_subscription<diagnostic_msgs::msg::KeyValue>(
             "log_info", 10, std::bind(&Logger::log_callback, this, std::placeholders::_1));
@@ -96,7 +96,7 @@ namespace cslam
         optimization_log_file.open(result_folder + "/log.csv");
         optimization_log_file << "robot_id," << std::to_string(robot_id_) << std::endl;
         optimization_log_file << "origin_robot_id," << std::to_string(origin_robot_id_) << std::endl;
-        optimization_log_file << "nb_robots," << std::to_string(nb_robots_) << std::endl;
+        optimization_log_file << "max_nb_robots," << std::to_string(max_nb_robots_) << std::endl;
         unsigned int total_nb_matches = 0;
         unsigned int total_nb_failed_matches = 0;
         unsigned int total_nb_vertices_transmitted = 0;

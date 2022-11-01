@@ -58,7 +58,7 @@ RGBDHandler::RGBDHandler(std::shared_ptr<rclcpp::Node> &node)
   // Parameters
   node_->get_parameter("frontend.max_keyframe_queue_size", max_queue_size_);
   node_->get_parameter("frontend.pnp_min_inliers", min_inliers_);
-  node_->get_parameter("nb_robots", nb_robots_);
+  node_->get_parameter("max_nb_robots", max_nb_robots_);
   node_->get_parameter("robot_id", robot_id_);
 
   // Publisher for global descriptors

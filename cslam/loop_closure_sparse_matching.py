@@ -24,7 +24,7 @@ class LoopClosureSparseMatching(object):
         else:
             self.local_nnsm = NearestNeighborsMatching()
         self.other_robots_nnsm = {}
-        for i in range(self.params['nb_robots']):
+        for i in range(self.params['max_nb_robots']):
             if i != self.params['robot_id']:
                 if self.params["frontend.sensor_type"] == "lidar":
                     self.other_robots_nnsm[i] = ScanContextMatching()
@@ -32,7 +32,7 @@ class LoopClosureSparseMatching(object):
                     self.other_robots_nnsm[i] = NearestNeighborsMatching()
         # Initialize candidate selection algorithm
         self.candidate_selector = AlgebraicConnectivityMaximization(
-            self.params['robot_id'], self.params['nb_robots'], extra_params=self.params)
+            self.params['robot_id'], self.params['max_nb_robots'], extra_params=self.params)
 
     def add_local_global_descriptor(self, embedding, keyframe_id):
         """ Add a local keyframe for matching
@@ -43,7 +43,7 @@ class LoopClosureSparseMatching(object):
         """
         matches = []
         self.local_nnsm.add_item(embedding, keyframe_id)
-        for i in range(self.params['nb_robots']):
+        for i in range(self.params['max_nb_robots']):
             if i != self.params['robot_id']:
                 kf, similarity = self.other_robots_nnsm[i].search_best(embedding)
                 if kf is not None:
