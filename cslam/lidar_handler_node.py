@@ -5,6 +5,7 @@ from sensor_msgs.msg import PointCloud2, PointField, NavSatFix
 from nav_msgs.msg import Odometry
 from cslam_common_interfaces.msg import KeyframeOdom, KeyframePointCloud
 from cslam_common_interfaces.msg import LocalDescriptorsRequest, LocalPointCloudDescriptors, InterRobotLoopClosure, IntraRobotLoopClosure, LocalKeyframeMatch
+from cslam_common_interfaces.msg import VizPointCloud
 import cslam.lidar_pr.icp_utils as icp_utils
 import rclpy
 from rclpy.node import Node
@@ -37,6 +38,8 @@ class LidarHandler: # TODO: document
         self.intra_robot_loop_closure_publisher = self.node.create_publisher(IntraRobotLoopClosure, "intra_robot_loop_closure", 100)
 
         self.inter_robot_loop_closure_publisher = self.node.create_publisher(InterRobotLoopClosure, "/inter_robot_loop_closure", 100)
+
+        self.viz_pointcloud_publisher = self.node.create_publisher(VizPointCloud, "/viz/keyframe_pointcloud", 100)
 
         period_ms = self.params["frontend.map_manager_process_period_ms"]
         self.processing_timer = self.node.create_timer(float(period_ms)/1000, self.process_new_sensor_data, clock=Clock())
@@ -120,7 +123,6 @@ class LidarHandler: # TODO: document
         return (odom0.pose.pose.position.x - odom1.pose.pose.position.x)**2 + (odom0.pose.pose.position.y - odom1.pose.pose.position.y)**2 + (odom0.pose.pose.position.z - odom1.pose.pose.position.z)**2
 
     def generate_new_keyframe(self, msg):
-        # TODO: Perform overlap check, instead of consering each frame as a keyframe
         if self.previous_odom is None:
             self.previous_odom = msg[1]
             return True 
@@ -158,6 +160,12 @@ class LidarHandler: # TODO: document
                 if self.params["evaluation.enable_gps_recording"]:
                     msg_odom.gps = gps
                 self.keyframe_odom_publisher.publish(msg_odom)
+                if self.params["visualization.enable"]:
+                    viz_msg = VizPointCloud()
+                    viz_msg.robot_id = self.params["robot_id"]
+                    viz_msg.keyframe_id = self.nb_local_keyframes
+                    viz_msg.pointcloud = msg_pointcloud.pointcloud
+                    self.viz_pointcloud_publisher.publish(viz_msg)
                 self.nb_local_keyframes = self.nb_local_keyframes + 1
 
 if __name__ == '__main__':
@@ -177,6 +185,8 @@ if __name__ == '__main__':
                         ('evaluation.enable_logs', False),  
                         ('evaluation.enable_gps_recording', False), 
                         ('evaluation.gps_topic', ""),            
+                        ('evaluation.gps_topic', ""),        
+                        ('visualization.enable', False),
                         ])
     params = {}
     params['frontend.pointcloud_topic'] = node.get_parameter(
@@ -201,6 +211,8 @@ if __name__ == '__main__':
             'evaluation.enable_gps_recording').value
     params["evaluation.gps_topic"] = node.get_parameter(
             'evaluation.gps_topic').value
+    params["visualization.enable"] = node.get_parameter(
+            'visualization.enable').value
     lidar_handler = LidarHandler(node, params)
     node.get_logger().info('Initialization done.')
     rclpy.spin(node)
