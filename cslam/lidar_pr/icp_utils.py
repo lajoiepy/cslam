@@ -101,7 +101,7 @@ def solve_teaser(src, dst, voxel_size, min_inliers):
     solver.solve(src_corr, dst_corr)
 
     solution = solver.getSolution()
-
+    
     valid = len(solver.getInlierMaxClique()) > min_inliers
     
     if valid:

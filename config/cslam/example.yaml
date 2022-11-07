@@ -10,7 +10,7 @@
       sensor_type: "stereo"
       inter_robot_loop_closure_budget: 5
       inter_robot_detection_period_sec: 5
-      max_keyframe_queue_size: 10
+      max_queue_size: 10
       similarity_threshold: 0.1
       global_descriptors_topic: "/global_descriptors"
       inter_robot_matches_topic: "/inter_robot_matches"

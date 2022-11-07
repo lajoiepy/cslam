@@ -16,7 +16,7 @@ int main(int argc, char **argv) {
   auto node = std::make_shared<rclcpp::Node>("map_manager");
 
   node->declare_parameter<int>("frontend.pnp_min_inliers", 20);
-  node->declare_parameter<int>("frontend.max_keyframe_queue_size", 10);
+  node->declare_parameter<int>("frontend.max_queue_size", 10);
   node->declare_parameter<int>("max_nb_robots", 1);
   node->declare_parameter<int>("robot_id", 0);
   node->declare_parameter<int>("frontend.map_manager_process_period_ms", 100);

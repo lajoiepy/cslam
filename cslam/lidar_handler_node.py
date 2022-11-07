@@ -92,7 +92,7 @@ class LidarHandler: # TODO: document
                 frame_ids.append(msg.matches_keyframe_id[i])
         for frame_id in frame_ids:
             pc = self.local_descriptors_map[frame_id]
-            transform, success = icp_utils.compute_transform(icp_utils.ros_to_open3d(msg.data), pc, self.params["frontend.voxel_size"], self.params["frontend.matching_min_inliers"])
+            transform, success = icp_utils.compute_transform(icp_utils.ros_to_open3d(msg.data), pc, self.params["frontend.voxel_size"], self.params["frontend.registration_min_inliers"])
             out_msg = InterRobotLoopClosure()
             out_msg.robot0_id = self.params["robot_id"]
             out_msg.robot0_keyframe_id = frame_id
@@ -108,7 +108,7 @@ class LidarHandler: # TODO: document
     def receive_local_keyframe_match(self, msg):
         pc0 = self.local_descriptors_map[msg.keyframe0_id]
         pc1 = self.local_descriptors_map[msg.keyframe1_id]
-        transform, success = icp_utils.compute_transform(pc1, pc0, self.params["frontend.voxel_size"], self.params["frontend.matching_min_inliers"])
+        transform, success = icp_utils.compute_transform(pc1, pc0, self.params["frontend.voxel_size"], self.params["frontend.registration_min_inliers"])
         out_msg = IntraRobotLoopClosure()
         out_msg.keyframe0_id = msg.keyframe0_id
         out_msg.keyframe1_id = msg.keyframe1_id
@@ -178,7 +178,7 @@ if __name__ == '__main__':
                         ('frontend.odom_topic', None),
                         ('frontend.map_manager_process_period_ms', None),
                         ('frontend.voxel_size', None),
-                        ('frontend.matching_min_inliers', None),
+                        ('frontend.registration_min_inliers', None),
                         ('frontend.keyframe_generation_ratio_distance', 0.5),
                         ('frontend.pointcloud_odom_approx_time_sync_s', 0.1),
                         ('robot_id', None),           
@@ -197,8 +197,8 @@ if __name__ == '__main__':
         'frontend.map_manager_process_period_ms').value
     params['frontend.voxel_size'] = node.get_parameter(
         'frontend.voxel_size').value
-    params['frontend.matching_min_inliers'] = node.get_parameter(
-        'frontend.matching_min_inliers').value 
+    params['frontend.registration_min_inliers'] = node.get_parameter(
+        'frontend.registration_min_inliers').value 
     params['frontend.keyframe_generation_ratio_distance'] = node.get_parameter(
         'frontend.keyframe_generation_ratio_distance').value
     params['frontend.pointcloud_odom_approx_time_sync_s'] = node.get_parameter(

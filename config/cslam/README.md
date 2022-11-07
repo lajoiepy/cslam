@@ -12,7 +12,7 @@
 
 `inter_robot_detection_period_sec`: Period (in seconds) for inter-robot loop closure detection.
 
-`max_keyframe_queue_size`: Maximum number of keyframe to store in buffer for processing.
+`max_queue_size`: Maximum number of keyframe to store in buffer for processing.
 
 `similarity_threshold`: Minimum similarity value required to consider a potential match.
 

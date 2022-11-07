@@ -17,7 +17,7 @@ RGBDHandler::RGBDHandler(std::shared_ptr<rclcpp::Node> &node)
   node->declare_parameter<float>("frontend.keyframe_generation_ratio_threshold", 0.0);
   node->declare_parameter<std::string>("frontend.sensor_base_frame_id", "camera_link");
   node->declare_parameter<bool>("evaluation.enable_logs", false);
-  node_->get_parameter("frontend.max_keyframe_queue_size", max_queue_size_);
+  node_->get_parameter("frontend.max_queue_size", max_queue_size_);
   node_->get_parameter("frontend.keyframe_generation_ratio_threshold", keyframe_generation_ratio_threshold_);
   node_->get_parameter("frontend.sensor_base_frame_id", base_frame_id_);
   node_->get_parameter("visualization.enable",
@@ -56,7 +56,7 @@ RGBDHandler::RGBDHandler(std::shared_ptr<rclcpp::Node> &node)
                 std::placeholders::_1));
 
   // Parameters
-  node_->get_parameter("frontend.max_keyframe_queue_size", max_queue_size_);
+  node_->get_parameter("frontend.max_queue_size", max_queue_size_);
   node_->get_parameter("frontend.pnp_min_inliers", min_inliers_);
   node_->get_parameter("max_nb_robots", max_nb_robots_);
   node_->get_parameter("robot_id", robot_id_);

@@ -21,6 +21,7 @@
 #include <cslam_common_interfaces/msg/intra_robot_loop_closure.hpp>
 
 #include <geometry_msgs/msg/transform_stamped.hpp>
+#include <geometry_msgs/msg/pose_stamped.hpp>
 #include <std_msgs/msg/string.hpp>
 #include <std_msgs/msg/u_int32.hpp>
 
@@ -329,6 +330,9 @@ namespace cslam
 
         rclcpp::Subscription<cslam_common_interfaces::msg::OptimizationResult>::
             SharedPtr optimized_estimates_subscriber_;
+
+        rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr
+            optimized_pose_estimate_publisher_;
 
         std::map<unsigned int,
                  rclcpp::Publisher<

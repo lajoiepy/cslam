@@ -111,6 +111,10 @@ DecentralizedPGO::DecentralizedPGO(std::shared_ptr<rclcpp::Node> &node)
       std::bind(&DecentralizedPGO::optimized_estimates_callback, this,
                 std::placeholders::_1));
 
+  optimized_pose_estimate_publisher_ = node->create_publisher<
+                geometry_msgs::msg::PoseStamped>(
+                "/r" + std::to_string(robot_id_) + "/current_pose_estimate", 100);
+
   optimizer_state_publisher_ =
       node_->create_publisher<cslam_common_interfaces::msg::OptimizerState>(
           "optimizer_state", 100);
@@ -750,13 +754,20 @@ void DecentralizedPGO::broadcast_tf_callback()
   tf_broadcaster_->sendTransform(latest_optimized_pose_msg);
 
   // latest optimized pose to latest local pose (odometry alone)
-  geometry_msgs::msg::TransformStamped current_pose_msg;
-  current_pose_msg.header.stamp = now;
-  current_pose_msg.header.frame_id = LATEST_OPTIMIZED_FRAME_ID(robot_id_);
-  current_pose_msg.child_frame_id = CURRENT_FRAME_ID(robot_id_);
-  gtsam::Pose3 current_pose3 = local_pose_at_latest_optimization_.inverse() * latest_local_pose_;
-  current_pose_msg.transform = gtsam_pose_to_transform_msg(current_pose3);
-  tf_broadcaster_->sendTransform(current_pose_msg);
+  geometry_msgs::msg::TransformStamped current_transform_msg;
+  current_transform_msg.header.stamp = now;
+  current_transform_msg.header.frame_id = LATEST_OPTIMIZED_FRAME_ID(robot_id_);
+  current_transform_msg.child_frame_id = CURRENT_FRAME_ID(robot_id_);
+  gtsam::Pose3 current_pose_diff = local_pose_at_latest_optimization_.inverse() * latest_local_pose_;
+  current_transform_msg.transform = gtsam_pose_to_transform_msg(current_pose_diff);
+  tf_broadcaster_->sendTransform(current_transform_msg);
+
+  // Publish as message latest estimate (optimized pose + odometry)
+  geometry_msgs::msg::PoseStamped pose_msg;
+  pose_msg.header.stamp = now;
+  pose_msg.header.frame_id = MAP_FRAME_ID(origin_robot_id_);
+  pose_msg.pose = gtsam_pose_to_msg(latest_optimized_pose_ * current_pose_diff);
+  optimized_pose_estimate_publisher_->publish(pose_msg);
 }
 
 gtsam::Values
