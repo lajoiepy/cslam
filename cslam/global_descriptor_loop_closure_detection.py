@@ -1,16 +1,10 @@
 #!/usr/bin/env python
 from cslam.algebraic_connectivity_maximization import EdgeInterRobot
 import numpy as np
-from cv_bridge import CvBridge
 
 import os
 from os.path import join, exists, isfile, realpath, dirname
-import numpy as np
 
-from cslam.vpr.netvlad import NetVLAD
-from cslam.vpr.cosplace import CosPlace
-from cslam.lidar_pr.scancontext import ScanContext
-import cslam.lidar_pr.icp_utils as icp_utils
 from cslam.loop_closure_sparse_matching import LoopClosureSparseMatching
 from cslam.broker import Broker
 
@@ -30,7 +24,6 @@ from rclpy.clock import Clock
 from cslam.neighbors_manager import NeighborManager
 from cslam.utils.misc import dict_to_list_chunks
 
-
 class GlobalDescriptorLoopClosureDetection(object):
     """ Global descriptor matching """
 
@@ -48,15 +41,19 @@ class GlobalDescriptorLoopClosureDetection(object):
         # Place Recognition network setup
         if self.params['frontend.global_descriptor_technique'].lower(
         ) == 'cosplace':
+            from cslam.vpr.cosplace import CosPlace
             self.node.get_logger().info('Using CosPlace.')
             self.global_descriptor = CosPlace(self.params, self.node)
             self.keyframe_type = "rgb"
         elif self.params['frontend.global_descriptor_technique'].lower(
         ) == 'scancontext':
+            from cslam.lidar_pr.scancontext import ScanContext
+            import cslam.lidar_pr.icp_utils as icp_utils
             self.node.get_logger().info('Using ScanContext.')
             self.global_descriptor = ScanContext(self.params, self.node)
             self.keyframe_type = "pointcloud"
         else:
+            from cslam.vpr.netvlad import NetVLAD
             self.node.get_logger().info('Using NetVLAD (default)')
             self.global_descriptor = NetVLAD(self.params, self.node)
             self.keyframe_type = "rgb"
@@ -138,6 +135,9 @@ class GlobalDescriptorLoopClosureDetection(object):
             self.log_total_matches_selected = 0
             self.log_detection_cumulative_communication = 0
             self.log_total_sparsification_computation_time = 0.0
+        # Import OpenCV at the end to avoid issue on NVIDIA Jetson Xavier: https://github.com/opencv/opencv/issues/14884#issuecomment-599852128
+        import cv2
+        from cv_bridge import CvBridge
 
     def add_global_descriptor_to_map(self, embedding, kf_id):
         """ Add global descriptor to matching list
