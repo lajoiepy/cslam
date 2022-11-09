@@ -1,1 +1,3 @@
-TODO: download the models from the web
+# TODO: CosPlace Instructions
+
+# TODO: add NetVLAD instructions
