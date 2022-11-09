@@ -40,10 +40,10 @@ class GlobalDescriptorLoopClosureDetection(object):
 
         # Place Recognition network setup
         if self.params['frontend.global_descriptor_technique'].lower(
-        ) == 'cosplace':
-            from cslam.vpr.cosplace import CosPlace
-            self.node.get_logger().info('Using CosPlace.')
-            self.global_descriptor = CosPlace(self.params, self.node)
+        ) == 'netvlad':
+            from cslam.vpr.netvlad import NetVLAD
+            self.node.get_logger().info('Using NetVLAD.')
+            self.global_descriptor = NetVLAD(self.params, self.node)
             self.keyframe_type = "rgb"
         elif self.params['frontend.global_descriptor_technique'].lower(
         ) == 'scancontext':
@@ -53,9 +53,9 @@ class GlobalDescriptorLoopClosureDetection(object):
             self.global_descriptor = ScanContext(self.params, self.node)
             self.keyframe_type = "pointcloud"
         else:
-            from cslam.vpr.netvlad import NetVLAD
-            self.node.get_logger().info('Using NetVLAD (default)')
-            self.global_descriptor = NetVLAD(self.params, self.node)
+            from cslam.vpr.cosplace import CosPlace
+            self.node.get_logger().info('Using CosPlace. (default)')
+            self.global_descriptor = CosPlace(self.params, self.node)
             self.keyframe_type = "rgb"
 
         # ROS 2 objects setup

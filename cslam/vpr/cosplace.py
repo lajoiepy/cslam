@@ -59,14 +59,14 @@ class CosPlace(object):
 
             resume_ckpt = self.params['frontend.nn_checkpoint']
             if isfile(resume_ckpt):
-                print("loading checkpoint '{}'".format(resume_ckpt))
+                self.node.get_logger().info("loading checkpoint '{}'".format(resume_ckpt))
                 checkpoint = torch.load(
                     resume_ckpt, map_location=lambda storage, loc: storage)
 
                 self.model.load_state_dict(checkpoint)
                 self.model = self.model.to(self.device)
             else:
-                print("Error: Checkpoint path is incorrect")
+                self.node.get_logger().error("Error: Checkpoint path is incorrect {}".format(resume_ckpt))
                 exit()
 
             self.model.eval()

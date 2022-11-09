@@ -39,7 +39,7 @@ class LoopClosureDetection(Node):
                         ('frontend.enable_sparsification', True),
                         ('frontend.use_vertex_cover_selection', True),
                         ('frontend.cosplace.descriptor_dim', 512),
-                        ('frontend.cosplace.backbone', "resnet101"),
+                        ('frontend.cosplace.backbone', "resnet18"),
                         ('frontend.sensor_type', "stereo"),
                         ('evaluation.enable_logs', False),
                         ('evaluation.enable_sparsification_comparison', False),
