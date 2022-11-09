@@ -38,7 +38,7 @@ class LoopClosureDetection(Node):
                         ('frontend.inter_robot_matches_topic', "/inter_robot_matches"),
                         ('frontend.enable_sparsification', True),
                         ('frontend.use_vertex_cover_selection', True),
-                        ('frontend.cosplace.descriptor_dim', 512),
+                        ('frontend.cosplace.descriptor_dim', 64),
                         ('frontend.cosplace.backbone', "resnet18"),
                         ('frontend.sensor_type', "stereo"),
                         ('evaluation.enable_logs', False),
