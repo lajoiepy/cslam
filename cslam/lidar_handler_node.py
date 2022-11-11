@@ -144,9 +144,9 @@ class LidarHandler: # TODO: document
             if self.generate_new_keyframe(data):
                 try:
                     self.local_descriptors_map[self.nb_local_keyframes] = icp_utils.downsample_ros_pointcloud(data[0], self.params["frontend.voxel_size"])
-                except:
+                except Exception as e:
                     self.local_descriptors_map[self.nb_local_keyframes] = []
-                    self.node.get_logger().info("Failure to downsample point cloud.")
+                    self.node.get_logger().info("Failure to downsample point cloud to voxel size {}. {}".format(self.params["frontend.voxel_size"], e))
                     return
                 # Publish pointcloud
                 msg_pointcloud = KeyframePointCloud()

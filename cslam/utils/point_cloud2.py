@@ -154,6 +154,34 @@ def read_points_numpy(
     return structured_to_unstructured(structured_numpy_array)
 
 
+def read_points_numpy_filtered(
+        cloud: PointCloud2,
+        skip_nans: bool = False,
+        uvs: Optional[Iterable] = None,
+        reshape_organized_cloud: bool = False) -> np.ndarray:
+    """
+    Read equally typed fields from sensor_msgs.PointCloud2 message as a unstructured numpy array.
+
+    This method is better suited if one wants to perform math operations
+    on e.g. all x,y,z fields.
+    But it is limited to fields with the same dtype as unstructured numpy arrays
+    only contain one dtype.
+
+    :param cloud: The point cloud to read from sensor_msgs.PointCloud2.
+    :param field_names: The names of fields to read. If None, read all fields.
+                        (Type: Iterable, Default: None)
+    :param skip_nans: If True, then don't return any point with a NaN value.
+                      (Type: Bool, Default: False)
+    :param uvs: If specified, then only return the points at the given
+        coordinates. (Type: Iterable, Default: None)
+    :param reshape_organized_cloud: Returns the array as an 2D organized point cloud if set.
+    :return: Numpy array containing all points.
+    """
+    field_names = [field.name for field in cloud.fields if field.name in ['x', 'y', 'z']]
+    structured_numpy_array = read_points(
+        cloud, field_names, skip_nans, uvs, reshape_organized_cloud)
+    return structured_to_unstructured(structured_numpy_array)
+
 def read_points_list(
         cloud: PointCloud2,
         field_names: Optional[List[str]] = None,

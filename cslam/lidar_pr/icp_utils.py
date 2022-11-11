@@ -143,7 +143,7 @@ def ros_to_open3d(msg):
     return open3d_cloud
 
 def ros_pointcloud_to_points(pc_msg):
-    return pc2_utils.read_points_numpy(pc_msg)[:,:3]
+    return pc2_utils.read_points_numpy_filtered(pc_msg)[:,:3]
 
 def downsample_ros_pointcloud(pc_msg, voxel_size):
     points = ros_pointcloud_to_points(pc_msg)
