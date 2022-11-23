@@ -517,7 +517,7 @@ void RGBDHandler::receive_local_image_descriptors(
       }
       else
       {
-        RCLCPP_DEBUG(
+        RCLCPP_INFO(
             node_->get_logger(),
             "Could not compute transformation between (%d,%d) and (%d,%d): %s",
             robot_id_, local_keyframe_id, msg->robot_id, msg->keyframe_id,

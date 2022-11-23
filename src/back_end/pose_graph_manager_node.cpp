@@ -27,6 +27,7 @@ int main(int argc, char **argv) {
   node->declare_parameter<bool>("evaluation.enable_gps_recording", false);
   node->declare_parameter<bool>("evaluation.enable_simulated_rendezvous", false);
   node->declare_parameter<std::string>("evaluation.rendezvous_schedule_file", "");
+  node->declare_parameter<bool>("evaluation.enable_pose_timestamps_recording", false);
   node->declare_parameter<bool>("visualization.enable", false);
   node->declare_parameter<int>("visualization.publishing_period_ms", 0);
 

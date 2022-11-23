@@ -310,6 +310,8 @@ namespace cslam
             tentative_local_pose_at_latest_optimization_, latest_optimized_pose_;
         gtsam::LabeledSymbol latest_local_symbol_;
 
+        bool enable_pose_timestamps_recording_;
+
         std::map<std::pair<unsigned int, unsigned int>,
                  std::vector<gtsam::BetweenFactor<gtsam::Pose3>>>
             inter_robot_loop_closures_;

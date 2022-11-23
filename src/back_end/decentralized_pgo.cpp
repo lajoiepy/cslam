@@ -27,6 +27,7 @@ DecentralizedPGO::DecentralizedPGO(std::shared_ptr<rclcpp::Node> &node)
   node->get_parameter("evaluation.enable_simulated_rendezvous", enable_simulated_rendezvous_);
   std::string rendezvous_schedule_file;
   node->get_parameter("evaluation.rendezvous_schedule_file", rendezvous_schedule_file);
+  node->get_parameter("evaluation.enable_pose_timestamps_recording", enable_pose_timestamps_recording_);
   node_->get_parameter("visualization.enable",
                        enable_visualization_);
   node_->get_parameter("visualization.publishing_period_ms",
@@ -257,6 +258,11 @@ void DecentralizedPGO::odometry_callback(
   // Update latest pose
   latest_local_pose_ = current_estimate;
   latest_local_symbol_ = symbol;
+
+  if (enable_pose_timestamps_recording_)
+  {
+    logger_->log_pose_timestamp(symbol, msg->odom.header.stamp.sec, msg->odom.header.stamp.nanosec);
+  }
 }
 
 void DecentralizedPGO::intra_robot_loop_closure_callback(
@@ -636,6 +642,14 @@ void DecentralizedPGO::optimized_estimates_callback(
       first_pose = current_pose_estimates_->at<gtsam::Pose3>(first_symbol);
     }
     update_transform_to_origin(first_pose);
+
+    try{
+      logger_->write_logs();
+    }
+    catch (const std::exception &e)
+    {
+      RCLCPP_ERROR(node_->get_logger(), "Writing logs failed: %s", e.what());
+    }
   }
 }
 
@@ -793,11 +807,10 @@ DecentralizedPGO::optimize(const gtsam::NonlinearFactorGraph::shared_ptr &graph,
     logger_->stop_timer();
     try{
       logger_->log_optimized_global_pose_graph(graph, result, robot_id_);
-      logger_->write_logs();
     }
     catch (const std::exception &e)
     {
-      RCLCPP_ERROR(node_->get_logger(), "Writing logs failed: %s", e.what());
+      RCLCPP_ERROR(node_->get_logger(), "Logging failed: %s", e.what());
       result = *initial;
     }
   }

@@ -2,24 +2,26 @@
 
 using namespace cslam;
 
-SimulatedRendezVous::SimulatedRendezVous(std::shared_ptr<rclcpp::Node> &node, 
-                                        const std::string& schedule_file, 
-                                        const unsigned int &robot_id): node_(node), robot_id_(robot_id), enabled_(true)
+SimulatedRendezVous::SimulatedRendezVous(std::shared_ptr<rclcpp::Node> &node,
+                                         const std::string &schedule_file,
+                                         const unsigned int &robot_id) : node_(node), robot_id_(robot_id), enabled_(true)
 {
-    try{
+    try
+    {
         int64_t initial_time = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
         std::ifstream schedule(schedule_file);
         if (schedule.is_open())
         {
-            for (std::string line; std::getline(schedule, line); )
+            for (std::string line; std::getline(schedule, line);)
             {
                 auto delim0 = line.find(",");
                 if (robot_id_ == std::stoul(line.substr(0, delim0)))
                 {
-                    RCLCPP_INFO(node_->get_logger(), "Simulated rendezvous schedule of robot"+line);
-                    while (delim0 != std::string::npos){
+                    RCLCPP_INFO(node_->get_logger(), "Simulated rendezvous schedule of robot " + line);
+                    while (delim0 != std::string::npos)
+                    {
                         auto delim1 = line.find(",", delim0 + 1);
-
+                        
                         auto start = std::stoull(line.substr(delim0 + 1, delim1)) + initial_time;
 
                         delim0 = delim1;
@@ -29,11 +31,14 @@ SimulatedRendezVous::SimulatedRendezVous(std::shared_ptr<rclcpp::Node> &node,
 
                         rendezvous_ranges_.push_back(std::make_pair(start, end));
 
-                        delim0 = delim1;
+                        delim0 = line.find(",", delim1 +1);
                     }
                 }
             }
             schedule.close();
+        } else {
+            RCLCPP_ERROR(node_->get_logger(), "Unable to open rendezvous schedule file");
+            enabled_ = false;
         }
     }
     catch (const std::exception &e)
@@ -45,12 +50,14 @@ SimulatedRendezVous::SimulatedRendezVous(std::shared_ptr<rclcpp::Node> &node,
 
 bool SimulatedRendezVous::is_alive()
 {
-    if (enabled_) {
+    if (enabled_)
+    {
         bool is_alive = false;
         uint64_t current_time = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 
-        for (const auto& range: rendezvous_ranges_)
+        for (const auto &range : rendezvous_ranges_)
         {
+            RCLCPP_INFO(node_->get_logger(), "Rendezvous time: %d", ((int) current_time) - range.first);
             if (current_time >= range.first && current_time <= range.second)
             {
                 is_alive = true;

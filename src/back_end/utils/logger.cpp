@@ -31,6 +31,10 @@ namespace cslam
         log_sparsification_cumulative_computation_time_ = 0.0;
     }
 
+    void Logger::log_pose_timestamp(const gtsam::LabeledSymbol & symbol, const int& sec, const int& nanosec){
+        pose_time_map_.insert({symbol, {sec, nanosec}});
+    }
+
     void Logger::add_pose_graph_log_info(const cslam_common_interfaces::msg::PoseGraph &msg)
     {
         pose_graphs_log_info_.push_back(msg);
@@ -174,6 +178,19 @@ namespace cslam
                 }
             }
         }
+
+        std::ofstream pose_time_map_file;
+        pose_time_map_file.open(result_folder + "/pose_timestamps" + std::to_string(robot_id_) + ".csv");
+        pose_time_map_file << "vertice_id,sec,nanosec" << std::endl;
+
+        for (const auto& key_value: pose_time_map_)
+        {
+            pose_time_map_file << std::to_string(key_value.first) << ","
+                            << std::to_string(key_value.second.first) << ","
+                            << std::to_string(key_value.second.second) << std::endl;
+        }
+        
+        pose_time_map_file.close();
 
         // Clear logs
         pose_graphs_log_info_.clear();

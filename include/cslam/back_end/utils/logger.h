@@ -66,6 +66,8 @@ namespace cslam
 
         void fill_msg(cslam_common_interfaces::msg::PoseGraph & msg);
 
+        void log_pose_timestamp(const gtsam::LabeledSymbol & symbol, const int& sec, const int& nanosec);
+
     private:
     
         double compute_error(const gtsam::NonlinearFactorGraph::shared_ptr &graph,
@@ -96,6 +98,8 @@ namespace cslam
 
         unsigned int log_nb_matches_, log_nb_failed_matches_, log_nb_vertices_transmitted_, log_nb_matches_selected_, log_detection_cumulative_communication_, log_local_descriptors_cumulative_communication_;
         float log_sparsification_cumulative_computation_time_;
+
+        std::map<gtsam::LabeledSymbol, std::pair<int, int>> pose_time_map_;
     };
 
 } // namespace cslam
