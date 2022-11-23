@@ -15,7 +15,7 @@ RGBDHandler::RGBDHandler(std::shared_ptr<rclcpp::Node> &node)
                                         "color/camera_info");
   node->declare_parameter<std::string>("frontend.odom_topic", "odom");
   node->declare_parameter<float>("frontend.keyframe_generation_ratio_threshold", 0.0);
-  node->declare_parameter<std::string>("frontend.sensor_base_frame_id", "camera_link");
+  node->declare_parameter<std::string>("frontend.sensor_base_frame_id", ""); // If empty we assume that the camera link is the base link
   node->declare_parameter<bool>("evaluation.enable_logs", false);
   node_->get_parameter("frontend.max_queue_size", max_queue_size_);
   node_->get_parameter("frontend.keyframe_generation_ratio_threshold", keyframe_generation_ratio_threshold_);
@@ -192,11 +192,15 @@ void RGBDHandler::rgbd_callback(
 
   rclcpp::Time stamp = rtabmap_ros::timestampFromROS(image_rect_rgb->header.stamp) > rtabmap_ros::timestampFromROS(image_rect_depth->header.stamp) ? image_rect_rgb->header.stamp : image_rect_depth->header.stamp;
 
-  Transform local_transform = rtabmap_ros::getTransform(base_frame_id_, image_rect_rgb->header.frame_id, stamp, *tf_buffer_, 0.1);
-  if (local_transform.isNull())
+	Transform local_transform;
+  if (base_frame_id_ != "")
   {
-    return;
-  }
+		local_transform = rtabmap_ros::getTransform(base_frame_id_, image_rect_rgb->header.frame_id, stamp, *tf_buffer_, 0.1);
+		if (local_transform.isNull())
+		{
+		  return;
+		}
+	}
 
   cv_bridge::CvImageConstPtr ptr_image = cv_bridge::toCvShare(image_rect_rgb);
   if (image_rect_rgb->encoding.compare(sensor_msgs::image_encodings::TYPE_8UC1) != 0 &&

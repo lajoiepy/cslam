@@ -24,10 +24,6 @@ from rclpy.clock import Clock
 from cslam.neighbors_manager import NeighborManager
 from cslam.utils.misc import dict_to_list_chunks
 
-# Import OpenCV at the end to avoid issue on NVIDIA Jetson Xavier: https://github.com/opencv/opencv/issues/14884#issuecomment-599852128
-import cv2
-from cv_bridge import CvBridge
-
 class GlobalDescriptorLoopClosureDetection(object):
     """ Global descriptor matching """
 
@@ -139,6 +135,12 @@ class GlobalDescriptorLoopClosureDetection(object):
             self.log_total_matches_selected = 0
             self.log_detection_cumulative_communication = 0
             self.log_total_sparsification_computation_time = 0.0
+        
+        # Import OpenCV at the end to avoid issue on NVIDIA Jetson Xavier: https://github.com/opencv/opencv/issues/14884#issuecomment-599852128
+        global cv2
+        import cv2
+        global CvBridge
+        from cv_bridge import CvBridge
 
     def add_global_descriptor_to_map(self, embedding, kf_id):
         """ Add global descriptor to matching list

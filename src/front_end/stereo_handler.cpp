@@ -99,14 +99,18 @@ void StereoHandler::stereo_callback(
           ? image_rect_left->header.stamp
           : image_rect_right->header.stamp;
 
-  Transform localTransform = rtabmap_ros::getTransform(
-      base_frame_id_, image_rect_left->header.frame_id, stamp, *tf_buffer_, 0.1);
-  if (localTransform.isNull()) {
-    RCLCPP_INFO(node_->get_logger(),
-                 "Could not get transform from %s to %s after 0.1 s!",
-                 base_frame_id_.c_str(), image_rect_left->header.frame_id.c_str());
-    return;
-  }
+  Transform localTransform;
+  if (base_frame_id_ != "")
+  {
+		localTransform = rtabmap_ros::getTransform(
+		    base_frame_id_, image_rect_left->header.frame_id, stamp, *tf_buffer_, 0.1);
+		if (localTransform.isNull()) {
+		  RCLCPP_INFO(node_->get_logger(),
+		               "Could not get transform from %s to %s after 0.1 s!",
+		               base_frame_id_.c_str(), image_rect_left->header.frame_id.c_str());
+		  return;
+		}
+	}
 
   if (image_rect_left->data.size() && image_rect_right->data.size()) {
     bool alreadyRectified = true;
