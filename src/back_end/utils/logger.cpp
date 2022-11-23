@@ -81,13 +81,19 @@ namespace cslam
         // Write pgo logs (.g2o)
         try
         {
-            if (initial_global_pose_graph_.second->size() > 0)
+            if (initial_global_pose_graph_.first != nullptr && initial_global_pose_graph_.second != nullptr)
             {
-                gtsam::writeG2o(*initial_global_pose_graph_.first, *initial_global_pose_graph_.second, result_folder + "/initial_global_pose_graph.g2o");
+                if (initial_global_pose_graph_.second->size() > 0)
+                {
+                    gtsam::writeG2o(*initial_global_pose_graph_.first, *initial_global_pose_graph_.second, result_folder + "/initial_global_pose_graph.g2o");
+                } 
             }
-            if (optimized_global_pose_graph_.second->size() > 0)
+            if (optimized_global_pose_graph_.first != nullptr && optimized_global_pose_graph_.second != nullptr)
             {
-                gtsam::writeG2o(*optimized_global_pose_graph_.first, *optimized_global_pose_graph_.second, result_folder + "/optimized_global_pose_graph.g2o");
+                if (optimized_global_pose_graph_.second->size() > 0)
+                {
+                    gtsam::writeG2o(*optimized_global_pose_graph_.first, *optimized_global_pose_graph_.second, result_folder + "/optimized_global_pose_graph.g2o");
+                }
             }
         }
         catch (std::exception &e)
@@ -124,19 +130,23 @@ namespace cslam
         optimization_log_file << "total_sparsification_cumulative_computation_time," << std::to_string(total_sparsification_cumulative_computation_time) << std::endl;
         optimization_log_file << "latest_pgo_time," << std::to_string(elapsed_time_) << std::endl;
         optimization_log_file << "total_pgo_time," << std::to_string(total_pgo_time_) << std::endl;
-
-        optimization_log_file << "nb_edges," << std::to_string(optimized_global_pose_graph_.first->size()) << std::endl;
-        optimization_log_file << "nb_vertices," << std::to_string(optimized_global_pose_graph_.second->size()) << std::endl;
-        float total_error = compute_error(optimized_global_pose_graph_.first,
-                                          optimized_global_pose_graph_.second);
-        optimization_log_file << "total_error," << std::to_string(total_error) << std::endl;
-        auto loop_closure_errors = compute_inter_robot_loop_closure_errors(optimized_global_pose_graph_.first,
-                                                                           optimized_global_pose_graph_.second);
-        optimization_log_file << "inter_robot_loop_closures," << std::to_string(loop_closure_errors.size()) << std::endl;
-        for (const auto &error : loop_closure_errors)
+        
+        if (optimized_global_pose_graph_.first != nullptr && optimized_global_pose_graph_.second != nullptr)
         {
-            optimization_log_file << "error"
-                                     << "," << std::to_string(error.second) << std::endl;
+            optimization_log_file << "nb_edges," << std::to_string(optimized_global_pose_graph_.first->size()) << std::endl;
+            optimization_log_file << "nb_vertices," << std::to_string(optimized_global_pose_graph_.second->size()) << std::endl;
+            float total_error = compute_error(optimized_global_pose_graph_.first,
+                                            optimized_global_pose_graph_.second);
+            optimization_log_file << "total_error," << std::to_string(total_error) << std::endl;
+            auto loop_closure_errors = compute_inter_robot_loop_closure_errors(optimized_global_pose_graph_.first,
+                                                                            optimized_global_pose_graph_.second);
+        
+            optimization_log_file << "inter_robot_loop_closures," << std::to_string(loop_closure_errors.size()) << std::endl;
+            for (const auto &error : loop_closure_errors)
+            {
+                optimization_log_file << "error"
+                                        << "," << std::to_string(error.second) << std::endl;
+            }
         }
 
         optimization_log_file.close();
@@ -194,11 +204,17 @@ namespace cslam
 
         // Clear logs
         pose_graphs_log_info_.clear();
-        initial_global_pose_graph_.first.reset();
-        initial_global_pose_graph_.second.reset();
-        optimized_global_pose_graph_.first.reset();
-        optimized_global_pose_graph_.second.reset();
         gps_values_.clear();
+        if (optimized_global_pose_graph_.first != nullptr && optimized_global_pose_graph_.second != nullptr)
+        {
+            optimized_global_pose_graph_.first.reset();
+            optimized_global_pose_graph_.second.reset();
+        }
+        if (initial_global_pose_graph_.first != nullptr && initial_global_pose_graph_.second != nullptr)
+        {
+            initial_global_pose_graph_.first.reset();
+            initial_global_pose_graph_.second.reset();
+        }
     }
 
     std::vector<std::pair<std::pair<gtsam::LabeledSymbol, gtsam::LabeledSymbol>, double>> Logger::compute_inter_robot_loop_closure_errors(const gtsam::NonlinearFactorGraph::shared_ptr &graph,
