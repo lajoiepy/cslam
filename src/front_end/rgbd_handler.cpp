@@ -192,7 +192,7 @@ void RGBDHandler::rgbd_callback(
 
   rclcpp::Time stamp = rtabmap_ros::timestampFromROS(image_rect_rgb->header.stamp) > rtabmap_ros::timestampFromROS(image_rect_depth->header.stamp) ? image_rect_rgb->header.stamp : image_rect_depth->header.stamp;
 
-	Transform local_transform;
+	Transform local_transform(0,0,0,0,0,0);
   if (base_frame_id_ != "")
   {
 		local_transform = rtabmap_ros::getTransform(base_frame_id_, image_rect_rgb->header.frame_id, stamp, *tf_buffer_, 0.1);
@@ -200,7 +200,7 @@ void RGBDHandler::rgbd_callback(
 		{
 		  return;
 		}
-	}
+  }
 
   cv_bridge::CvImageConstPtr ptr_image = cv_bridge::toCvShare(image_rect_rgb);
   if (image_rect_rgb->encoding.compare(sensor_msgs::image_encodings::TYPE_8UC1) != 0 &&

@@ -1,5 +1,5 @@
 # TODO: CosPlace Instructions
-
-# TODO: add NetVLAD instructions
+# Download from https://github.com/gmberton/CosPlace
+# The default parameters are for ResNet-18 with dimension=64
 
 # TODO: recommend symlink

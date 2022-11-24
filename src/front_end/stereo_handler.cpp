@@ -99,7 +99,7 @@ void StereoHandler::stereo_callback(
           ? image_rect_left->header.stamp
           : image_rect_right->header.stamp;
 
-  Transform localTransform;
+  Transform localTransform(0,0,0,0,0,0);
   if (base_frame_id_ != "")
   {
 		localTransform = rtabmap_ros::getTransform(
