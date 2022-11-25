@@ -1,6 +1,12 @@
 #include "cslam/front_end/rgbd_handler.h"
 #include "cslam/front_end/sensor_msg_utils.h"
 
+// For visualization
+#include <pcl_conversions/pcl_conversions.h>
+#include <pcl/PCLPointCloud2.h>
+#include <pcl/point_types.h>
+#include <pcl/filters/voxel_grid.h>
+
 using namespace rtabmap;
 using namespace cslam;
 
@@ -24,6 +30,8 @@ RGBDHandler::RGBDHandler(std::shared_ptr<rclcpp::Node> &node)
                        enable_visualization_);
   node_->get_parameter("visualization.publishing_period_ms",
                        visualization_period_ms_);
+  node_->get_parameter("visualization.voxel_size",
+                       visualization_voxel_size_);
   node_->get_parameter("evaluation.enable_logs",
                        enable_logs_);
   node->get_parameter("evaluation.enable_gps_recording",
@@ -625,6 +633,24 @@ void RGBDHandler::send_visualization_keypoints(const std::pair<std::shared_ptr<r
   visualization_local_descriptors_publisher_->publish(features_msg);
 }
 
+sensor_msgs::msg::PointCloud2 RGBDHandler::visualization_pointcloud_voxel_subsampling(
+    const sensor_msgs::msg::PointCloud2 &input_cloud)
+{
+  pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZRGB>);
+  pcl::fromROSMsg(input_cloud, *cloud);
+
+  pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_filtered(new pcl::PointCloud<pcl::PointXYZRGB>);
+  pcl::VoxelGrid<pcl::PointXYZRGB> sor;
+  sor.setInputCloud(cloud);
+  sor.setLeafSize(visualization_voxel_size_, visualization_voxel_size_, visualization_voxel_size_);
+  sor.filter(*cloud_filtered);
+
+  sensor_msgs::msg::PointCloud2 output_cloud;
+  pcl::toROSMsg(*cloud_filtered, output_cloud);
+  output_cloud.header = input_cloud.header;
+  return output_cloud;
+}
+
 void RGBDHandler::send_visualization_pointcloud(const std::shared_ptr<rtabmap::SensorData> & sensor_data)
 {
   cslam_common_interfaces::msg::VizPointCloud keyframe_pointcloud_msg;
@@ -634,6 +660,12 @@ void RGBDHandler::send_visualization_pointcloud(const std::shared_ptr<rtabmap::S
   header.stamp = node_->now();
   header.frame_id = MAP_FRAME_ID(robot_id_);
   auto pointcloud_msg = create_colored_pointcloud(sensor_data, header);
+
+  if (visualization_voxel_size_ > 0.0)
+  {
+    pointcloud_msg = visualization_pointcloud_voxel_subsampling(pointcloud_msg);
+  }
+
   keyframe_pointcloud_msg.pointcloud = pointcloud_msg;
   keyframe_pointcloud_publisher_->publish(keyframe_pointcloud_msg);
 }

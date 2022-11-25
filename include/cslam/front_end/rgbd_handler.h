@@ -204,6 +204,15 @@ namespace cslam
          */
         void gps_callback(const sensor_msgs::msg::NavSatFix::ConstSharedPtr msg);
 
+        /**
+         * @brief Subsample pointcloud to reduce size for visualization
+         * 
+         * @param input_cloud 
+         * @return pcl::PointCloud<pcl::PointXYZRGB>& 
+         */
+        sensor_msgs::msg::PointCloud2 visualization_pointcloud_voxel_subsampling(
+                        const sensor_msgs::msg::PointCloud2 &input_cloud);
+
     protected:
         std::deque<std::pair<std::shared_ptr<rtabmap::SensorData>,
                              nav_msgs::msg::Odometry::ConstSharedPtr>>
@@ -272,6 +281,7 @@ namespace cslam
 
         unsigned int visualization_period_ms_;
         bool enable_visualization_;
+        float visualization_voxel_size_;
 
         bool enable_gps_recording_;
         std::string gps_topic_;
