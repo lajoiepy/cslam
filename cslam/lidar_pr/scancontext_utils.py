@@ -6,16 +6,17 @@ np.set_printoptions(precision=4)
 import time
 from scipy import spatial
 
+import rclpy#TODO: remove
+
 def xy2theta(x, y):
     if (x >= 0 and y >= 0): 
-        theta = 180/np.pi * np.arctan(y/x);
-    if (x < 0 and y >= 0): 
-        theta = 180 - ((180/np.pi) * np.arctan(y/(-x)));
-    if (x < 0 and y < 0): 
-        theta = 180 + ((180/np.pi) * np.arctan(y/x));
-    if ( x >= 0 and y < 0):
-        theta = 360 - ((180/np.pi) * np.arctan((-y)/x));
-
+        theta = 180/np.pi * np.arctan(y/x)
+    elif (x < 0 and y >= 0): 
+        theta = 180 - ((180/np.pi) * np.arctan(y/(-x)))
+    elif (x < 0 and y < 0): 
+        theta = 180 + ((180/np.pi) * np.arctan(y/x))
+    elif ( x >= 0 and y < 0):
+        theta = 360 - ((180/np.pi) * np.arctan((-y)/x))
     return theta
 
 
@@ -55,6 +56,9 @@ def ptcloud2sc(ptcloud, sc_shape, max_length):
     num_points = ptcloud.shape[0]
     for pt_idx in range(num_points):
         point = ptcloud[pt_idx, :]
+        if np.isnan(point[0]) or np.isnan(point[1]) or np.isnan(point[2]):
+            # Reject spurious points
+            continue
         point_height = point[2] + 2.0 # for setting ground is roughly zero 
         
         idx_ring, idx_sector = pt2rs(point, gap_ring, gap_sector, num_ring, num_sector)

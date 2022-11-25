@@ -17,7 +17,7 @@ SimulatedRendezVous::SimulatedRendezVous(std::shared_ptr<rclcpp::Node> &node,
                 auto delim0 = line.find(",");
                 if (robot_id_ == std::stoul(line.substr(0, delim0)))
                 {
-                    RCLCPP_INFO(node_->get_logger(), "Simulated rendezvous schedule of robot " + line);
+                    //RCLCPP_INFO(node_->get_logger(), "Simulated rendezvous schedule of robot " + line);
                     while (delim0 != std::string::npos)
                     {
                         auto delim1 = line.find(",", delim0 + 1);
@@ -57,7 +57,7 @@ bool SimulatedRendezVous::is_alive()
 
         for (const auto &range : rendezvous_ranges_)
         {
-            RCLCPP_INFO(node_->get_logger(), "Rendezvous time: %d", ((int) current_time) - range.first);
+            //RCLCPP_INFO(node_->get_logger(), "Time until rendezvous (%d,%d) = %d | Time until rendezvous end = %d", ((int) range.first), ((int) range.second), range.first - ((int)current_time), range.second - ((int)current_time));
             if (current_time >= range.first && current_time <= range.second)
             {
                 is_alive = true;

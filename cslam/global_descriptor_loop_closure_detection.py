@@ -48,6 +48,7 @@ class GlobalDescriptorLoopClosureDetection(object):
         elif self.params['frontend.global_descriptor_technique'].lower(
         ) == 'scancontext':
             from cslam.lidar_pr.scancontext import ScanContext
+            global icp_utils
             import cslam.lidar_pr.icp_utils as icp_utils
             self.node.get_logger().info('Using ScanContext.')
             self.global_descriptor = ScanContext(self.params, self.node)
@@ -315,9 +316,6 @@ class GlobalDescriptorLoopClosureDetection(object):
             selection = self.lcm.select_candidates(
                 self.params["frontend.inter_robot_loop_closure_budget"],
                 neighbors_is_in_range)
-
-            self.node.get_logger().info(
-                "Selected {} candidates to match".format(len(selection))) # TODO: remove
 
             # Extract and publish local descriptors
             vertices_info = self.edge_list_to_vertices(selection)
