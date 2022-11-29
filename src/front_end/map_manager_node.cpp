@@ -24,6 +24,7 @@ int main(int argc, char **argv) {
   node->declare_parameter<bool>("visualization.enable", false);
   node->declare_parameter<int>("visualization.publishing_period_ms", 0);
   node->declare_parameter<float>("visualization.voxel_size", 0.05);
+  node->declare_parameter<float>("visualization.max_range", 2.0);
   node->declare_parameter<bool>("evaluation.enable_gps_recording", false);
   node->declare_parameter<std::string>("evaluation.gps_topic", "");
 
