@@ -22,10 +22,10 @@ class NeighborManager():
                     self.params['neighbor_management.max_heartbeat_delay_sec'])
 
         self.subscriber = self.node.create_subscription(
-            String, 'get_current_neighbors',
+            String, 'cslam/get_current_neighbors',
             self.get_current_neighbors_callback, 100)
         self.neighbors_publisher = self.node.create_publisher(
-            RobotIdsAndOrigin, 'current_neighbors', 100)
+            RobotIdsAndOrigin, 'cslam/current_neighbors', 100)
 
     def check_neighbors_in_range(self):
         """Check which neighbors are in range

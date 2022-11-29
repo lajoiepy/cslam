@@ -61,7 +61,7 @@ class GlobalDescriptorLoopClosureDetection(object):
 
         # ROS 2 objects setup
         self.params[
-            'frontend.global_descriptors_topic'] = self.node.get_parameter(
+            'frontend.global_descriptors_topic'] = 'cslam/' + self.node.get_parameter(
                 'frontend.global_descriptors_topic').value
         self.global_descriptor_publisher = self.node.create_publisher(
             GlobalDescriptors,
@@ -72,7 +72,7 @@ class GlobalDescriptorLoopClosureDetection(object):
             self.global_descriptor_callback, 100)
 
         self.params[
-            'frontend.inter_robot_matches_topic'] = self.node.get_parameter(
+            'frontend.inter_robot_matches_topic'] = 'cslam/' + self.node.get_parameter(
                 'frontend.inter_robot_matches_topic').value
         self.inter_robot_matches_publisher = self.node.create_publisher(
             InterRobotMatches,
@@ -84,19 +84,19 @@ class GlobalDescriptorLoopClosureDetection(object):
 
         if self.keyframe_type == "rgb":
             self.receive_keyframe_subscriber = self.node.create_subscription(
-                KeyframeRGB, 'keyframe_data', self.receive_keyframe, 100)
+                KeyframeRGB, 'cslam/keyframe_data', self.receive_keyframe, 100)
         elif self.keyframe_type == "pointcloud":
             self.receive_keyframe_subscriber = self.node.create_subscription(
-                KeyframePointCloud, 'keyframe_data', self.receive_keyframe,
+                KeyframePointCloud, 'cslam/keyframe_data', self.receive_keyframe,
                 100)
         else:
             self.node.get_logger().error("Unknown keyframe type")
 
         self.local_match_publisher = self.node.create_publisher(
-            LocalKeyframeMatch, 'local_keyframe_match', 100)
+            LocalKeyframeMatch, 'cslam/local_keyframe_match', 100)
 
         self.receive_inter_robot_loop_closure_subscriber = self.node.create_subscription(
-            InterRobotLoopClosure, '/inter_robot_loop_closure',
+            InterRobotLoopClosure, '/cslam/inter_robot_loop_closure',
             self.receive_inter_robot_loop_closure, 100)
 
         self.local_descriptors_request_publishers = {}
@@ -104,7 +104,7 @@ class GlobalDescriptorLoopClosureDetection(object):
             self.local_descriptors_request_publishers[
                 i] = self.node.create_publisher(
                     LocalDescriptorsRequest,
-                    '/r' + str(i) + '/local_descriptors_request', 100)
+                    '/r' + str(i) + '/cslam/local_descriptors_request', 100)
 
         # Listen for changes in node liveliness
         self.neighbor_manager = NeighborManager(
@@ -127,9 +127,9 @@ class GlobalDescriptorLoopClosureDetection(object):
 
         if self.params["evaluation.enable_logs"]:
             self.log_publisher = self.node.create_publisher(
-                KeyValue, 'log_info', 100)
+                KeyValue, 'cslam/log_info', 100)
             self.log_matches_publisher = self.node.create_publisher(
-                InterRobotMatches, 'log_matches', 100)
+                InterRobotMatches, 'cslam/log_matches', 100)
             self.log_total_successful_matches = 0
             self.log_total_failed_matches = 0
             self.log_total_vertices_transmitted = 0

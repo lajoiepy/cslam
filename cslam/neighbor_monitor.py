@@ -25,7 +25,7 @@ class NeighborMonitor():
         self.last_match_sent = -1
 
         self.heartbeat_subscriber = self.node.create_subscription(
-            UInt32, '/r' + str(rid) + '/' + 'heartbeat',
+            UInt32, '/r' + str(rid) + '/' + 'cslam/heartbeat',
             self.heartbeat_callback, 10)
 
     def heartbeat_callback(self, msg):

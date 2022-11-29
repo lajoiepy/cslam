@@ -17,10 +17,10 @@ namespace cslam
         max_nb_robots_ = max_nb_robots;
 
         logger_subscriber_ = node_->create_subscription<diagnostic_msgs::msg::KeyValue>(
-            "log_info", 10, std::bind(&Logger::log_callback, this, std::placeholders::_1));
+            "cslam/log_info", 10, std::bind(&Logger::log_callback, this, std::placeholders::_1));
 
         inter_robot_matches_subscriber_ = node_->create_subscription<cslam_common_interfaces::msg::InterRobotMatches>(
-            "log_matches", 10, std::bind(&Logger::log_matches_callback, this, std::placeholders::_1));
+            "cslam/log_matches", 10, std::bind(&Logger::log_matches_callback, this, std::placeholders::_1));
 
         log_nb_matches_ = 0;
         log_nb_failed_matches_ = 0;

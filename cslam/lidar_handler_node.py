@@ -21,25 +21,25 @@ class LidarHandler: # TODO: document
                                   Subscriber(self.node, Odometry, self.params["frontend.odom_topic"])], 100, self.params["frontend.pointcloud_odom_approx_time_sync_s"] )
         tss.registerCallback(self.lidar_callback)
 
-        self.keyframe_odom_publisher = self.node.create_publisher(KeyframeOdom, "keyframe_odom", 100)
+        self.keyframe_odom_publisher = self.node.create_publisher(KeyframeOdom, "cslam/keyframe_odom", 100)
 
-        self.keyframe_pointcloud_publisher = self.node.create_publisher(KeyframePointCloud, "keyframe_data", 100)
+        self.keyframe_pointcloud_publisher = self.node.create_publisher(KeyframePointCloud, "cslam/keyframe_data", 100)
 
         self.send_local_descriptors_subscriber = self.node.create_subscription(LocalDescriptorsRequest,
-                                                                            "local_descriptors_request", self.send_local_descriptors_request, 100)
+                                                                            "cslam/local_descriptors_request", self.send_local_descriptors_request, 100)
 
         self.local_keyframe_match_subscriber = self.node.create_subscription(LocalKeyframeMatch,
-                                                                            "local_keyframe_match", self.receive_local_keyframe_match, 100)
+                                                                            "cslam/local_keyframe_match", self.receive_local_keyframe_match, 100)
         
-        self.pointcloud_descriptors_publisher = self.node.create_publisher(LocalPointCloudDescriptors, "/local_descriptors", 100)
+        self.pointcloud_descriptors_publisher = self.node.create_publisher(LocalPointCloudDescriptors, "/cslam/local_descriptors", 100)
         
-        self.pointcloud_descriptors_subscriber = self.node.create_subscription(LocalPointCloudDescriptors, "/local_descriptors", self.receive_local_descriptors, 100)
+        self.pointcloud_descriptors_subscriber = self.node.create_subscription(LocalPointCloudDescriptors, "/cslam/local_descriptors", self.receive_local_descriptors, 100)
         
-        self.intra_robot_loop_closure_publisher = self.node.create_publisher(IntraRobotLoopClosure, "intra_robot_loop_closure", 100)
+        self.intra_robot_loop_closure_publisher = self.node.create_publisher(IntraRobotLoopClosure, "cslam/intra_robot_loop_closure", 100)
 
-        self.inter_robot_loop_closure_publisher = self.node.create_publisher(InterRobotLoopClosure, "/inter_robot_loop_closure", 100)
+        self.inter_robot_loop_closure_publisher = self.node.create_publisher(InterRobotLoopClosure, "/cslam/inter_robot_loop_closure", 100)
 
-        self.viz_pointcloud_publisher = self.node.create_publisher(VizPointCloud, "/viz/keyframe_pointcloud", 100)
+        self.viz_pointcloud_publisher = self.node.create_publisher(VizPointCloud, "/cslam/viz/keyframe_pointcloud", 100)
 
         period_ms = self.params["frontend.map_manager_process_period_ms"]
         self.processing_timer = self.node.create_timer(float(period_ms)/1000, self.process_new_sensor_data, clock=Clock())

@@ -59,7 +59,7 @@ RGBDHandler::RGBDHandler(std::shared_ptr<rclcpp::Node> &node)
   // Service to extract and publish local image descriptors to another robot
   send_local_descriptors_subscriber_ = node_->create_subscription<
       cslam_common_interfaces::msg::LocalDescriptorsRequest>(
-      "local_descriptors_request", 100,
+      "cslam/local_descriptors_request", 100,
       std::bind(&RGBDHandler::local_descriptors_request, this,
                 std::placeholders::_1));
 
@@ -72,38 +72,38 @@ RGBDHandler::RGBDHandler(std::shared_ptr<rclcpp::Node> &node)
   // Publisher for global descriptors
   keyframe_data_publisher_ =
       node_->create_publisher<cslam_common_interfaces::msg::KeyframeRGB>(
-          "keyframe_data", 100);
+          "cslam/keyframe_data", 100);
 
   // Publisher for odometry with ID
   keyframe_odom_publisher_ =
       node_->create_publisher<cslam_common_interfaces::msg::KeyframeOdom>(
-          "keyframe_odom", 100);
+          "cslam/keyframe_odom", 100);
 
   // Local matches subscription
   local_keyframe_match_subscriber_ = node->create_subscription<
       cslam_common_interfaces::msg::LocalKeyframeMatch>(
-      "local_keyframe_match", 100,
+      "cslam/local_keyframe_match", 100,
       std::bind(&RGBDHandler::receive_local_keyframe_match, this,
                 std::placeholders::_1));
 
   // Publishers to other robots local descriptors subscribers
-  std::string local_descriptors_topic = "/local_descriptors";
+  std::string local_descriptors_topic = "/cslam/local_descriptors";
   local_descriptors_publisher_ = node_->create_publisher<
       cslam_common_interfaces::msg::LocalImageDescriptors>(local_descriptors_topic, 100);
 
   if (enable_visualization_)
   {
     visualization_local_descriptors_publisher_ = node_->create_publisher<
-        cslam_common_interfaces::msg::LocalImageDescriptors>("/viz/local_descriptors", 100);
+        cslam_common_interfaces::msg::LocalImageDescriptors>("/cslam/viz/local_descriptors", 100);
 
     keyframe_pointcloud_publisher_ = node_->create_publisher<cslam_common_interfaces::msg::VizPointCloud>(
-        "/viz/keyframe_pointcloud", 100);
+        "/cslam/viz/keyframe_pointcloud", 100);
   }
 
   // Subscriber for local descriptors
   local_descriptors_subscriber_ = node->create_subscription<
       cslam_common_interfaces::msg::LocalImageDescriptors>(
-      "/local_descriptors", 100,
+      "/cslam/local_descriptors", 100,
       std::bind(&RGBDHandler::receive_local_image_descriptors, this,
                 std::placeholders::_1));
 
@@ -116,12 +116,12 @@ RGBDHandler::RGBDHandler(std::shared_ptr<rclcpp::Node> &node)
   // Intra-robot loop closure publisher
   intra_robot_loop_closure_publisher_ = node_->create_publisher<
       cslam_common_interfaces::msg::IntraRobotLoopClosure>(
-      "intra_robot_loop_closure", 100);
+      "cslam/intra_robot_loop_closure", 100);
 
   // Publisher for inter robot loop closure to all robots
   inter_robot_loop_closure_publisher_ = node_->create_publisher<
       cslam_common_interfaces::msg::InterRobotLoopClosure>(
-      "/inter_robot_loop_closure", 100);
+      "/cslam/inter_robot_loop_closure", 100);
 
   tf_buffer_ = std::make_shared<tf2_ros::Buffer>(node_->get_clock());
   tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
@@ -162,7 +162,7 @@ RGBDHandler::RGBDHandler(std::shared_ptr<rclcpp::Node> &node)
   if (enable_logs_){
     log_total_local_descriptors_cumulative_communication_ = 0;
     log_publisher_ = node_->create_publisher<diagnostic_msgs::msg::KeyValue>(
-        "log_info", 100);
+        "cslam/log_info", 100);
   }
 }
 

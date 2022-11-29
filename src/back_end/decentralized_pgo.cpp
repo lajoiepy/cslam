@@ -39,25 +39,25 @@ DecentralizedPGO::DecentralizedPGO(std::shared_ptr<rclcpp::Node> &node)
 
   odometry_subscriber_ =
       node->create_subscription<cslam_common_interfaces::msg::KeyframeOdom>(
-          "keyframe_odom", 1000,
+          "cslam/keyframe_odom", 1000,
           std::bind(&DecentralizedPGO::odometry_callback, this,
                     std::placeholders::_1));
 
   intra_robot_loop_closure_subscriber_ = node->create_subscription<
       cslam_common_interfaces::msg::IntraRobotLoopClosure>(
-      "intra_robot_loop_closure", 1000,
+      "cslam/intra_robot_loop_closure", 1000,
       std::bind(&DecentralizedPGO::intra_robot_loop_closure_callback, this,
                 std::placeholders::_1));
 
   inter_robot_loop_closure_subscriber_ = node->create_subscription<
       cslam_common_interfaces::msg::InterRobotLoopClosure>(
-      "/inter_robot_loop_closure", 1000,
+      "/cslam/inter_robot_loop_closure", 1000,
       std::bind(&DecentralizedPGO::inter_robot_loop_closure_callback, this,
                 std::placeholders::_1));
 
   write_current_estimates_subscriber_ =
       node->create_subscription<std_msgs::msg::String>(
-          "print_current_estimates", 100,
+          "cslam/print_current_estimates", 100,
           std::bind(&DecentralizedPGO::write_current_estimates_callback, this,
                     std::placeholders::_1));
 
@@ -96,29 +96,29 @@ DecentralizedPGO::DecentralizedPGO(std::shared_ptr<rclcpp::Node> &node)
   // Publishers for optimization result
   debug_optimization_result_publisher_ =
       node_->create_publisher<cslam_common_interfaces::msg::OptimizationResult>(
-          "debug_optimization_result", 100);
+          "cslam/debug_optimization_result", 100);
 
   for (unsigned int i = 0; i < max_nb_robots_; i++)
   {
     optimized_estimates_publishers_.insert(
         {i, node->create_publisher<
                 cslam_common_interfaces::msg::OptimizationResult>(
-                "/r" + std::to_string(i) + "/optimized_estimates", 100)});
+                "/r" + std::to_string(i) + "/cslam/optimized_estimates", 100)});
   }
 
   optimized_estimates_subscriber_ = node->create_subscription<
       cslam_common_interfaces::msg::OptimizationResult>(
-      "optimized_estimates", 100,
+      "cslam/optimized_estimates", 100,
       std::bind(&DecentralizedPGO::optimized_estimates_callback, this,
                 std::placeholders::_1));
 
   optimized_pose_estimate_publisher_ = node->create_publisher<
                 geometry_msgs::msg::PoseStamped>(
-                "/r" + std::to_string(robot_id_) + "/current_pose_estimate", 100);
+                "/r" + std::to_string(robot_id_) + "/cslam/current_pose_estimate", 100);
 
   optimizer_state_publisher_ =
       node_->create_publisher<cslam_common_interfaces::msg::OptimizerState>(
-          "optimizer_state", 100);
+          "cslam/optimizer_state", 100);
 
   // Initialize inter-robot loop closures measurements
   for (unsigned int i = 0; i < max_nb_robots_; i++)
@@ -132,12 +132,12 @@ DecentralizedPGO::DecentralizedPGO(std::shared_ptr<rclcpp::Node> &node)
 
   // Get neighbors ROS 2 objects
   get_current_neighbors_publisher_ =
-      node->create_publisher<std_msgs::msg::String>("get_current_neighbors",
+      node->create_publisher<std_msgs::msg::String>("cslam/get_current_neighbors",
                                                     100);
 
   current_neighbors_subscriber_ = node->create_subscription<
       cslam_common_interfaces::msg::RobotIdsAndOrigin>(
-      "current_neighbors", 100,
+      "cslam/current_neighbors", 100,
       std::bind(&DecentralizedPGO::current_neighbors_callback, this,
                 std::placeholders::_1));
 
@@ -146,29 +146,29 @@ DecentralizedPGO::DecentralizedPGO(std::shared_ptr<rclcpp::Node> &node)
   {
     get_pose_graph_publishers_.insert(
         {i, node->create_publisher<cslam_common_interfaces::msg::RobotIds>(
-                "/r" + std::to_string(i) + "/get_pose_graph", 100)});
+                "/r" + std::to_string(i) + "/cslam/get_pose_graph", 100)});
     received_pose_graphs_.insert({i, false});
   }
 
   get_pose_graph_subscriber_ =
       node->create_subscription<cslam_common_interfaces::msg::RobotIds>(
-          "get_pose_graph", 100,
+          "cslam/get_pose_graph", 100,
           std::bind(&DecentralizedPGO::get_pose_graph_callback, this,
                     std::placeholders::_1));
 
   pose_graph_publisher_ =
       node->create_publisher<cslam_common_interfaces::msg::PoseGraph>(
-          "/pose_graph", 100);
+          "/cslam/pose_graph", 100);
 
   pose_graph_subscriber_ =
       node->create_subscription<cslam_common_interfaces::msg::PoseGraph>(
-          "/pose_graph", 100,
+          "/cslam/pose_graph", 100,
           std::bind(&DecentralizedPGO::pose_graph_callback, this,
                     std::placeholders::_1));
 
   visualization_pose_graph_publisher_ =
       node->create_publisher<cslam_common_interfaces::msg::PoseGraph>(
-          "/viz/pose_graph", 100);
+          "/cslam/viz/pose_graph", 100);
 
   // Optimizer
   optimizer_state_ = OptimizerState::IDLE;
@@ -186,14 +186,14 @@ DecentralizedPGO::DecentralizedPGO(std::shared_ptr<rclcpp::Node> &node)
   }
 
   heartbeat_publisher_ =
-      node_->create_publisher<std_msgs::msg::UInt32>("heartbeat", 10);
+      node_->create_publisher<std_msgs::msg::UInt32>("cslam/heartbeat", 10);
   heartbeat_timer_ = node_->create_wall_timer(
       std::chrono::milliseconds((unsigned int)heartbeat_period_sec_ * 1000),
       std::bind(&DecentralizedPGO::heartbeat_timer_callback, this));
 
   reference_frame_per_robot_publisher_ =
       node_->create_publisher<cslam_common_interfaces::msg::ReferenceFrames>(
-          "reference_frames", rclcpp::QoS(1).transient_local());
+          "cslam/reference_frames", rclcpp::QoS(1).transient_local());
 
   origin_robot_id_ = robot_id_;
 
