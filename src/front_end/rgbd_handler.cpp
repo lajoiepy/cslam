@@ -6,6 +6,7 @@
 #include <pcl/PCLPointCloud2.h>
 #include <pcl/point_types.h>
 #include <pcl/filters/voxel_grid.h>
+#include <pcl/filters/passthrough.h>
 
 using namespace rtabmap;
 using namespace cslam;
@@ -32,6 +33,9 @@ RGBDHandler::RGBDHandler(std::shared_ptr<rclcpp::Node> &node)
                        visualization_period_ms_);
   node_->get_parameter("visualization.voxel_size",
                        visualization_voxel_size_);
+  node_->get_parameter("visualization.max_range",
+                       visualization_max_range_);
+
   node_->get_parameter("evaluation.enable_logs",
                        enable_logs_);
   node->get_parameter("evaluation.enable_gps_recording",
@@ -645,8 +649,15 @@ sensor_msgs::msg::PointCloud2 RGBDHandler::visualization_pointcloud_voxel_subsam
   sor.setLeafSize(visualization_voxel_size_, visualization_voxel_size_, visualization_voxel_size_);
   sor.filter(*cloud_filtered);
 
+  pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_filtered_clipped(new pcl::PointCloud<pcl::PointXYZRGB>);
+  pcl::PassThrough<pcl::PointXYZRGB> pass;
+  pass.setInputCloud (cloud_filtered);
+  pass.setFilterFieldName ("z");
+  pass.setFilterLimits (0.0, visualization_max_range_);
+  pass.filter(*cloud_filtered_clipped);
+
   sensor_msgs::msg::PointCloud2 output_cloud;
-  pcl::toROSMsg(*cloud_filtered, output_cloud);
+  pcl::toROSMsg(*cloud_filtered_clipped, output_cloud);
   output_cloud.header = input_cloud.header;
   return output_cloud;
 }

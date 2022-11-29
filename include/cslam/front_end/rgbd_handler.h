@@ -281,7 +281,7 @@ namespace cslam
 
         unsigned int visualization_period_ms_;
         bool enable_visualization_;
-        float visualization_voxel_size_;
+        float visualization_voxel_size_, visualization_max_range_;
 
         bool enable_gps_recording_;
         std::string gps_topic_;
