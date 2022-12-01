@@ -283,6 +283,7 @@ void DecentralizedPGO::intra_robot_loop_closure_callback(
                                            default_noise_model_);
 
     pose_graph_->push_back(factor);
+    RCLCPP_INFO(node_->get_logger(), "New intra-robot loop closure (%d, %d).", msg->keyframe0_id, msg->keyframe1_id);
   }
 }
 

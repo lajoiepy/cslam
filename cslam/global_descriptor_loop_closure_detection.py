@@ -61,7 +61,7 @@ class GlobalDescriptorLoopClosureDetection(object):
 
         # ROS 2 objects setup
         self.params[
-            'frontend.global_descriptors_topic'] = 'cslam/' + self.node.get_parameter(
+            'frontend.global_descriptors_topic'] = '/cslam/' + self.node.get_parameter(
                 'frontend.global_descriptors_topic').value
         self.global_descriptor_publisher = self.node.create_publisher(
             GlobalDescriptors,

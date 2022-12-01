@@ -250,7 +250,7 @@ void RGBDHandler::rgbd_callback(
     received_data_queue_.pop_front();
     RCLCPP_WARN(
         node_->get_logger(),
-        "Maximum queue size (%d) exceeded, the oldest element was removed.",
+        "RGBD: Maximum queue size (%d) exceeded, the oldest element was removed.",
         max_queue_size_);
   }
 
