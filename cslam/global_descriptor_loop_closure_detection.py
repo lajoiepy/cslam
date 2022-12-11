@@ -143,6 +143,8 @@ class GlobalDescriptorLoopClosureDetection(object):
         global CvBridge
         from cv_bridge import CvBridge
 
+        self.gpu_start_time = time.time() # TODO: remove
+
     def add_global_descriptor_to_map(self, embedding, kf_id):
         """ Add global descriptor to matching list
 

@@ -233,6 +233,34 @@ class AlgebraicConnectivityMaximization(object):
             edges[e] = edges[e]._replace(weight=np.random.rand())
         return self.greedy_initialization(nb_candidates_to_choose, edges)
 
+    def connection_biased_greedy_selection(self, nb_candidates_to_choose, edges, is_robot_included):
+        """Greedy weight initialization with connection bias
+        TODO
+        """
+        nb_candidate_chosen = 0
+        edges_copy = edges.copy()
+        edges_ids_to_select = []
+        for rid in is_robot_included:
+            if not self.initial_fixed_edge_exists[rid]:
+                max_weight = -1
+                max_edge = None
+                for i in range(len(edges_copy)):
+                    if edges_copy[i].robot0_id == rid or edges_copy[i].robot1_id == rid:
+                        if edges_copy[i].weight > max_weight:
+                            max_weight = edges_copy[i].weight
+                            max_edge = i
+                if max_edge is not None:
+                    edges_ids_to_select.append(max_edge)
+                    edges_copy[max_edge]._replace(weight=0.0)
+                    nb_candidate_chosen += 1
+
+        w_init = np.zeros(len(edges))
+        if nb_candidates_to_choose - nb_candidate_chosen > 0:
+            w_init = self.greedy_initialization(nb_candidates_to_choose - nb_candidate_chosen, edges_copy)
+        for i in edges_ids_to_select:
+            w_init[i] = 1.0
+        return w_init
+
     def compute_offsets(self, is_robot_included):
         """Compute rekey offsets
 
@@ -278,6 +306,16 @@ class AlgebraicConnectivityMaximization(object):
                 j = self.offsets[e.robot1_id] + e.robot1_keyframe_id
                 rekeyed_edges.append(Edge(i, j, e.weight))
         return rekeyed_edges
+
+    def get_included_edges(self, edges, is_robot_included):
+        """TODO
+        """
+        # Rekey edges
+        included_edges = []
+        for e in edges:
+            if is_robot_included[e.robot0_id] and is_robot_included[e.robot1_id]:
+                included_edges.append(e)
+        return included_edges
 
     def fill_odometry(self):
         """Add odometry edges
@@ -452,16 +490,14 @@ class AlgebraicConnectivityMaximization(object):
                                                  rekeyed_candidate_edges,
                                                  w_init,
                                                  nb_candidates_to_choose)
-                if self.params["evaluation.enable_sparsification_comparison"]:
-                    self.sparsification_comparison_logs(
-                        rekeyed_candidate_edges, is_robot_included, w_init,
-                        result)
             else:
-                result = w_init
-                if self.params["evaluation.enable_sparsification_comparison"]:
-                    self.sparsification_comparison_logs(
-                        rekeyed_candidate_edges, is_robot_included, result,
-                        result)
+                result = self.connection_biased_greedy_selection(    
+                    nb_candidates_to_choose, self.get_included_edges(self.candidate_edges.values(), is_robot_included), is_robot_included)
+                    
+            if self.params["evaluation.enable_sparsification_comparison"]:
+                self.sparsification_comparison_logs(
+                    rekeyed_candidate_edges, is_robot_included, w_init,
+                    result)
 
             selected_edges = [
                 rekeyed_candidate_edges[i]

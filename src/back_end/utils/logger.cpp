@@ -31,7 +31,8 @@ namespace cslam
         log_sparsification_cumulative_computation_time_ = 0.0;
     }
 
-    void Logger::log_pose_timestamp(const gtsam::LabeledSymbol & symbol, const int& sec, const int& nanosec){
+    void Logger::log_pose_timestamp(const gtsam::LabeledSymbol &symbol, const int &sec, const int &nanosec)
+    {
         pose_time_map_.insert({symbol, {sec, nanosec}});
     }
 
@@ -86,7 +87,7 @@ namespace cslam
                 if (initial_global_pose_graph_.second->size() > 0)
                 {
                     gtsam::writeG2o(*initial_global_pose_graph_.first, *initial_global_pose_graph_.second, result_folder + "/initial_global_pose_graph.g2o");
-                } 
+                }
             }
             if (optimized_global_pose_graph_.first != nullptr && optimized_global_pose_graph_.second != nullptr)
             {
@@ -130,22 +131,22 @@ namespace cslam
         optimization_log_file << "total_sparsification_cumulative_computation_time," << std::to_string(total_sparsification_cumulative_computation_time) << std::endl;
         optimization_log_file << "latest_pgo_time," << std::to_string(elapsed_time_) << std::endl;
         optimization_log_file << "total_pgo_time," << std::to_string(total_pgo_time_) << std::endl;
-        
+
         if (optimized_global_pose_graph_.first != nullptr && optimized_global_pose_graph_.second != nullptr)
         {
             optimization_log_file << "nb_edges," << std::to_string(optimized_global_pose_graph_.first->size()) << std::endl;
             optimization_log_file << "nb_vertices," << std::to_string(optimized_global_pose_graph_.second->size()) << std::endl;
             float total_error = compute_error(optimized_global_pose_graph_.first,
-                                            optimized_global_pose_graph_.second);
+                                              optimized_global_pose_graph_.second);
             optimization_log_file << "total_error," << std::to_string(total_error) << std::endl;
             auto loop_closure_errors = compute_inter_robot_loop_closure_errors(optimized_global_pose_graph_.first,
-                                                                            optimized_global_pose_graph_.second);
-        
+                                                                               optimized_global_pose_graph_.second);
+
             optimization_log_file << "inter_robot_loop_closures," << std::to_string(loop_closure_errors.size()) << std::endl;
             for (const auto &error : loop_closure_errors)
             {
                 optimization_log_file << "error"
-                                        << "," << std::to_string(error.second) << std::endl;
+                                      << "," << std::to_string(error.second) << std::endl;
             }
         }
 
@@ -166,7 +167,7 @@ namespace cslam
                              << std::to_string(info.gps_values[i].longitude) << ","
                              << std::to_string(info.gps_values[i].altitude) << std::endl;
             }
-            
+
             gps_log_file.close();
         }
 
@@ -181,10 +182,10 @@ namespace cslam
                 for (size_t i = 0; i < info.spectral_matches.matches.size(); i++)
                 {
                     matches_log_file << std::to_string(info.spectral_matches.matches[i].robot0_id) << ","
-                                    << std::to_string(info.spectral_matches.matches[i].robot0_keyframe_id) << ","
-                                    << std::to_string(info.spectral_matches.matches[i].robot1_id) << ","
-                                    << std::to_string(info.spectral_matches.matches[i].robot1_keyframe_id) << ","
-                                    << std::to_string(info.spectral_matches.matches[i].weight) << std::endl;
+                                     << std::to_string(info.spectral_matches.matches[i].robot0_keyframe_id) << ","
+                                     << std::to_string(info.spectral_matches.matches[i].robot1_id) << ","
+                                     << std::to_string(info.spectral_matches.matches[i].robot1_keyframe_id) << ","
+                                     << std::to_string(info.spectral_matches.matches[i].weight) << std::endl;
                 }
             }
         }
@@ -193,13 +194,13 @@ namespace cslam
         pose_time_map_file.open(result_folder + "/pose_timestamps" + std::to_string(robot_id_) + ".csv");
         pose_time_map_file << "vertice_id,sec,nanosec" << std::endl;
 
-        for (const auto& key_value: pose_time_map_)
+        for (const auto &key_value : pose_time_map_)
         {
             pose_time_map_file << std::to_string(key_value.first) << ","
-                            << std::to_string(key_value.second.first) << ","
-                            << std::to_string(key_value.second.second) << std::endl;
+                               << std::to_string(key_value.second.first) << ","
+                               << std::to_string(key_value.second.second) << std::endl;
         }
-        
+
         pose_time_map_file.close();
 
         // Clear logs
@@ -223,7 +224,8 @@ namespace cslam
         std::vector<std::pair<std::pair<gtsam::LabeledSymbol, gtsam::LabeledSymbol>, double>> loop_closure_errors;
         try
         {
-            if (result->size() > 0){
+            if (result->size() > 0)
+            {
                 for (const auto &factor_ : *graph)
                 {
                     auto factor =
@@ -245,10 +247,10 @@ namespace cslam
                         }
                     }
                 }
-            }            
+            }
         }
         catch (std::exception &e)
-        { 
+        {
             RCLCPP_ERROR(node_->get_logger(), "Logging: Error while computing inter-robot loop closure errors connectivity: %s", e.what());
         }
         return loop_closure_errors;
@@ -263,44 +265,65 @@ namespace cslam
             error = graph->error(*result);
         }
         catch (std::exception &e)
-        { 
+        {
             RCLCPP_ERROR(node_->get_logger(), "Logging: Error while computing graph error: %s", e.what());
         }
         return error;
     }
 
-
     void Logger::log_callback(const diagnostic_msgs::msg::KeyValue::ConstSharedPtr msg)
     {
-        if (msg->key == "nb_matches"){
+        if (msg->key == "nb_matches")
+        {
             log_nb_matches_ = std::stoul(msg->value);
-        } else if (msg->key == "nb_failed_matches"){
+        }
+        else if (msg->key == "nb_failed_matches")
+        {
             log_nb_failed_matches_ = std::stoul(msg->value);
-        } else if (msg->key == "nb_vertices_transmitted"){
+        }
+        else if (msg->key == "nb_vertices_transmitted")
+        {
             log_nb_vertices_transmitted_ = std::stoul(msg->value);
-        } else if (msg->key == "nb_matches_selected"){
+        }
+        else if (msg->key == "nb_matches_selected")
+        {
             log_nb_matches_selected_ = std::stoul(msg->value);
-        } else if (msg->key == "detection_cumulative_communication"){
+        }
+        else if (msg->key == "detection_cumulative_communication")
+        {
             log_detection_cumulative_communication_ = std::stoul(msg->value);
-        } else if (msg->key == "local_descriptors_cumulative_communication"){
+        }
+        else if (msg->key == "local_descriptors_cumulative_communication")
+        {
             log_local_descriptors_cumulative_communication_ = std::stoul(msg->value);
-        } else if (msg->key == "sparsification_cumulative_computation_time"){
+        }
+        else if (msg->key == "sparsification_cumulative_computation_time")
+        {
             log_sparsification_cumulative_computation_time_ = std::stof(msg->value);
-        } else {
+        }
+        else
+        {
             RCLCPP_ERROR(node_->get_logger(), "Unknown log key: %s %s", msg->key.c_str(), msg->value.c_str());
         }
     }
 
     void Logger::log_matches_callback(const cslam_common_interfaces::msg::InterRobotMatches::ConstSharedPtr msg)
     {
-        if (msg->robot_id == 0){
-            for (size_t i = 0; i < msg->matches.size(); i++){
-                spectral_matches_.matches.push_back(msg->matches[i]);
+        if (msg->robot_id == 0)
+        {
+            for (size_t i = 0; i < msg->matches.size(); i++)
+            {
+                // Check if match is already in the vector
+                if (std::find(spectral_matches_.matches.begin(), spectral_matches_.matches.end(), msg->matches[i]) == spectral_matches_.matches.end())
+                {
+                    spectral_matches_.matches.push_back(msg->matches[i]);
+                }
             }
         }
     }
 
-    void Logger::fill_msg(cslam_common_interfaces::msg::PoseGraph & msg){
+    void Logger::fill_msg(cslam_common_interfaces::msg::PoseGraph &msg)
+    {
         msg.nb_matches = log_nb_matches_;
         msg.nb_failed_matches = log_nb_failed_matches_;
         msg.nb_vertices_transmitted = log_nb_vertices_transmitted_;

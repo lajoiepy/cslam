@@ -572,6 +572,8 @@ DecentralizedPGO::aggregate_pose_graphs()
       estimates->insert(*other_robots_graph_and_estimates_[id].second);
     }
   }
+
+  std::set<std::pair<gtsam::Key, gtsam::Key>> added_loop_closures;
   // Add local inter-robot loop closures
   auto included_robots_ids = current_neighbors_ids_;
   included_robots_ids.robots.ids.push_back(robot_id_);
@@ -591,9 +593,11 @@ DecentralizedPGO::aggregate_pose_graphs()
              inter_robot_loop_closures_[{min_id, max_id}])
         {
           if (estimates->exists(factor.key1()) &&
-              estimates->exists(factor.key2()))
+              estimates->exists(factor.key2()) &&
+              added_loop_closures.count({factor.key1(), factor.key2()}) == 0)
           {
             graph->push_back(factor);
+            added_loop_closures.insert({factor.key1(), factor.key2()});
           }
         }
       }
@@ -616,9 +620,11 @@ DecentralizedPGO::aggregate_pose_graphs()
           is_pose_graph_connected[robot1_id])
       {
         if (estimates->exists(factor->key1()) &&
-            estimates->exists(factor->key2()))
+            estimates->exists(factor->key2()) &&
+            added_loop_closures.count({factor->key1(), factor->key2()}) == 0)
         {
           graph->push_back(factor);
+          added_loop_closures.insert({factor->key1(), factor->key2()});
         }
       }
     }

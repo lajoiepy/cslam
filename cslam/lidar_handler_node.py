@@ -92,7 +92,7 @@ class LidarHandler: # TODO: document
                 frame_ids.append(msg.matches_keyframe_id[i])
         for frame_id in frame_ids:
             pc = self.local_descriptors_map[frame_id]
-            transform, success = icp_utils.compute_transform(icp_utils.ros_to_open3d(msg.data), pc, self.params["frontend.voxel_size"], self.params["frontend.registration_min_inliers"])
+            transform, success = icp_utils.compute_transform(pc, icp_utils.ros_to_open3d(msg.data), self.params["frontend.voxel_size"], self.params["frontend.registration_min_inliers"])
             out_msg = InterRobotLoopClosure()
             out_msg.robot0_id = self.params["robot_id"]
             out_msg.robot0_keyframe_id = frame_id
@@ -108,7 +108,7 @@ class LidarHandler: # TODO: document
     def receive_local_keyframe_match(self, msg):
         pc0 = self.local_descriptors_map[msg.keyframe0_id]
         pc1 = self.local_descriptors_map[msg.keyframe1_id]
-        transform, success = icp_utils.compute_transform(pc1, pc0, self.params["frontend.voxel_size"], self.params["frontend.registration_min_inliers"])
+        transform, success = icp_utils.compute_transform(pc0, pc1, self.params["frontend.voxel_size"], self.params["frontend.registration_min_inliers"])
         out_msg = IntraRobotLoopClosure()
         out_msg.keyframe0_id = msg.keyframe0_id
         out_msg.keyframe1_id = msg.keyframe1_id
