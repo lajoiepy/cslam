@@ -560,7 +560,7 @@ void RGBDHandler::send_keyframe(const std::pair<std::shared_ptr<rtabmap::SensorD
 
   // Image message
   std_msgs::msg::Header header;
-  header.stamp = node_->now();
+  header.stamp = keypoints_data.second->header.stamp;
   cv_bridge::CvImage image_bridge = cv_bridge::CvImage(
       header, sensor_msgs::image_encodings::RGB8, rgb);
   cslam_common_interfaces::msg::KeyframeRGB keyframe_msg;

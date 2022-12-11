@@ -50,13 +50,17 @@ void StereoHandler::stereo_callback(
     const sensor_msgs::msg::Image::ConstSharedPtr image_rect_right,
     const sensor_msgs::msg::CameraInfo::ConstSharedPtr camera_info_left,
     const sensor_msgs::msg::CameraInfo::ConstSharedPtr camera_info_right,
-    const nav_msgs::msg::Odometry::ConstSharedPtr odom) {
+    const nav_msgs::msg::Odometry::ConstSharedPtr odom_ptr) {
   // If odom tracking failed, do not process the frame
-  if (odom->pose.covariance[0] > 1000)
+  if (odom_ptr->pose.covariance[0] > 1000)
   {
     RCLCPP_WARN(node_->get_logger(), "Odom tracking failed, skipping frame");
     return;
   }
+  // Fix timestamps for logging
+  auto odom = std::make_shared<nav_msgs::msg::Odometry>(*odom_ptr);
+  odom->header.stamp = image_rect_left->header.stamp;
+  
   if (!(image_rect_left->encoding.compare(
             sensor_msgs::image_encodings::TYPE_8UC1) == 0 ||
         image_rect_left->encoding.compare(sensor_msgs::image_encodings::MONO8) ==

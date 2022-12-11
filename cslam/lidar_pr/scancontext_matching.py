@@ -78,8 +78,13 @@ class ScanContextMatching(object):
                 nn_yawdiff = yaw_diff
                 nn_idx = candidate_idx
 
-        nn_yawdiff_deg = nn_yawdiff * (360/self.shape[1])
-        similarity = 1 - nn_dist # For now we return only 1 match, but we could return the n best matches
+        if nn_idx is None:
+            nn_idx = 0 
+            nn_yawdiff_deg = 0
+            similarity = 0.0
+        else:
+            nn_yawdiff_deg = nn_yawdiff * (360/self.shape[1])
+            similarity = 1 - nn_dist # For now we return only 1 match, but we could return the n best matches
         return [self.items[nn_idx]], [similarity]
 
     def search_best(self, query):
