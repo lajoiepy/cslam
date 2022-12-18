@@ -216,11 +216,13 @@ class AlgebraicConnectivityMaximization(object):
         w_init = self.greedy_initialization(nb_greedy, edges)
         nb_edges = len(edges)
         i = 0
-        while i < nb_random:
+        trial = 0
+        while i < nb_random and trial < 2*nb_random:
             j = int(np.random.rand() * nb_edges)
             if w_init[j] < 0.5:
                 w_init[j] = 1.0
                 i = i + 1
+            trial += 1
         return w_init
 
     def random_initialization(self, nb_candidates_to_choose, edges):

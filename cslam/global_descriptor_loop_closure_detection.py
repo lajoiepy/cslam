@@ -310,6 +310,7 @@ class GlobalDescriptorLoopClosureDetection(object):
         """
         neighbors_is_in_range, neighbors_in_range_list = self.neighbor_manager.check_neighbors_in_range(
         )
+        self.node.get_logger().info('Neighbors in range: ' +  str(neighbors_in_range_list))
         # Check if the robot is the broker
         if len(neighbors_in_range_list
                ) > 0 and self.neighbor_manager.local_robot_is_broker():
@@ -318,7 +319,7 @@ class GlobalDescriptorLoopClosureDetection(object):
             selection = self.lcm.select_candidates(
                 self.params["frontend.inter_robot_loop_closure_budget"],
                 neighbors_is_in_range)
-
+            
             # Extract and publish local descriptors
             vertices_info = self.edge_list_to_vertices(selection)
             broker = Broker(selection, neighbors_in_range_list)
