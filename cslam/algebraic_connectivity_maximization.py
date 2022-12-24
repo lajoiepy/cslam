@@ -242,7 +242,8 @@ class AlgebraicConnectivityMaximization(object):
         nb_candidate_chosen = 0
         edges_copy = edges.copy()
         edges_ids_to_select = []
-        for rid in is_robot_included:
+        rids = [r for r in is_robot_included.keys() if is_robot_included[r]]
+        for rid in rids:
             if not self.initial_fixed_edge_exists[rid]:
                 max_weight = -1
                 max_edge = None
@@ -371,7 +372,6 @@ class AlgebraicConnectivityMaximization(object):
         
         Returns:
             dict(int, bool): dict indicating if each robot is connected
-            bool: true if at least one robot is connected
         """
         is_robot_connected = {}
         for i in range(self.max_nb_robots):
@@ -450,7 +450,7 @@ class AlgebraicConnectivityMaximization(object):
             nb_candidates_to_choose (int): number of candidates to choose,
                             related to a computation/communication budget
             is_other_robot_considered: dict(int, bool): indicates which 
-                            other robots are are to be included 
+                            other robots are in communication range 
             greedy_initialization: perform greedy initialization based on similarity
 
         Returns:
