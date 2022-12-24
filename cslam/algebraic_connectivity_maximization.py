@@ -420,7 +420,7 @@ class AlgebraicConnectivityMaximization(object):
         """
         mac = MAC(fixed_edges, candidate_edges, self.total_nb_poses)
 
-        result = w_init
+        result = w_init.copy()
         trial = 0
         while trial < nb_candidates_to_choose:
             try:
