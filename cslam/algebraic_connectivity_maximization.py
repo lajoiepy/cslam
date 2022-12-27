@@ -217,12 +217,15 @@ class AlgebraicConnectivityMaximization(object):
         nb_edges = len(edges)
         i = 0
         trial = 0
-        while i < nb_random and trial < 2*nb_random:
+        max_trials = 2*nb_random
+        while i < nb_random and trial < max_trials:
             j = int(np.random.rand() * nb_edges)
             if w_init[j] < 0.5:
                 w_init[j] = 1.0
                 i = i + 1
             trial += 1
+        if trial >= max_trials:
+            w_init = self.greedy_initialization(nb_candidates_to_choose, edges)
         return w_init
 
     def random_initialization(self, nb_candidates_to_choose, edges):
@@ -242,7 +245,8 @@ class AlgebraicConnectivityMaximization(object):
         nb_candidate_chosen = 0
         edges_copy = edges.copy()
         edges_ids_to_select = []
-        for rid in is_robot_included:
+        rids = [r for r in is_robot_included.keys() if is_robot_included[r]]
+        for rid in rids:
             if not self.initial_fixed_edge_exists[rid]:
                 max_weight = -1
                 max_edge = None
@@ -371,7 +375,6 @@ class AlgebraicConnectivityMaximization(object):
         
         Returns:
             dict(int, bool): dict indicating if each robot is connected
-            bool: true if at least one robot is connected
         """
         is_robot_connected = {}
         for i in range(self.max_nb_robots):
@@ -420,7 +423,7 @@ class AlgebraicConnectivityMaximization(object):
         """
         mac = MAC(fixed_edges, candidate_edges, self.total_nb_poses)
 
-        result = w_init
+        result = w_init.copy()
         trial = 0
         while trial < nb_candidates_to_choose:
             try:
@@ -450,7 +453,7 @@ class AlgebraicConnectivityMaximization(object):
             nb_candidates_to_choose (int): number of candidates to choose,
                             related to a computation/communication budget
             is_other_robot_considered: dict(int, bool): indicates which 
-                            other robots are are to be included 
+                            other robots are in communication range 
             greedy_initialization: perform greedy initialization based on similarity
 
         Returns:
