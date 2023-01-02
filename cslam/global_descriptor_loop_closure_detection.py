@@ -72,7 +72,7 @@ class GlobalDescriptorLoopClosureDetection(object):
             self.global_descriptor_callback, 100)
 
         self.params[
-            'frontend.inter_robot_matches_topic'] = 'cslam/' + self.node.get_parameter(
+            'frontend.inter_robot_matches_topic'] = '/cslam/' + self.node.get_parameter(
                 'frontend.inter_robot_matches_topic').value
         self.inter_robot_matches_publisher = self.node.create_publisher(
             InterRobotMatches,
@@ -251,6 +251,7 @@ class GlobalDescriptorLoopClosureDetection(object):
             # Don't transmit matches that should have already been detected by the other robot
             _, neighbors_in_range_list = self.neighbor_manager.check_neighbors_in_range()
             if len(neighbors_in_range_list) == 2:
+                self.node.get_logger().info("Transmitting matches {}".format(neighbors_in_range_list))
                 for c in chuncks:
                     for match in c:
                         if match.robot0_id in neighbors_in_range_list and match.robot1_id in neighbors_in_range_list:
@@ -310,7 +311,7 @@ class GlobalDescriptorLoopClosureDetection(object):
         """
         neighbors_is_in_range, neighbors_in_range_list = self.neighbor_manager.check_neighbors_in_range(
         )
-        self.node.get_logger().info('Neighbors in range: ' +  str(neighbors_in_range_list))
+        #self.node.get_logger().info('Neighbors in range: ' +  str(neighbors_in_range_list))
         # Check if the robot is the broker
         if len(neighbors_in_range_list
                ) > 0 and self.neighbor_manager.local_robot_is_broker():
@@ -423,7 +424,6 @@ class GlobalDescriptorLoopClosureDetection(object):
         Args:
             msg (cslam_common_interfaces::msg::InterRobotMatches): matches
         """
-        pass
         if msg.robot_id != self.params['robot_id']:
             for match in msg.matches:
                 edge = EdgeInterRobot(match.robot0_id, match.robot0_keyframe_id, match.robot1_id, match.robot1_keyframe_id, match.weight)

@@ -262,7 +262,7 @@ class AlgebraicConnectivityMaximization(object):
 
         w_init = np.zeros(len(edges))
         if nb_candidates_to_choose - nb_candidate_chosen > 0:
-            w_init = self.greedy_initialization(nb_candidates_to_choose - nb_candidate_chosen, edges_copy)
+            w_init = self.greedy_initialization(nb_candidates_to_choose - nb_candidate_chosen, self.rekey_edges(edges_copy, is_robot_included))
         for i in edges_ids_to_select:
             w_init[i] = 1.0
         return w_init
@@ -496,10 +496,14 @@ class AlgebraicConnectivityMaximization(object):
                                                  w_init,
                                                  nb_candidates_to_choose)
             else:
+                #result = self.greedy_initialization(nb_candidates_to_choose,
+                #                                    rekeyed_candidate_edges)
                 result = self.connection_biased_greedy_selection(    
-                    nb_candidates_to_choose, self.get_included_edges(self.candidate_edges.values(), is_robot_included), is_robot_included)
+                   nb_candidates_to_choose, self.get_included_edges(self.candidate_edges.values(), is_robot_included), is_robot_included)
                     
             if self.params["evaluation.enable_sparsification_comparison"]:
+                rclpy.logging.get_logger(
+                    'sparsification').info('Is robot included? {}'.format(is_robot_included))
                 self.sparsification_comparison_logs(
                     rekeyed_candidate_edges, is_robot_included, w_init,
                     result)
