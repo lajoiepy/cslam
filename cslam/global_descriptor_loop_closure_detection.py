@@ -143,7 +143,7 @@ class GlobalDescriptorLoopClosureDetection(object):
         global CvBridge
         from cv_bridge import CvBridge
 
-        self.gpu_start_time = time.time() # TODO: remove
+        self.gpu_start_time = time.time() 
 
     def add_global_descriptor_to_map(self, embedding, kf_id):
         """ Add global descriptor to matching list
@@ -341,7 +341,7 @@ class GlobalDescriptorLoopClosureDetection(object):
                 stop_time = time.time()
                 self.log_total_sparsification_computation_time += stop_time - start_time
                 self.log_total_matches_selected += len(selection)
-                self.log_publisher.publish(# TODO: move to logger module
+                self.log_publisher.publish(
                     KeyValue(
                         key="sparsification_cumulative_computation_time",
                         value=str(

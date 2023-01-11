@@ -21,7 +21,6 @@ import sklearn
 from sklearn.neighbors import NearestNeighbors
 from cslam.vpr.cosplace_utils.network import GeoLocalizationNet
 from ament_index_python.packages import get_package_share_directory
-import gc # TODO: remove
 
 IMAGENET_DEFAULT_MEAN = (0.485, 0.456, 0.406)
 IMAGENET_DEFAULT_STD = (0.229, 0.224, 0.225)

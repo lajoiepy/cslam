@@ -139,7 +139,6 @@ namespace cslam
 
         /**
          * @brief Function to send the image to the python node
-         * TODO: Move to parent class
          *
          * @param keypoints_data keyframe keypoints data
          */
@@ -147,7 +146,6 @@ namespace cslam
 
         /**
          * @brief Function to send the image to the python node
-         * TODO: Move to parent class
          *
          * @param keypoints_data keyframe keypoints data
          * @param gps_data GPS data

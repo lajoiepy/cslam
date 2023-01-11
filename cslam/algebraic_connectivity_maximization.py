@@ -2,7 +2,6 @@ from typing import NamedTuple
 
 import numpy as np
 import rclpy
-from rclpy.node import Node  # TODO: remove
 
 from cslam.mac.mac import MAC
 from cslam.mac.utils import Edge, weight_graph_lap_from_edge_list
@@ -240,7 +239,7 @@ class AlgebraicConnectivityMaximization(object):
 
     def connection_biased_greedy_selection(self, nb_candidates_to_choose, edges, is_robot_included):
         """Greedy weight initialization with connection bias
-        TODO
+        Prioritize edges that connect unconnected robots.
         """
         nb_candidate_chosen = 0
         edges_copy = edges.copy()

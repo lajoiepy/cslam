@@ -171,21 +171,19 @@ def downsample_ros_pointcloud(pc_msg, voxel_size):
     points = ros_pointcloud_to_points(pc_msg)
     return downsample(points, voxel_size)
 
-
-# TODO: document
 def compute_transform(src, dst, voxel_size, min_inliers):
     """Computes a 3D transform between 2 point clouds using TEASER++.
 
     Be careful: TEASER++ computes the transform from dst to src.
 
     Args:
-        src (_type_): _description_
-        dst (_type_): _description_
-        voxel_size (_type_): _description_
-        min_inliers (_type_): _description_
+        src (Open3D point cloud): pointcloud from
+        dst (Open3D point cloud): pointcloud to
+        voxel_size (int): Voxel size
+        min_inliers (int): Minimum number of inlier points correspondance to consider the registration a success
 
     Returns:
-        _type_: _description_
+        (Transform, bool): transform and success flag
     """
     valid, translation, rotation = solve_teaser(src, dst, voxel_size,
                                                 min_inliers)

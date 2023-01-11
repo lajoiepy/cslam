@@ -16,10 +16,20 @@ namespace cslam
 {
 
     class SimulatedRendezVous
-    { // TODO: document
+    { 
+        /**
+         * @brief Rendez-vous simulation.
+         * Reads a config file indicating when the robot should be considered alive
+         * 
+         */
     public:
         SimulatedRendezVous(std::shared_ptr<rclcpp::Node> &node, const std::string& schedule_file, const unsigned int &robot_id);
 
+        /**
+         * @brief Check if the robot is alive (aka in the rendez-vous schedule)
+         * 
+         * @return is alive flag
+         */
         bool is_alive();
 
     private:
