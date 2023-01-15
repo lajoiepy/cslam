@@ -1,7 +1,6 @@
 from typing import NamedTuple
 
 import numpy as np
-import rclpy
 
 from cslam.mac.mac import MAC
 from cslam.mac.utils import Edge, weight_graph_lap_from_edge_list
@@ -89,6 +88,24 @@ class AlgebraicConnectivityMaximization(object):
         else:
             return (edge.robot1_id, edge.robot1_keyframe_id, edge.robot0_id,
                     edge.robot0_keyframe_id)
+
+    def replace_weight(self, edge, weight):
+        """Replace the weight of an edge
+
+        Args:
+            edge (EdgeInterRobot): inter-robot edge
+            weight (float): new weight
+
+        Returns:
+            EdgeInterRobot: new edge with new weight
+        """
+        # Check if inter-robot edge
+        if type(edge) is EdgeInterRobot:
+            return EdgeInterRobot(edge.robot0_id, edge.robot0_keyframe_id,
+                                  edge.robot1_id, edge.robot1_keyframe_id,
+                                  weight)
+        elif type(edge) is Edge:
+            return Edge(edge.i, edge.j, weight)
 
     def update_nb_poses(self, edge):
         """The number of poses should be the maximal edge id known
@@ -180,7 +197,7 @@ class AlgebraicConnectivityMaximization(object):
             edges (list(EdgeInterRobot)): inter-robot edges
         """
         for i in range(len(edges)):
-            edges[i] = edges[i]._replace(weight=self.fixed_weight)
+            edges[i] = self.replace_weight(edges[i], weight=self.fixed_weight)
             self.update_initial_fixed_edge_exists(edges[i])
         self.fixed_edges.extend(edges)
         self.remove_candidate_edges(edges)
@@ -216,7 +233,7 @@ class AlgebraicConnectivityMaximization(object):
         nb_edges = len(edges)
         i = 0
         trial = 0
-        max_trials = 2*nb_random
+        max_trials = 2 * nb_random
         while i < nb_random and trial < max_trials:
             j = int(np.random.rand() * nb_edges)
             if w_init[j] < 0.5:
@@ -234,10 +251,11 @@ class AlgebraicConnectivityMaximization(object):
             nb_candidates_to_choose (int): number of edges to choose
         """
         for e in range(len(edges)):
-            edges[e] = edges[e]._replace(weight=np.random.rand())
+            edges[e] = self.replace_weight(edges[e], np.random.rand())
         return self.greedy_initialization(nb_candidates_to_choose, edges)
 
-    def connection_biased_greedy_selection(self, nb_candidates_to_choose, edges, is_robot_included):
+    def connection_biased_greedy_selection(self, nb_candidates_to_choose,
+                                           edges, is_robot_included):
         """Greedy weight initialization with connection bias
         Prioritize edges that connect unconnected robots.
         """
@@ -250,18 +268,22 @@ class AlgebraicConnectivityMaximization(object):
                 max_weight = -1
                 max_edge = None
                 for i in range(len(edges_copy)):
-                    if edges_copy[i].robot0_id == rid or edges_copy[i].robot1_id == rid:
+                    if edges_copy[i].robot0_id == rid or edges_copy[
+                            i].robot1_id == rid:
                         if edges_copy[i].weight > max_weight:
                             max_weight = edges_copy[i].weight
                             max_edge = i
                 if max_edge is not None:
                     edges_ids_to_select.append(max_edge)
-                    edges_copy[max_edge]._replace(weight=0.0)
+                    edges_copy[max_edge] = self.replace_weight(
+                        edges_copy[max_edge], weight=0.0)
                     nb_candidate_chosen += 1
 
         w_init = np.zeros(len(edges))
         if nb_candidates_to_choose - nb_candidate_chosen > 0:
-            w_init = self.greedy_initialization(nb_candidates_to_choose - nb_candidate_chosen, self.rekey_edges(edges_copy, is_robot_included))
+            w_init = self.greedy_initialization(
+                nb_candidates_to_choose - nb_candidate_chosen,
+                self.rekey_edges(edges_copy, is_robot_included))
         for i in edges_ids_to_select:
             w_init[i] = 1.0
         return w_init
@@ -318,7 +340,8 @@ class AlgebraicConnectivityMaximization(object):
         # Rekey edges
         included_edges = []
         for e in edges:
-            if is_robot_included[e.robot0_id] and is_robot_included[e.robot1_id]:
+            if is_robot_included[e.robot0_id] and is_robot_included[
+                    e.robot1_id]:
                 included_edges.append(e)
         return included_edges
 
@@ -486,26 +509,24 @@ class AlgebraicConnectivityMaximization(object):
             else:
                 w_init = self.random_initialization(nb_candidates_to_choose,
                                                     rekeyed_candidate_edges)
-            
+
             if self.params[
                     "frontend.enable_sparsification"] and self.check_initial_fixed_measurements_exists(
                         is_robot_included):
                 result = self.run_mac_solver(rekeyed_fixed_edges,
-                                                 rekeyed_candidate_edges,
-                                                 w_init,
-                                                 nb_candidates_to_choose)
+                                             rekeyed_candidate_edges, w_init,
+                                             nb_candidates_to_choose)
             else:
-                #result = self.greedy_initialization(nb_candidates_to_choose,
-                #                                    rekeyed_candidate_edges)
-                result = self.connection_biased_greedy_selection(    
-                   nb_candidates_to_choose, self.get_included_edges(self.candidate_edges.values(), is_robot_included), is_robot_included)
-                    
+                result = self.connection_biased_greedy_selection(
+                    nb_candidates_to_choose,
+                    self.get_included_edges(self.candidate_edges.values(),
+                                            is_robot_included),
+                    is_robot_included)
+
             if self.params["evaluation.enable_sparsification_comparison"]:
-                rclpy.logging.get_logger(
-                    'sparsification').info('Is robot included? {}'.format(is_robot_included))
-                self.sparsification_comparison_logs(
-                    rekeyed_candidate_edges, is_robot_included, w_init,
-                    result)
+                self.sparsification_comparison_logs(rekeyed_candidate_edges,
+                                                    is_robot_included, w_init,
+                                                    result)
 
             selected_edges = [
                 rekeyed_candidate_edges[i]

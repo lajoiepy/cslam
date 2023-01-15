@@ -1,5 +1,8 @@
 import unittest
 
+import sys
+sys.path.append('/home/lajoiepy/Documents/projects/c-slam/c-slam-ws/install/cslam/lib/python3.8/site-packages/')
+
 from cslam.algebraic_connectivity_maximization import AlgebraicConnectivityMaximization, EdgeInterRobot
 from cslam.mac.utils import Edge
 from cslam.mac.mac import MAC
@@ -105,12 +108,12 @@ class TestAlgebraicConnectivity(unittest.TestCase):
         fixed_edges_list, candidate_edges_list = build_simple_graph(
             nb_poses, nb_candidate_edges)
         weights = np.random.rand(nb_candidate_edges)
+        ac = AlgebraicConnectivityMaximization()
         i = 0
         for e in range(len(candidate_edges_list)):
-            candidate_edges_list[e] = candidate_edges_list[e]._replace(
+            candidate_edges_list[e] = ac.replace_weight(candidate_edges_list[e],
                 weight=weights[i])
             i = i + 1
-        ac = AlgebraicConnectivityMaximization()
         ac.set_graph(fixed_edges_list, candidate_edges_list)
         is_robot_considered = {0: True}
         is_robot_included = ac.check_graph_disconnections(is_robot_considered)

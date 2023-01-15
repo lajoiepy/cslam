@@ -650,12 +650,14 @@ void DecentralizedPGO::optimized_estimates_callback(
     }
     update_transform_to_origin(first_pose);
 
-    try{
-      logger_->write_logs();
-    }
-    catch (const std::exception &e)
-    {
-      RCLCPP_ERROR(node_->get_logger(), "Writing logs failed: %s", e.what());
+    if (enable_logs_) {
+      try{
+        logger_->write_logs();
+      }
+      catch (const std::exception &e)
+      {
+        RCLCPP_ERROR(node_->get_logger(), "Writing logs failed: %s", e.what());
+      }
     }
   }
 }
