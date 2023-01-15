@@ -1,1 +1,1 @@
-Debugging instructions: https://gist.github.com/JADC362/a4425c2d05cdaadaaa71b697b674425f
+For details, look up main [Swarm-SLAM repo](https://github.com/MISTLab/Swarm-SLAM) and [documentation](https://lajoiepy.github.io/cslam_documentation/html/index.html).
