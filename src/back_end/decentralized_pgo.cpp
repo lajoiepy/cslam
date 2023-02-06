@@ -360,6 +360,19 @@ bool DecentralizedPGO::is_optimizer()
       is_optimizer = false;
     }
   }
+  bool is_connected_to_neighbors = false;
+  for (unsigned int i = 0; i < current_neighbors_ids_.robots.ids.size(); i++)
+  {
+    if (connected_robots_.find(current_neighbors_ids_.robots.ids[i]) !=
+        connected_robots_.end())
+    {
+      is_connected_to_neighbors = true;
+    }
+  }
+  if (!is_connected_to_neighbors)
+  {
+    is_optimizer = true;
+  }
   if (odometry_pose_estimates_->size() == 0)
   {
     is_optimizer = false;
