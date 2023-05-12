@@ -38,6 +38,8 @@
   <build_depend>class_loader</build_depend>
   <build_depend>rtabmap</build_depend>
   <build_depend>rtabmap_ros</build_depend>
+  <build_depend>rtabmap_msgs</build_depend>
+  <build_depend>rtabmap_conversions</build_depend>
   <build_depend>octomap</build_depend>
   <build_depend>octomap_msgs</build_depend>
   <build_depend>image_geometry</build_depend>
@@ -80,6 +82,8 @@
   <exec_depend>class_loader</exec_depend>
   <exec_depend>rtabmap</exec_depend>
   <exec_depend>rtabmap_ros</exec_depend>
+  <exec_depend>rtabmap_msgs</exec_depend>
+  <exec_depend>rtabmap_conversions</exec_depend>
   <exec_depend>octomap</exec_depend>
   <exec_depend>octomap_msgs</exec_depend>
   <exec_depend>image_geometry</exec_depend>

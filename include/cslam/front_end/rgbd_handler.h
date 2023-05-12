@@ -3,7 +3,7 @@
 
 #include <rclcpp/rclcpp.hpp>
 
-#include <rtabmap_ros/msg/rgbd_image.hpp>
+#include <rtabmap_msgs/msg/rgbd_image.hpp>
 
 #include <rtabmap/core/Compression.h>
 #include <rtabmap/core/Memory.h>
@@ -46,7 +46,7 @@
 
 #include <memory>
 
-#include "cslam/front_end/sensor_msg_utils.h"
+#include <rtabmap_conversions/MsgConversion.h>
 #include "cslam/front_end/sensor_handler_interface.h"
 #include "cslam/front_end/visualization_utils.h"
 
@@ -122,11 +122,11 @@ namespace cslam
          * @brief converts sensor data to descriptor msg
          *
          * @param sensor_data local descriptors
-         * @param msg_data rtabmap_ros::msg::RGBDImage&
+         * @param msg_data rtabmap_msgs::msg::RGBDImage&
          */
         void sensor_data_to_rgbd_msg(
             const std::shared_ptr<rtabmap::SensorData> sensor_data,
-            rtabmap_ros::msg::RGBDImage &msg_data);
+            rtabmap_msgs::msg::RGBDImage &msg_data);
 
         /**
          * @brief Generate a new keyframe according to the policy

@@ -10,7 +10,7 @@ sensor_msgs::msg::PointCloud2 create_colored_pointcloud(const std::shared_ptr<rt
   // Update camera model
   image_geometry::PinholeCameraModel model;
   sensor_msgs::msg::CameraInfo info_msg;
-  rtabmap_ros::cameraModelToROS(sensor_data->cameraModels()[0], info_msg);
+  rtabmap_conversions::cameraModelToROS(sensor_data->cameraModels()[0], info_msg);
   model.fromCameraInfo(info_msg);
 
   auto cloud_msg = std::make_shared<sensor_msgs::msg::PointCloud2>();

@@ -49,7 +49,9 @@ find_package(class_loader REQUIRED)
 #find_package(rosgraph_msgs REQUIRED)
 find_package(image_geometry REQUIRED)
 #find_package(pluginlib REQUIRED)
-find_package(rtabmap_ros 0.20.18 REQUIRED)
+find_package(rtabmap_ros REQUIRED)
+find_package(rtabmap_msgs REQUIRED)
+find_package(rtabmap_conversions REQUIRED)
 
 # Optional components
 #find_package(costmap_2d)
@@ -92,6 +94,8 @@ include_directories(
   ${CMAKE_CURRENT_SOURCE_DIR}/include
   ${RTABMap_INCLUDE_DIRS}
   ${rtabmap_ros_INCLUDE_DIRS}
+  ${rtabmap_msgs_INCLUDE_DIRS}
+  ${rtabmap_conversions_INCLUDE_DIRS}
   ${PCL_INCLUDE_DIRS}
   ${GTSAM_INCLUDE_DIR}
 )
@@ -124,6 +128,8 @@ SET(Libraries
    perception_pcl
    RTABMap
    rtabmap_ros
+   rtabmap_msgs
+   rtabmap_conversions
 )
 
 find_package(cslam_common_interfaces REQUIRED)
@@ -134,7 +140,7 @@ add_executable(map_manager
   src/front_end/map_manager_node.cpp 
   src/front_end/stereo_handler.cpp 
   src/front_end/rgbd_handler.cpp 
-  src/front_end/sensor_msg_utils.cpp
+  #src/front_end/sensor_msg_utils.cpp
   src/front_end/visualization_utils.cpp)
 add_dependencies(map_manager  
   map_manager
