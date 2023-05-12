@@ -18,7 +18,7 @@
 
 #include <memory>
 
-#include "cslam/front_end/sensor_msg_utils.h"
+#include <rtabmap_conversions/MsgConversion.h>
 #include "cslam/front_end/utils/depth_traits.h"
 
 namespace cslam
