@@ -17,7 +17,7 @@ SimulatedRendezVous::SimulatedRendezVous(std::shared_ptr<rclcpp::Node> &node,
                 auto delim0 = line.find(",");
                 if (robot_id_ == std::stoul(line.substr(0, delim0)))
                 {
-                    RCLCPP_INFO(node_->get_logger(), "Simulated rendezvous schedule of robot " + line);
+                    RCLCPP_INFO(node_->get_logger(), "Simulated rendezvous schedule of robot %s", line.c_str());
                     while (delim0 != std::string::npos)
                     {
                         auto delim1 = line.find(",", delim0 + 1);
