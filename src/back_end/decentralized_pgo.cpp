@@ -536,7 +536,7 @@ bool DecentralizedPGO::check_waiting_timeout()
   {
     end_waiting();
     optimizer_state_ = OptimizerState::IDLE;
-    RCLCPP_INFO(node_->get_logger(), "Timeout: " + std::to_string(robot_id_));
+    RCLCPP_INFO(node_->get_logger(), "Timeout: (%d)", robot_id_);
   }
   return is_waiting();
 }
