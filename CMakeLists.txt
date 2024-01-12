@@ -49,7 +49,7 @@ find_package(class_loader REQUIRED)
 #find_package(rosgraph_msgs REQUIRED)
 find_package(image_geometry REQUIRED)
 #find_package(pluginlib REQUIRED)
-find_package(rtabmap_ros REQUIRED)
+# find_package(rtabmap_ros REQUIRED)
 find_package(rtabmap_msgs REQUIRED)
 find_package(rtabmap_conversions REQUIRED)
 
@@ -93,7 +93,7 @@ find_package(PCL 1.7
 include_directories(
   ${CMAKE_CURRENT_SOURCE_DIR}/include
   ${RTABMap_INCLUDE_DIRS}
-  ${rtabmap_ros_INCLUDE_DIRS}
+  # ${rtabmap_ros_INCLUDE_DIRS}
   ${rtabmap_msgs_INCLUDE_DIRS}
   ${rtabmap_conversions_INCLUDE_DIRS}
   ${PCL_INCLUDE_DIRS}
@@ -127,7 +127,7 @@ SET(Libraries
    pcl_msgs
    perception_pcl
    RTABMap
-   rtabmap_ros
+  #  rtabmap_ros
    rtabmap_msgs
    rtabmap_conversions
 )
