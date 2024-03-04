@@ -19,13 +19,13 @@ class LoopClosureDetection(Node):
 
         self.declare_parameters(
             namespace='',
-            parameters=[('frontend.similarity_threshold', None),
-                        ('frontend.global_descriptor_technique', None),
-                        ('frontend.netvlad.pca_checkpoint', None), ('frontend.nn_checkpoint', None),
-                        ('robot_id', None), ('max_nb_robots', None),
+            parameters=[('frontend.similarity_threshold', 0.9),
+                        ('frontend.global_descriptor_technique', 'cosplace'),
+                        ('frontend.netvlad.pca_checkpoint', ''), ('frontend.nn_checkpoint', 'models/resnet18_64.pth'),
+                        ('robot_id', 0), ('max_nb_robots', 10),
                         ('frontend.inter_robot_loop_closure_budget', 5),
                         ('frontend.inter_robot_detection_period_sec', 5),
-                        ('frontend.nb_best_matches', 10), ('frontend.image_crop_size', None),
+                        ('frontend.nb_best_matches', 10), ('frontend.image_crop_size', 376),
                         ('frontend.intra_loop_min_inbetween_keyframes', 10),
                         ('neighbor_management.max_heartbeat_delay_sec', 5),
                         ('neighbor_management.init_delay_sec', 5),
