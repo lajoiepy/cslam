@@ -10,6 +10,7 @@ import cslam.lidar_pr.icp_utils as icp_utils
 import rclpy
 from rclpy.node import Node
 from rclpy.clock import Clock
+from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy, DurabilityPolicy
 from diagnostic_msgs.msg import KeyValue
 
 class LidarHandler: 
@@ -19,7 +20,13 @@ class LidarHandler:
         self.node = node
         self.params = params
 
-        tss = ApproximateTimeSynchronizer( [ Subscriber(self.node, PointCloud2, self.params["frontend.pointcloud_topic"]),
+        qos_profile = QoSProfile(
+            reliability=ReliabilityPolicy.BEST_EFFORT,
+            history=HistoryPolicy.KEEP_LAST,
+            depth=100
+        )
+        
+        tss = ApproximateTimeSynchronizer( [ Subscriber(self.node, PointCloud2, self.params["frontend.pointcloud_topic"], qos_profile=qos_profile),
                                   Subscriber(self.node, Odometry, self.params["frontend.odom_topic"])], 100, self.params["frontend.pointcloud_odom_approx_time_sync_s"] )
         tss.registerCallback(self.lidar_callback)
 
