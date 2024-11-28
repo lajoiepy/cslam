@@ -77,7 +77,7 @@ class LoopClosureSparseMatching(object):
 
         if len(kfs) > 0 and kfs[0] == kf_id:
             kfs, similarities = kfs[1:], similarities[1:]
-        if len(kfs) == 0:
+        if len(kfs) == 0 or kfs[0] == None:
             return None, None
 
         for kf, similarity in zip(kfs, similarities):
