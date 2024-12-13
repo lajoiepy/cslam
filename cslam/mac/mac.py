@@ -131,8 +131,8 @@ class MAC:
 
     def round_solution(self, w, k):
         """
-        Round a solution w to the relaxed problem, i.e. w \in [0,1]^m, |w| = k to a
-        solution to the original problem with w_i \in {0,1}. Ties between edges
+        Round a solution w to the relaxed problem, i.e. w \\in [0,1]^m, |w| = k to a
+        solution to the original problem with w_i \\in {0,1}. Ties between edges
         are broken arbitrarily.
 
         w: A solution in the feasible set for the relaxed problem
@@ -148,7 +148,7 @@ class MAC:
 
     def simple_random_round(self, w, k):
         """
-        Round a solution w to the relaxed problem, i.e. w \in [0,1]^m, |w| = k to
+        Round a solution w to the relaxed problem, i.e. w \\in [0,1]^m, |w| = k to
         one with hard edge constraints and satisfying the constraint that the
         expected number of selected edges is equal to k.
 
@@ -167,8 +167,8 @@ class MAC:
 
     def round_solution_tiebreaker(self, w, k, decimal_tol=10):
         """
-        Round a solution w to the relaxed problem, i.e. w \in [0,1]^m, |w| = k to a
-        solution to the original problem with w_i \in {0,1}. Ties between edges
+        Round a solution w to the relaxed problem, i.e. w \\in [0,1]^m, |w| = k to a
+        solution to the original problem with w_i \\in {0,1}. Ties between edges
         are broken based on the original weight (all else being equal, we
         prefer edges with larger weight).
 
@@ -198,7 +198,7 @@ class MAC:
         duality_gap_tol: Minimum duality gap (for early stopping)
 
         returns a tuple (solution, unrounded, upper_bound) where
-        solution: the (rounded) solution w \in {0,1}^m |w| = k
+        solution: the (rounded) solution w \\in {0,1}^m |w| = k
         unrounded: the solution obtained prior to rounding
         upper_bound: the value of the dual at the last iteration
         """

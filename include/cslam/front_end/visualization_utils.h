@@ -3,14 +3,14 @@
 
 #include <rclcpp/rclcpp.hpp>
 
-#include <cv_bridge/cv_bridge.h>
+#include <cv_bridge/cv_bridge.hpp>
 
 #include <chrono>
 #include <sensor_msgs/msg/image.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
 #include <sensor_msgs/point_cloud2_iterator.hpp>
 #include <rtabmap/core/SensorData.h>
-#include <image_geometry/pinhole_camera_model.h>
+#include <image_geometry/pinhole_camera_model.hpp>
 #include <cslam_common_interfaces/msg/keyframe_odom.hpp>
 #include <deque>
 #include <functional>
