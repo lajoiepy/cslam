@@ -91,8 +91,12 @@ def Rt2T(R, t):
 
 
 def downsample(points, voxel_size):
+
+    mask = np.isfinite(points).all(axis=1)
+    filtered_points = points[mask]
+
     open3d_cloud = open3d.geometry.PointCloud()
-    open3d_cloud.points = open3d.utility.Vector3dVector(points)
+    open3d_cloud.points = open3d.utility.Vector3dVector(filtered_points)
     return open3d_cloud.voxel_down_sample(voxel_size=voxel_size)
 
 
