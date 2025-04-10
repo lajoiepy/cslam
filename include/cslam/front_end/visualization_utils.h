@@ -3,14 +3,22 @@
 
 #include <rclcpp/rclcpp.hpp>
 
+#ifdef PRE_ROS_IRON
+#include <cv_bridge/cv_bridge.h>
+#else
 #include <cv_bridge/cv_bridge.hpp>
+#endif
 
 #include <chrono>
 #include <sensor_msgs/msg/image.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
 #include <sensor_msgs/point_cloud2_iterator.hpp>
 #include <rtabmap/core/SensorData.h>
+#ifdef PRE_ROS_IRON
+#include <image_geometry/pinhole_camera_model.h>
+#else
 #include <image_geometry/pinhole_camera_model.hpp>
+#endif
 #include <cslam_common_interfaces/msg/keyframe_odom.hpp>
 #include <deque>
 #include <functional>
