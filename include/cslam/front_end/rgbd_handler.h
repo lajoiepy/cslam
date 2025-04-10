@@ -26,7 +26,11 @@
 #include <tf2_ros/buffer.h>
 #include <tf2_ros/transform_listener.h>
 
+#ifdef PRE_ROS_IRON
+#include <cv_bridge/cv_bridge.h>
+#else
 #include <cv_bridge/cv_bridge.hpp>
+#endif
 
 #include <chrono>
 #include <cslam_common_interfaces/msg/keyframe_odom.hpp>
